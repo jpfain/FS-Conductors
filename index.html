@@ -155,7 +155,7 @@
     <div class="header-actions">
       <div>
         <label for="yearSelect"><strong>Year:</strong> </label>
-        <select id="yearSelect">
+        <select id="yearSelect" onchange="renderUI()">
           <option value="2026" selected>2026</option>
           <option value="2027">2027</option>
         </select>
@@ -340,46 +340,117 @@
       reader.readAsText(file);
     }
 
-    // --- MASTER ICS EXPORTER (Saves to schedule.ics) ---
-    function exportMasterICS() {
+    // --- UI RENDER ENGINE & HANDLERS ---
+    function renderUI() {
+      const state = loadAppState();
       const selectedYear = parseInt(document.getElementById("yearSelect").value, 10);
-      const schedule = generateSchedule(selectedYear);
-      const nowString = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
       
-      let icsLines = [
+      // Render Roster Badges
+      const rosterContainer = document.getElementById("rosterDisplay");
+      rosterContainer.innerHTML = state.roster.map(name => `<span class="roster-tag">${name}</span>`).join('');
+
+      // Render Schedule Table
+      const schedule = generateSchedule(selectedYear);
+      const tbody = document.getElementById("scheduleTableBody");
+      tbody.innerHTML = schedule.map(row => {
+        let statusBadge = "<span>Normal</span>";
+        if (row.isBlackout) statusBadge = `<span class="badge badge-blackout">Cancelled</span>`;
+        else if (row.isOverride) statusBadge = `<span class="badge badge-override">Override</span>`;
+
+        return `
+          <tr>
+            <td><strong>${formatDateDisplay(row.date)}</strong></td>
+            <td>${row.conductor}</td>
+            <td>${statusBadge}</td>
+            <td class="actions">
+              <button class="secondary btn-sm" onclick="editOverride('${row.date}')">Override</button>
+              <button class="secondary btn-sm" onclick="toggleBlackout('${row.date}')">${row.isBlackout ? 'Uncancel' : 'Cancel'}</button>
+              ${!row.isBlackout ? `<button class="btn-sm" onclick="downloadSingleICS('${row.date}', '${row.conductor}')">.ics</button>` : ''}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function promptUpdateRoster() {
+      const state = loadAppState();
+      const input = prompt("Enter conductors in order (comma separated):", state.roster.join(", "));
+      if (input !== null) {
+        const newRoster = input.split(",").map(s => s.trim()).filter(s => s.length > 0);
+        if (newRoster.length > 0) {
+          state.roster = newRoster;
+          saveAppState(state);
+        }
+      }
+    }
+
+    function editOverride(dateKey) {
+      const state = loadAppState();
+      const current = state.overrides[dateKey] || "";
+      const input = prompt(`Override conductor for ${dateKey} (leave empty to clear):`, current);
+      if (input !== null) {
+        if (input.trim() === "") {
+          delete state.overrides[dateKey];
+        } else {
+          state.overrides[dateKey] = input.trim();
+        }
+        saveAppState(state);
+      }
+    }
+
+    function toggleBlackout(dateKey) {
+      const state = loadAppState();
+      if (state.blackouts[dateKey]) {
+        delete state.blackouts[dateKey];
+      } else {
+        state.blackouts[dateKey] = true;
+      }
+      saveAppState(state);
+    }
+
+    // --- ICS ICS EXPORTERS ---
+    function generateICSContent(events) {
+      let ics = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
-        "PRODID:-//Conductor Schedule Generator//EN",
-        "CALSCALE:GREGORIAN",
-        "METHOD:PUBLISH",
-        `X-WR-CALNAME:Conductor Schedule ${selectedYear}`,
-        "X-WR-TIMEZONE:America/New_York"
+        "PRODID:-//Conductor Schedule App//EN",
+        "CALSCALE:GREGORIAN"
       ];
 
-      schedule.forEach(slot => {
-        if (slot.isBlackout) return;
-
-        const [y, m, d] = slot.date.split('-');
-        const dtStart = `${y}${m}${d}T093000`;
-        const dtEnd = `${y}${m}${d}T110000`;
-        const uid = `conductor-meeting-${slot.date}@conductorschedule.local`;
-
-        icsLines.push(
+      events.forEach(ev => {
+        const cleanDate = ev.date.replace(/-/g, "");
+        ics.push(
           "BEGIN:VEVENT",
-          `UID:${uid}`,
-          `DTSTAMP:${nowString}`,
-          `DTSTART;TZID=America/New_York:${dtStart}`,
-          `DTEND;TZID=America/New_York:${dtEnd}`,
-          `SUMMARY:Conductor Duty: ${slot.conductor}`,
-          `DESCRIPTION:Scheduled rotational conductor assignment.`,
-          "STATUS:CONFIRMED",
+          `SUMMARY:Meeting Conductor: ${ev.conductor}`,
+          `DTSTART;VALUE=DATE:${cleanDate}`,
+          `DTEND;VALUE=DATE:${cleanDate}`,
+          `DESCRIPTION:Assigned conductor for meeting on ${ev.date}`,
           "END:VEVENT"
         );
       });
 
-      icsLines.push("END:VCALENDAR");
+      ics.push("END:VCALENDAR");
+      return ics.join("\r\n");
+    }
 
-      const blob = new Blob([icsLines.join("\r\n")], { type: "text/calendar;charset=utf-8" });
+    function downloadSingleICS(dateKey, conductor) {
+      const icsData = generateICSContent([{ date: dateKey, conductor }]);
+      const blob = new Blob([icsData], { type: "text/calendar;charset=utf-8" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `conductor-${dateKey}.ics`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+    }
+
+    function exportMasterICS() {
+      const selectedYear = parseInt(document.getElementById("yearSelect").value, 10);
+      const schedule = generateSchedule(selectedYear).filter(item => !item.isBlackout);
+      const icsData = generateICSContent(schedule);
+      
+      const blob = new Blob([icsData], { type: "text/calendar;charset=utf-8" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
       link.download = "schedule.ics";
@@ -389,90 +460,8 @@
       URL.revokeObjectURL(link.href);
     }
 
-    // --- SINGLE EVENT ICS EXPORTER ---
-    function exportSingleICS(dateStr, conductor) {
-      if (!conductor || conductor.includes("CANCELLED")) return;
-      const [y, m, d] = dateStr.split('-');
-      const nowString = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-      const dtStart = `${y}${m}${d}T093000`;
-      const dtEnd = `${y}${m}${d}T110000`;
-      const uid = `conductor-meeting-${dateStr}@conductorschedule.local`;
-
-      const icsLines = [
-        "BEGIN:VCALENDAR",
-        "VERSION:2.0",
-        "PRODID:-//Conductor Schedule Generator//EN",
-        "CALSCALE:GREGORIAN",
-        "METHOD:PUBLISH",
-        "X-WR-TIMEZONE:America/New_York",
-        "BEGIN:VEVENT",
-        `UID:${uid}`,
-        `DTSTAMP:${nowString}`,
-        `DTSTART;TZID=America/New_York:${dtStart}`,
-        `DTEND;TZID=America/New_York:${dtEnd}`,
-        `SUMMARY:Conductor Duty: ${conductor}`,
-        `DESCRIPTION:Conductor assignment for ${formatDateDisplay(dateStr)}.`,
-        "STATUS:CONFIRMED",
-        "END:VEVENT",
-        "END:VCALENDAR"
-      ];
-
-      const blob = new Blob([icsLines.join("\r\n")], { type: "text/calendar;charset=utf-8" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = `conductor-${dateStr}.ics`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(link.href);
-    }
-
-    // --- WEB SHARE API ---
-    async function shareMeeting(dateStr, conductor) {
-      if (!conductor || conductor.includes("CANCELLED")) return;
-      const displayDate = formatDateDisplay(dateStr);
-      const shareData = {
-        title: `Conductor Assignment`,
-        text: `Reminder: ${conductor} is scheduled to conduct the meeting on ${displayDate}.`,
-        url: window.location.href
-      };
-
-      if (navigator.share) {
-        try {
-          await navigator.share(shareData);
-        } catch (err) {
-          if (err.name !== 'AbortError') console.error('Share failed:', err);
-        }
-      } else {
-        try {
-          await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
-          alert("Assignment details copied to clipboard!");
-        } catch (err) {
-          alert(`${shareData.text}`);
-        }
-      }
-    }
-
-    // --- UI RENDER & CONTROLLERS ---
-    function renderUI() {
-      const state = loadAppState();
-      const selectedYear = parseInt(document.getElementById("yearSelect").value, 10);
-      
-      const rosterContainer = document.getElementById("rosterDisplay");
-      rosterContainer.innerHTML = state.roster
-        .map((name, index) => `<span class="roster-tag">${index + 1}. ${name}</span>`)
-        .join("");
-
-      const schedule = generateSchedule(selectedYear);
-      const tbody = document.getElementById("scheduleTableBody");
-      
-      tbody.innerHTML = schedule.map(slot => {
-        let statusBadge = `<span class="badge" style="background:#e2e8f0; color:#475569;">Standard</span>`;
-        if (slot.isBlackout) statusBadge = `<span class="badge badge-blackout">Cancelled</span>`;
-        else if (slot.isOverride) statusBadge = `<span class="badge badge-override">Override</span>`;
-
-        const escapedConductor = slot.conductor.replace(/'/g, "\\'");
-
-        const singleIcsBtn = slot.isBlackout 
-          ? '' 
-          : `<button class="btn-sm success" onclick="exportSingleICS('${slot.date}', '${escapedConductor}')">.ics</button>`;
+    // Initial render
+    window.addEventListener('DOMContentLoaded', renderUI);
+  </script>
+</body>
+</html>
