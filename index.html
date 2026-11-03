@@ -4,10 +4,20 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Conductor Schedule</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1e3a8a">
+
+  <!-- iOS PWA Meta Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Conductor">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
   <style>
     :root {
       --primary: #1e3a8a;
       --accent: #2563eb;
+      --success: #16a34a;
       --bg: #f8fafc;
       --card-bg: #ffffff;
       --text: #0f172a;
@@ -24,7 +34,7 @@
       color: var(--text);
       margin: 0;
       padding: 16px;
-      max-width: 800px;
+      max-width: 850px;
       margin-left: auto;
       margin-right: auto;
     }
@@ -36,20 +46,20 @@
       margin-bottom: 20px;
       padding-bottom: 12px;
       border-bottom: 2px solid var(--border);
+      flex-wrap: wrap;
+      gap: 12px;
     }
 
     h1 { font-size: 1.5rem; margin: 0; color: var(--primary); }
 
-    .controls {
+    .header-actions {
       display: flex;
-      gap: 12px;
       align-items: center;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
+      gap: 10px;
     }
 
-    select, button, input {
-      font-size: 1rem;
+    select, button {
+      font-size: 0.95rem;
       padding: 8px 12px;
       border-radius: 6px;
       border: 1px solid var(--border);
@@ -63,9 +73,8 @@
       font-weight: 600;
     }
 
-    button.secondary {
-      background-color: #64748b;
-    }
+    button.success { background-color: var(--success); }
+    button.secondary { background-color: #64748b; }
 
     .roster-card {
       background: var(--card-bg);
@@ -75,11 +84,19 @@
       margin-bottom: 20px;
     }
 
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
     .roster-tags {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      margin-top: 8px;
+      margin-top: 12px;
     }
 
     .roster-tag {
@@ -119,15 +136,15 @@
     .badge-override { background: var(--override-bg); color: var(--override-text); }
     .badge-blackout { background: var(--blackout-bg); color: var(--blackout-text); }
 
-    .actions { display: flex; gap: 6px; }
+    .actions { display: flex; gap: 6px; flex-wrap: wrap; }
 
     .btn-sm {
       padding: 4px 8px;
       font-size: 0.8rem;
     }
 
-    @media (max-width: 600px) {
-      th:nth-child(3), td:nth-child(3) { display: none; } /* Hide Status column on mobile */
+    @media (max-width: 640px) {
+      th:nth-child(3), td:nth-child(3) { display: none; }
     }
   </style>
 </head>
@@ -135,20 +152,28 @@
 
   <header>
     <h1>Conductor Schedule</h1>
-    <div>
-      <label for="yearSelect"><strong>Year:</strong> </label>
-      <select id="yearSelect">
-        <option value="2026" selected>2026</option>
-        <option value="2027">2027</option>
-      </select>
+    <div class="header-actions">
+      <div>
+        <label for="yearSelect"><strong>Year:</strong> </label>
+        <select id="yearSelect">
+          <option value="2026" selected>2026</option>
+          <option value="2027">2027</option>
+        </select>
+      </div>
+      <button class="success" onclick="exportMasterICS()">Export schedule.ics</button>
     </div>
   </header>
 
-  <!-- ROSTER MANAGEMENT PANEL -->
+  <!-- ROSTER MANAGEMENT & BACKUP PANEL -->
   <section class="roster-card">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
+    <div class="card-header">
       <strong>Current Rotation Order:</strong>
-      <button class="secondary btn-sm" onclick="promptUpdateRoster()">Edit Roster</button>
+      <div class="actions">
+        <button class="secondary btn-sm" onclick="promptUpdateRoster()">Edit Roster</button>
+        <button class="secondary btn-sm" onclick="exportStateJSON()">Export JSON</button>
+        <button class="secondary btn-sm" onclick="triggerImportJSON()">Import JSON</button>
+        <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="handleImportJSON(event)">
+      </div>
     </div>
     <div class="roster-tags" id="rosterDisplay"></div>
   </section>
@@ -169,7 +194,35 @@
   </main>
 
   <script>
-    // --- PHASE 1 ENGINE CODE ---
+    // --- SERVICE WORKER REGISTRATION & AUTO-REFRESH ---
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => {
+            reg.addEventListener('updatefound', () => {
+              const newWorker = reg.installing;
+              if (newWorker) {
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    console.log('New PWA version detected. Auto-refreshing...');
+                  }
+                });
+              }
+            });
+          })
+          .catch(err => console.error('Service Worker Registration Error:', err));
+
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+          }
+        });
+      });
+    }
+
+    // --- ROTATIONAL ENGINE (2nd & 4th Saturdays) ---
     function getMeetingDates(year) {
       const meetingDates = [];
       for (let month = 0; month < 12; month++) {
@@ -240,18 +293,176 @@
       return schedule;
     }
 
-    // --- UI BINDINGS & CONTROLLERS ---
+    // --- JSON BACKUP EXPORT & IMPORT ---
+    function exportStateJSON() {
+      const state = loadAppState();
+      const jsonStr = JSON.stringify(state, null, 2);
+      const blob = new Blob([jsonStr], { type: "application/json" });
+      const link = document.createElement("a");
+      const todayStr = formatDateKey(new Date());
+      
+      link.href = URL.createObjectURL(blob);
+      link.download = `conductor-schedule-backup-${todayStr}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+    }
+
+    function triggerImportJSON() {
+      document.getElementById("importFileInput").click();
+    }
+
+    function handleImportJSON(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const importedState = JSON.parse(e.target.result);
+          if (importedState && Array.isArray(importedState.roster)) {
+            const stateToSave = {
+              roster: importedState.roster,
+              overrides: importedState.overrides || {},
+              blackouts: importedState.blackouts || {}
+            };
+            saveAppState(stateToSave);
+            alert("Schedule state restored successfully!");
+          } else {
+            alert("Invalid backup file structure.");
+          }
+        } catch (err) {
+          alert("Failed to parse JSON backup file: " + err.message);
+        }
+        event.target.value = "";
+      };
+      reader.readAsText(file);
+    }
+
+    // --- MASTER ICS EXPORTER (Saves to schedule.ics) ---
+    function exportMasterICS() {
+      const selectedYear = parseInt(document.getElementById("yearSelect").value, 10);
+      const schedule = generateSchedule(selectedYear);
+      const nowString = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      
+      let icsLines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//Conductor Schedule Generator//EN",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+        `X-WR-CALNAME:Conductor Schedule ${selectedYear}`,
+        "X-WR-TIMEZONE:America/New_York"
+      ];
+
+      schedule.forEach(slot => {
+        if (slot.isBlackout) return;
+
+        const [y, m, d] = slot.date.split('-');
+        const dtStart = `${y}${m}${d}T093000`;
+        const dtEnd = `${y}${m}${d}T110000`;
+        const uid = `conductor-meeting-${slot.date}@conductorschedule.local`;
+
+        icsLines.push(
+          "BEGIN:VEVENT",
+          `UID:${uid}`,
+          `DTSTAMP:${nowString}`,
+          `DTSTART;TZID=America/New_York:${dtStart}`,
+          `DTEND;TZID=America/New_York:${dtEnd}`,
+          `SUMMARY:Conductor Duty: ${slot.conductor}`,
+          `DESCRIPTION:Scheduled rotational conductor assignment.`,
+          "STATUS:CONFIRMED",
+          "END:VEVENT"
+        );
+      });
+
+      icsLines.push("END:VCALENDAR");
+
+      const blob = new Blob([icsLines.join("\r\n")], { type: "text/calendar;charset=utf-8" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "schedule.ics";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+    }
+
+    // --- SINGLE EVENT ICS EXPORTER ---
+    function exportSingleICS(dateStr, conductor) {
+      if (!conductor || conductor.includes("CANCELLED")) return;
+      const [y, m, d] = dateStr.split('-');
+      const nowString = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      const dtStart = `${y}${m}${d}T093000`;
+      const dtEnd = `${y}${m}${d}T110000`;
+      const uid = `conductor-meeting-${dateStr}@conductorschedule.local`;
+
+      const icsLines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//Conductor Schedule Generator//EN",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+        "X-WR-TIMEZONE:America/New_York",
+        "BEGIN:VEVENT",
+        `UID:${uid}`,
+        `DTSTAMP:${nowString}`,
+        `DTSTART;TZID=America/New_York:${dtStart}`,
+        `DTEND;TZID=America/New_York:${dtEnd}`,
+        `SUMMARY:Conductor Duty: ${conductor}`,
+        `DESCRIPTION:Conductor assignment for ${formatDateDisplay(dateStr)}.`,
+        "STATUS:CONFIRMED",
+        "END:VEVENT",
+        "END:VCALENDAR"
+      ];
+
+      const blob = new Blob([icsLines.join("\r\n")], { type: "text/calendar;charset=utf-8" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `conductor-${dateStr}.ics`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+    }
+
+    // --- WEB SHARE API ---
+    async function shareMeeting(dateStr, conductor) {
+      if (!conductor || conductor.includes("CANCELLED")) return;
+      const displayDate = formatDateDisplay(dateStr);
+      const shareData = {
+        title: `Conductor Assignment`,
+        text: `Reminder: ${conductor} is scheduled to conduct the meeting on ${displayDate}.`,
+        url: window.location.href
+      };
+
+      if (navigator.share) {
+        try {
+          await navigator.share(shareData);
+        } catch (err) {
+          if (err.name !== 'AbortError') console.error('Share failed:', err);
+        }
+      } else {
+        try {
+          await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
+          alert("Assignment details copied to clipboard!");
+        } catch (err) {
+          alert(`${shareData.text}`);
+        }
+      }
+    }
+
+    // --- UI RENDER & CONTROLLERS ---
     function renderUI() {
       const state = loadAppState();
       const selectedYear = parseInt(document.getElementById("yearSelect").value, 10);
       
-      // 1. Render Roster Tags
       const rosterContainer = document.getElementById("rosterDisplay");
       rosterContainer.innerHTML = state.roster
         .map((name, index) => `<span class="roster-tag">${index + 1}. ${name}</span>`)
         .join("");
 
-      // 2. Render Schedule Rows
       const schedule = generateSchedule(selectedYear);
       const tbody = document.getElementById("scheduleTableBody");
       
@@ -260,59 +471,8 @@
         if (slot.isBlackout) statusBadge = `<span class="badge badge-blackout">Cancelled</span>`;
         else if (slot.isOverride) statusBadge = `<span class="badge badge-override">Override</span>`;
 
-        return `
-          <tr>
-            <td><strong>${formatDateDisplay(slot.date)}</strong></td>
-            <td>${slot.conductor}</td>
-            <td>${statusBadge}</td>
-            <td class="actions">
-              <button class="btn-sm secondary" onclick="handleOverridePrompt('${slot.date}', '${slot.conductor}')">Override</button>
-              <button class="btn-sm secondary" onclick="toggleBlackout('${slot.date}')">${slot.isBlackout ? 'Restore' : 'Cancel'}</button>
-            </td>
-          </tr>
-        `;
-      }).join("");
-    }
+        const escapedConductor = slot.conductor.replace(/'/g, "\\'");
 
-    // --- EVENT HANDLERS ---
-    function handleOverridePrompt(dateKey, currentConductor) {
-      const state = loadAppState();
-      const conductorList = state.roster.join(", ");
-      const choice = prompt(`Select conductor for ${formatDateDisplay(dateKey)}:\nAvailable: ${conductorList}`, currentConductor);
-      
-      if (choice !== null && choice.trim() !== "") {
-        state.overrides[dateKey] = choice.trim();
-        saveAppState(state);
-      }
-    }
-
-    function toggleBlackout(dateKey) {
-      const state = loadAppState();
-      if (state.blackouts[dateKey]) {
-        delete state.blackouts[dateKey];
-      } else {
-        state.blackouts[dateKey] = true;
-      }
-      saveAppState(state);
-    }
-
-    function promptUpdateRoster() {
-      const state = loadAppState();
-      const currentList = state.roster.join(", ");
-      const input = prompt("Enter conductors in rotation order (comma-separated):", currentList);
-      
-      if (input !== null) {
-        const newList = input.split(",").map(s => s.trim()).filter(s => s.length > 0);
-        if (newList.length > 0) {
-          state.roster = newList;
-          saveAppState(state);
-        }
-      }
-    }
-
-    // Initial Load
-    document.getElementById("yearSelect").addEventListener("change", renderUI);
-    window.addEventListener("DOMContentLoaded", renderUI);
-  </script>
-</body>
-</html>
+        const singleIcsBtn = slot.isBlackout 
+          ? '' 
+          : `<button class="btn-sm success" onclick="exportSingleICS('${slot.date}', '${escapedConductor}')">.ics</button>`;
