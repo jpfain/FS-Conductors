@@ -1,38 +1,64 @@
-const CACHE_NAME = 'conductor-schedule-v2';
+const CACHE_NAME = 'conductor-schedule-v1';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './manifest.json'
 ];
 
-// Instantly skip waiting phase on new deployment
-self.addEventListener('install', event => {
-  self.skipWaiting();
+// Install Event: Cache core PWA assets
+self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS_TO_CACHE))
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(ASSETS_TO_CACHE);
+    }).then(() => {
+      return self.skipWaiting();
+    })
   );
 });
 
-// Delete old caches and claim clients immediately
-self.addEventListener('activate', event => {
+// Activate Event: Clean up legacy caches and take control immediately
+self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then(keys => {
+    caches.keys().then((cacheNames) => {
       return Promise.all(
-        keys.map(key => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
+        cacheNames.map((cache) => {
+          if (cache !== CACHE_NAME) {
+            return caches.delete(cache);
           }
         })
       );
-    }).then(() => self.clients.claim())
+    }).then(() => {
+      return self.clients.claim();
+    })
   );
 });
 
-// Cache-first fetch strategy
-self.addEventListener('fetch', event => {
+// Fetch Event: Serve cached response first, update cache from network in background
+self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
+
   event.respondWith(
-    caches.match(event.request).then(cachedResponse => {
-      return cachedResponse || fetch(event.request);
+    caches.match(event.request).then((cachedResponse) => {
+      const fetchPromise = fetch(event.request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+        }
+        return networkResponse;
+      }).catch(() => {
+        return cachedResponse;
+      });
+
+      return cachedResponse || fetchPromise;
     })
   );
+});
+
+// Listen for skipWaiting message from main thread
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.action === 'skipWaiting') {
+    self.skipWaiting();
+  }
 });
