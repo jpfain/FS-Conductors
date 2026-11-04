@@ -1,12 +1,12 @@
 {
   "name": "Conductor Schedule",
   "short_name": "Conductor",
-  "description": "Rotational Meeting Conductor Schedule Generator",
+  "description": "Rotational meeting schedule and conductor assignment tool for 2nd and 4th Saturdays.",
   "start_url": "./index.html",
   "display": "standalone",
-  "orientation": "portrait-primary",
   "background_color": "#f8fafc",
   "theme_color": "#1e3a8a",
+  "orientation": "portrait-primary",
   "icons": [
     {
       "src": "icon-192.png",
