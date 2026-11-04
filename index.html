@@ -3,66 +3,74 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Conductor Schedule</title>
-  <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1e3a8a">
-
-  <!-- iOS PWA Meta Tags -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Conductor">
-  <link rel="apple-touch-icon" href="icon-192.png">
-
+  <title>Conductor Schedule</title>
   <style>
     :root {
       --primary: #1e3a8a;
+      --secondary: #059669;
       --accent: #2563eb;
-      --success: #16a34a;
+      --danger: #ef4444;
+      --warning-bg: #fef3c7;
+      --warning-text: #92400e;
+      --blackout-bg: #fee2e2;
+      --blackout-text: #991b1b;
+      --meeting-bg: #dbeafe;
+      --meeting-border: #3b82f6;
       --bg: #f8fafc;
       --card-bg: #ffffff;
       --text: #0f172a;
-      --border: #e2e8f0;
-      --override-bg: #fef3c7;
-      --override-text: #92400e;
-      --blackout-bg: #fee2e2;
-      --blackout-text: #991b1b;
+      --border: #cbd5e1;
     }
+
+    * { box-sizing: border-box; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       background-color: var(--bg);
       color: var(--text);
       margin: 0;
-      padding: 16px;
-      max-width: 850px;
+      padding: clamp(12px, 3vw, 24px);
+      padding-bottom: calc(clamp(12px, 3vw, 24px) + env(safe-area-inset-bottom));
+      max-width: 960px;
       margin-left: auto;
       margin-right: auto;
+    }
+
+    .container {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: clamp(16px, 3vw, 24px);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      border: 1px solid #e2e8f0;
     }
 
     header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
       padding-bottom: 12px;
-      border-bottom: 2px solid var(--border);
+      border-bottom: 2px solid #f1f5f9;
       flex-wrap: wrap;
       gap: 12px;
     }
 
     h1 { font-size: 1.5rem; margin: 0; color: var(--primary); }
 
-    .header-actions {
+    .controls-group {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
+      flex-wrap: wrap;
     }
 
-    select, button {
-      font-size: 0.95rem;
+    button, select, input {
+      font-size: 0.875rem;
       padding: 8px 12px;
       border-radius: 6px;
       border: 1px solid var(--border);
+      min-height: 40px;
     }
 
     button {
@@ -71,56 +79,222 @@
       border: none;
       cursor: pointer;
       font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
 
-    button.success { background-color: var(--success); }
+    button:hover { opacity: 0.9; }
     button.secondary { background-color: #64748b; }
+    button.success { background-color: var(--secondary); }
+    button.outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    button.active { background-color: var(--primary); color: white; border-color: var(--primary); }
 
+    /* Roster Panel */
     .roster-card {
-      background: var(--card-bg);
-      padding: 16px;
+      background: #f8fafc;
       border-radius: 8px;
-      border: 1px solid var(--border);
+      padding: 16px;
       margin-bottom: 20px;
+      border: 1px solid #e2e8f0;
     }
 
-    .card-header {
+    .roster-header {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 10px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      flex-wrap: wrap;
+    }
+
+    .roster-form {
+      display: flex;
       gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .roster-input {
+      flex: 1;
+      background: white;
     }
 
     .roster-tags {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      margin-top: 12px;
     }
 
-    .roster-tag {
+    .tag {
       background: #e0e7ff;
       color: #3730a3;
       padding: 4px 10px;
       border-radius: 16px;
-      font-size: 0.9rem;
-      font-weight: 500;
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
 
+    .tag-num {
+      background: var(--primary);
+      color: white;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+    }
+
+    .tag-remove {
+      color: #64748b;
+      cursor: pointer;
+      border: none;
+      background: none;
+      padding: 0;
+      font-size: 1rem;
+      line-height: 1;
+      min-height: auto;
+    }
+
+    .tag-remove:hover { color: var(--danger); }
+
+    /* Action Toolbar */
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .view-toggle {
+      display: flex;
+      background: #e2e8f0;
+      padding: 3px;
+      border-radius: 8px;
+      gap: 2px;
+    }
+
+    .view-toggle button {
+      min-height: 34px;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+    }
+
+    /* Month Navigation Header */
+    .nav-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .nav-header h2 { font-size: 1.25rem; margin: 0; }
+
+    /* Calendar Grid View */
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+    }
+
+    .day-header {
+      text-align: center;
+      font-weight: 700;
+      padding: 8px;
+      background: #f1f5f9;
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+
+    .day-cell {
+      min-height: 105px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 6px;
+      background: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .day-cell.empty { background: #f8fafc; border: none; }
+
+    .day-number { font-weight: 700; font-size: 0.85rem; margin-bottom: 4px; }
+
+    .day-cell.meeting {
+      background: var(--meeting-bg);
+      border: 2px solid var(--meeting-border);
+    }
+
+    .day-cell.blackout {
+      background: var(--blackout-bg);
+      border: 2px solid var(--danger);
+    }
+
+    .meeting-tag {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #1d4ed8;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .blackout-tag {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--blackout-text);
+      text-transform: uppercase;
+    }
+
+    .conductor-select {
+      width: 100%;
+      padding: 4px;
+      font-size: 0.8rem;
+      min-height: 32px;
+      border-radius: 4px;
+    }
+
+    .cell-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 4px;
+      gap: 4px;
+    }
+
+    .btn-link {
+      background: none;
+      border: none;
+      color: #64748b;
+      font-size: 0.75rem;
+      padding: 2px 4px;
+      min-height: auto;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    /* Table View */
     table {
       width: 100%;
       border-collapse: collapse;
-      background: var(--card-bg);
+      background: white;
       border-radius: 8px;
       overflow: hidden;
       border: 1px solid var(--border);
     }
 
     th, td {
-      padding: 12px;
+      padding: 10px 12px;
       text-align: left;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 0.9rem;
     }
 
     th { background: #f1f5f9; font-weight: 600; }
@@ -129,57 +303,83 @@
       display: inline-block;
       padding: 2px 8px;
       border-radius: 4px;
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       font-weight: 600;
     }
 
-    .badge-override { background: var(--override-bg); color: var(--override-text); }
+    .badge-override { background: var(--warning-bg); color: var(--warning-text); }
     .badge-blackout { background: var(--blackout-bg); color: var(--blackout-text); }
+    .badge-standard { background: #e2e8f0; color: #475569; }
 
-    .actions { display: flex; gap: 6px; flex-wrap: wrap; }
-
-    .btn-sm {
-      padding: 4px 8px;
-      font-size: 0.8rem;
+    .status-msg {
+      font-size: 0.85rem;
+      color: var(--secondary);
+      font-weight: 600;
     }
 
     @media (max-width: 640px) {
+      .calendar-grid { gap: 3px; }
+      .day-cell { min-height: 85px; padding: 4px; }
+      .day-header { font-size: 0.75rem; padding: 4px; }
       th:nth-child(3), td:nth-child(3) { display: none; }
     }
   </style>
 </head>
 <body>
 
+<div class="container">
   <header>
     <h1>Conductor Schedule</h1>
-    <div class="header-actions">
+    <div class="controls-group">
+      <div class="view-toggle">
+        <button id="btnViewCalendar" class="active" onclick="setViewMode('calendar')">📅 Calendar</button>
+        <button id="btnViewTable" class="outline" onclick="setViewMode('table')">📋 Year List</button>
+      </div>
       <div>
-        <label for="yearSelect"><strong>Year:</strong> </label>
-        <select id="yearSelect" onchange="renderUI()">
+        <select id="yearSelect" onchange="handleYearChange()">
           <option value="2026" selected>2026</option>
           <option value="2027">2027</option>
+          <option value="2028">2028</option>
         </select>
       </div>
-      <button class="success" onclick="exportMasterICS()">Export schedule.ics</button>
     </div>
   </header>
 
-  <!-- ROSTER MANAGEMENT & BACKUP PANEL -->
-  <section class="roster-card">
-    <div class="card-header">
-      <strong>Current Rotation Order:</strong>
-      <div class="actions">
-        <button class="secondary btn-sm" onclick="promptUpdateRoster()">Edit Roster</button>
-        <button class="secondary btn-sm" onclick="exportStateJSON()">Export JSON</button>
-        <button class="secondary btn-sm" onclick="triggerImportJSON()">Import JSON</button>
-        <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="handleImportJSON(event)">
-      </div>
+  <!-- ROSTER MANAGEMENT PANEL -->
+  <div class="roster-card">
+    <div class="roster-header">
+      <span>Approved Conductors Roster</span>
+      <span style="font-size:0.8rem; font-weight:normal; color:#64748b;">Auto-rotates sequentially in order listed</span>
     </div>
-    <div class="roster-tags" id="rosterDisplay"></div>
-  </section>
+    <div class="roster-form">
+      <input type="text" id="newConductorInput" class="roster-input" placeholder="Enter conductor name..." onkeydown="if(event.key==='Enter') addConductor()">
+      <button onclick="addConductor()">+ Add</button>
+    </div>
+    <div class="roster-tags" id="rosterContainer"></div>
+  </div>
 
-  <!-- SCHEDULE DISPLAY TABLE -->
-  <main>
+  <!-- ACTION TOOLBAR -->
+  <div class="toolbar">
+    <div class="controls-group">
+      <button class="success" onclick="exportMasterICS()">📅 Export Full Year .ics</button>
+      <button class="secondary" onclick="exportMonthICS()">🗓️ Month .ics</button>
+      <button class="outline" onclick="copyTextSummary()">📋 Copy Text</button>
+    </div>
+    <span id="statusMsg" class="status-msg"></span>
+  </div>
+
+  <!-- MONTHLY CALENDAR VIEW -->
+  <div id="calendarViewSection">
+    <div class="nav-header">
+      <button class="secondary" onclick="changeMonth(-1)">&larr; Previous</button>
+      <h2 id="monthYearTitle"></h2>
+      <button class="secondary" onclick="changeMonth(1)">Next &rarr;</button>
+    </div>
+    <div class="calendar-grid" id="calendarGrid"></div>
+  </div>
+
+  <!-- ANNUAL TABLE VIEW -->
+  <div id="tableViewSection" style="display: none;">
     <table>
       <thead>
         <tr>
@@ -191,277 +391,454 @@
       </thead>
       <tbody id="scheduleTableBody"></tbody>
     </table>
-  </main>
+  </div>
+</div>
 
-  <script>
-    // --- SERVICE WORKER REGISTRATION & AUTO-REFRESH ---
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then(reg => {
-            reg.addEventListener('updatefound', () => {
-              const newWorker = reg.installing;
-              if (newWorker) {
-                newWorker.addEventListener('statechange', () => {
-                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    console.log('New PWA version detected. Auto-refreshing...');
-                  }
-                });
-              }
-            });
-          })
-          .catch(err => console.error('Service Worker Registration Error:', err));
+<script>
+  let currentDate = new Date();
+  let currentViewMode = "calendar";
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  const START_YEAR = 2026;
 
-        let refreshing = false;
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-          if (!refreshing) {
-            refreshing = true;
-            window.location.reload();
+  // Unified State Architecture
+  const DEFAULT_STATE = {
+    roster: ["Conductor A", "Conductor B", "Conductor C"],
+    overrides: {},
+    blackouts: {}
+  };
+
+  function loadAppState() {
+    const saved = localStorage.getItem("conductor_schedule_state");
+    return saved ? JSON.parse(saved) : DEFAULT_STATE;
+  }
+
+  function saveAppState(state) {
+    localStorage.setItem("conductor_schedule_state", JSON.stringify(state));
+    renderUI();
+  }
+
+  function getMeetingSaturdays(year, month) {
+    let saturdays = [];
+    let date = new Date(year, month, 1);
+    while (date.getMonth() === month) {
+      if (date.getDay() === 6) {
+        saturdays.push(date.getDate());
+      }
+      date.setDate(date.getDate() + 1);
+    }
+    return { second: saturdays[1], fourth: saturdays[3] };
+  }
+
+  // Multi-Year Continuous Rotation Engine
+  function getRotationalConductor(targetYear, targetMonth, targetDay, state) {
+    if (!state.roster || state.roster.length === 0) return "Unassigned";
+
+    let meetingCount = 0;
+    for (let y = START_YEAR; y <= targetYear; y++) {
+      let maxMonth = (y === targetYear) ? targetMonth : 11;
+      for (let m = 0; m <= maxMonth; m++) {
+        const sats = getMeetingSaturdays(y, m);
+        const monthSats = [sats.second, sats.fourth];
+
+        for (let day of monthSats) {
+          if (!day) continue;
+          if (y === targetYear && m === targetMonth && day > targetDay) break;
+
+          const dateKey = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          
+          if (y === targetYear && m === targetMonth && day === targetDay) {
+            return state.roster[meetingCount % state.roster.length];
           }
-        });
-      });
-    }
 
-    // --- ROTATIONAL ENGINE (2nd & 4th Saturdays) ---
-    function getMeetingDates(year) {
-      const meetingDates = [];
-      for (let month = 0; month < 12; month++) {
-        const firstDay = new Date(year, month, 1);
-        const dayOfWeek = firstDay.getDay();
-        const firstSat = (6 - dayOfWeek + 7) % 7 + 1;
-        const secondSat = new Date(year, month, firstSat + 7);
-        const fourthSat = new Date(year, month, firstSat + 21);
-        meetingDates.push(secondSat, fourthSat);
-      }
-      return meetingDates;
-    }
-
-    function formatDateKey(dateObj) {
-      const y = dateObj.getFullYear();
-      const m = String(dateObj.getMonth() + 1).padStart(2, '0');
-      const d = String(dateObj.getDate()).padStart(2, '0');
-      return `${y}-${m}-${d}`;
-    }
-
-    function formatDateDisplay(dateStr) {
-      const [year, month, day] = dateStr.split('-');
-      const d = new Date(year, month - 1, day);
-      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    }
-
-    const DEFAULT_STATE = {
-      roster: ["Conductor A", "Conductor B", "Conductor C", "Conductor D"],
-      overrides: {},
-      blackouts: {}
-    };
-
-    function loadAppState() {
-      const saved = localStorage.getItem("conductor_schedule_state");
-      return saved ? JSON.parse(saved) : DEFAULT_STATE;
-    }
-
-    function saveAppState(state) {
-      localStorage.setItem("conductor_schedule_state", JSON.stringify(state));
-      renderUI();
-    }
-
-    function generateSchedule(year) {
-      const state = loadAppState();
-      const dates = getMeetingDates(year);
-      const schedule = [];
-      let rosterIndex = 0;
-
-      dates.forEach(date => {
-        const dateKey = formatDateKey(date);
-        
-        if (state.blackouts[dateKey]) {
-          schedule.push({ date: dateKey, conductor: "CANCELLED / NO MEETING", isOverride: false, isBlackout: true });
-          return;
-        }
-
-        if (state.overrides[dateKey]) {
-          schedule.push({ date: dateKey, conductor: state.overrides[dateKey], isOverride: true, isBlackout: false });
-          rosterIndex = (rosterIndex + 1) % state.roster.length;
-          return;
-        }
-
-        const assignedConductor = state.roster[rosterIndex];
-        schedule.push({ date: dateKey, conductor: assignedConductor, isOverride: false, isBlackout: false });
-        rosterIndex = (rosterIndex + 1) % state.roster.length;
-      });
-
-      return schedule;
-    }
-
-    // --- JSON BACKUP EXPORT & IMPORT ---
-    function exportStateJSON() {
-      const state = loadAppState();
-      const jsonStr = JSON.stringify(state, null, 2);
-      const blob = new Blob([jsonStr], { type: "application/json" });
-      const link = document.createElement("a");
-      const todayStr = formatDateKey(new Date());
-      
-      link.href = URL.createObjectURL(blob);
-      link.download = `conductor-schedule-backup-${todayStr}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(link.href);
-    }
-
-    function triggerImportJSON() {
-      document.getElementById("importFileInput").click();
-    }
-
-    function handleImportJSON(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          const importedState = JSON.parse(e.target.result);
-          if (importedState && Array.isArray(importedState.roster)) {
-            const stateToSave = {
-              roster: importedState.roster,
-              overrides: importedState.overrides || {},
-              blackouts: importedState.blackouts || {}
-            };
-            saveAppState(stateToSave);
-            alert("Schedule state restored successfully!");
-          } else {
-            alert("Invalid backup file structure.");
+          // Advance roster pointer unless meeting was cancelled
+          if (!state.blackouts[dateKey]) {
+            meetingCount++;
           }
-        } catch (err) {
-          alert("Failed to parse JSON backup file: " + err.message);
-        }
-        event.target.value = "";
-      };
-      reader.readAsText(file);
-    }
-
-    // --- UI RENDER ENGINE & HANDLERS ---
-    function renderUI() {
-      const state = loadAppState();
-      const selectedYear = parseInt(document.getElementById("yearSelect").value, 10);
-      
-      // Render Roster Badges
-      const rosterContainer = document.getElementById("rosterDisplay");
-      rosterContainer.innerHTML = state.roster.map(name => `<span class="roster-tag">${name}</span>`).join('');
-
-      // Render Schedule Table
-      const schedule = generateSchedule(selectedYear);
-      const tbody = document.getElementById("scheduleTableBody");
-      tbody.innerHTML = schedule.map(row => {
-        let statusBadge = "<span>Normal</span>";
-        if (row.isBlackout) statusBadge = `<span class="badge badge-blackout">Cancelled</span>`;
-        else if (row.isOverride) statusBadge = `<span class="badge badge-override">Override</span>`;
-
-        return `
-          <tr>
-            <td><strong>${formatDateDisplay(row.date)}</strong></td>
-            <td>${row.conductor}</td>
-            <td>${statusBadge}</td>
-            <td class="actions">
-              <button class="secondary btn-sm" onclick="editOverride('${row.date}')">Override</button>
-              <button class="secondary btn-sm" onclick="toggleBlackout('${row.date}')">${row.isBlackout ? 'Uncancel' : 'Cancel'}</button>
-              ${!row.isBlackout ? `<button class="btn-sm" onclick="downloadSingleICS('${row.date}', '${row.conductor}')">.ics</button>` : ''}
-            </td>
-          </tr>
-        `;
-      }).join('');
-    }
-
-    function promptUpdateRoster() {
-      const state = loadAppState();
-      const input = prompt("Enter conductors in order (comma separated):", state.roster.join(", "));
-      if (input !== null) {
-        const newRoster = input.split(",").map(s => s.trim()).filter(s => s.length > 0);
-        if (newRoster.length > 0) {
-          state.roster = newRoster;
-          saveAppState(state);
         }
       }
     }
+    return state.roster[0];
+  }
 
-    function editOverride(dateKey) {
+  /* --- ROSTER CONTROLLERS --- */
+  function addConductor() {
+    const input = document.getElementById("newConductorInput");
+    const name = input.value.trim();
+    if (name) {
       const state = loadAppState();
-      const current = state.overrides[dateKey] || "";
-      const input = prompt(`Override conductor for ${dateKey} (leave empty to clear):`, current);
-      if (input !== null) {
-        if (input.trim() === "") {
-          delete state.overrides[dateKey];
-        } else {
-          state.overrides[dateKey] = input.trim();
-        }
-        saveAppState(state);
-      }
-    }
-
-    function toggleBlackout(dateKey) {
-      const state = loadAppState();
-      if (state.blackouts[dateKey]) {
-        delete state.blackouts[dateKey];
-      } else {
-        state.blackouts[dateKey] = true;
-      }
+      state.roster.push(name);
+      input.value = "";
       saveAppState(state);
     }
+  }
 
-    // --- ICS ICS EXPORTERS ---
-    function generateICSContent(events) {
-      let ics = [
-        "BEGIN:VCALENDAR",
-        "VERSION:2.0",
-        "PRODID:-//Conductor Schedule App//EN",
-        "CALSCALE:GREGORIAN"
-      ];
+  function removeConductor(index) {
+    const state = loadAppState();
+    state.roster.splice(index, 1);
+    saveAppState(state);
+  }
 
-      events.forEach(ev => {
-        const cleanDate = ev.date.replace(/-/g, "");
-        ics.push(
+  function renderRoster(state) {
+    const container = document.getElementById("rosterContainer");
+    container.innerHTML = "";
+    if (state.roster.length === 0) {
+      container.innerHTML = `<span style="font-size:0.85rem; color:#94a3b8;">No conductors added. Add names above.</span>`;
+      return;
+    }
+    state.roster.forEach((name, index) => {
+      const tag = document.createElement("div");
+      tag.className = "tag";
+      tag.innerHTML = `
+        <span class="tag-num">${index + 1}</span>
+        <span>${name}</span>
+        <button class="tag-remove" onclick="removeConductor(${index})" title="Remove">&times;</button>
+      `;
+      container.appendChild(tag);
+    });
+  }
+
+  /* --- VIEW & CALENDAR CONTROLLERS --- */
+  function setViewMode(mode) {
+    currentViewMode = mode;
+    document.getElementById("btnViewCalendar").className = mode === 'calendar' ? 'active' : 'outline';
+    document.getElementById("btnViewTable").className = mode === 'table' ? 'active' : 'outline';
+    document.getElementById("calendarViewSection").style.display = mode === 'calendar' ? 'block' : 'none';
+    document.getElementById("tableViewSection").style.display = mode === 'table' ? 'block' : 'none';
+    renderUI();
+  }
+
+  function changeMonth(delta) {
+    currentDate.setMonth(currentDate.getMonth() + delta);
+    document.getElementById("yearSelect").value = currentDate.getFullYear();
+    renderUI();
+  }
+
+  function handleYearChange() {
+    const year = parseInt(document.getElementById("yearSelect").value, 10);
+    currentDate.setFullYear(year);
+    renderUI();
+  }
+
+  function toggleBlackout(dateKey) {
+    const state = loadAppState();
+    if (state.blackouts[dateKey]) {
+      delete state.blackouts[dateKey];
+    } else {
+      state.blackouts[dateKey] = true;
+    }
+    saveAppState(state);
+  }
+
+  function setOverride(dateKey, conductorName) {
+    const state = loadAppState();
+    if (!conductorName) {
+      delete state.overrides[dateKey];
+    } else {
+      state.overrides[dateKey] = conductorName;
+    }
+    saveAppState(state);
+  }
+
+  function renderUI() {
+    const state = loadAppState();
+    renderRoster(state);
+
+    if (currentViewMode === "calendar") {
+      renderCalendarView(state);
+    } else {
+      renderTableView(state);
+    }
+  }
+
+  function renderCalendarView(state) {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+
+    document.getElementById("monthYearTitle").innerText = `${monthNames[month]} ${year}`;
+    const grid = document.getElementById("calendarGrid");
+    grid.innerHTML = "";
+
+    const dayHeaders = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    dayHeaders.forEach(day => {
+      const header = document.createElement("div");
+      header.className = "day-header";
+      header.innerText = day;
+      grid.appendChild(header);
+    });
+
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const totalDays = new Date(year, month + 1, 0).getDate();
+    const meetingSaturdays = getMeetingSaturdays(year, month);
+    const today = new Date();
+
+    for (let i = 0; i < firstDayIndex; i++) {
+      const emptyCell = document.createElement("div");
+      emptyCell.className = "day-cell empty";
+      grid.appendChild(emptyCell);
+    }
+
+    for (let day = 1; day <= totalDays; day++) {
+      const cell = document.createElement("div");
+      cell.className = "day-cell";
+
+      const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day;
+      if (isToday) cell.style.border = "2px solid var(--danger)";
+
+      const dayNum = document.createElement("div");
+      dayNum.className = "day-number";
+      dayNum.innerText = day;
+      cell.appendChild(dayNum);
+
+      const is2ndSaturday = day === meetingSaturdays.second;
+      const is4thSaturday = day === meetingSaturdays.fourth;
+
+      if (is2ndSaturday || is4thSaturday) {
+        const monthStr = String(month + 1).padStart(2, '0');
+        const dayStr = String(day).padStart(2, '0');
+        const dateKey = `${year}-${monthStr}-${dayStr}`;
+
+        const isBlackout = !!state.blackouts[dateKey];
+        const savedOverride = state.overrides[dateKey];
+        const autoAssigned = getRotationalConductor(year, month, day, state);
+
+        if (isBlackout) {
+          cell.classList.add("blackout");
+          const tag = document.createElement("div");
+          tag.className = "blackout-tag";
+          tag.innerText = "Cancelled";
+          cell.appendChild(tag);
+        } else {
+          cell.classList.add("meeting");
+          const tag = document.createElement("div");
+          tag.className = "meeting-tag";
+          tag.innerText = is2ndSaturday ? "2nd Sat Meeting" : "4th Sat Meeting";
+          cell.appendChild(tag);
+
+          const select = document.createElement("select");
+          select.className = "conductor-select";
+
+          const autoOpt = document.createElement("option");
+          autoOpt.value = "";
+          autoOpt.innerText = `Auto: ${autoAssigned}`;
+          select.appendChild(autoOpt);
+
+          state.roster.forEach(name => {
+            const opt = document.createElement("option");
+            opt.value = name;
+            opt.innerText = name;
+            select.appendChild(opt);
+          });
+
+          select.value = savedOverride || "";
+          select.addEventListener("change", (e) => setOverride(dateKey, e.target.value));
+          cell.appendChild(select);
+        }
+
+        const actionsDiv = document.createElement("div");
+        actionsDiv.className = "cell-actions";
+        actionsDiv.innerHTML = `<button class="btn-link" onclick="toggleBlackout('${dateKey}')">${isBlackout ? 'Restore' : 'Cancel'}</button>`;
+        cell.appendChild(actionsDiv);
+      }
+
+      grid.appendChild(cell);
+    }
+  }
+
+  function renderTableView(state) {
+    const selectedYear = parseInt(document.getElementById("yearSelect").value, 10);
+    const tbody = document.getElementById("scheduleTableBody");
+    tbody.innerHTML = "";
+
+    for (let month = 0; month < 12; month++) {
+      const sats = getMeetingSaturdays(selectedYear, month);
+      const meetingDays = [sats.second, sats.fourth];
+
+      meetingDays.forEach(day => {
+        if (!day) return;
+        const monthStr = String(month + 1).padStart(2, '0');
+        const dayStr = String(day).padStart(2, '0');
+        const dateKey = `${selectedYear}-${monthStr}-${dayStr}`;
+
+        const isBlackout = !!state.blackouts[dateKey];
+        const override = state.overrides[dateKey];
+        const autoAssigned = getRotationalConductor(selectedYear, month, day, state);
+        const conductor = isBlackout ? "CANCELLED / NO MEETING" : (override || autoAssigned);
+
+        let statusBadge = `<span class="badge badge-standard">Standard</span>`;
+        if (isBlackout) statusBadge = `<span class="badge badge-blackout">Cancelled</span>`;
+        else if (override) statusBadge = `<span class="badge badge-override">Override</span>`;
+
+        const displayDate = new Date(selectedYear, month, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td><strong>${displayDate}</strong></td>
+          <td>${conductor}</td>
+          <td>${statusBadge}</td>
+          <td>
+            <button class="outline" style="padding:2px 6px; min-height:auto;" onclick="promptTableOverride('${dateKey}', '${override || ''}')">Override</button>
+            <button class="outline" style="padding:2px 6px; min-height:auto;" onclick="toggleBlackout('${dateKey}')">${isBlackout ? 'Restore' : 'Cancel'}</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+  }
+
+  function promptTableOverride(dateKey, currentOverride) {
+    const state = loadAppState();
+    const conductorList = state.roster.join(", ");
+    const choice = prompt(`Select conductor for ${dateKey}:\nAvailable: ${conductorList}`, currentOverride);
+    if (choice !== null) {
+      setOverride(dateKey, choice.trim());
+    }
+  }
+
+  /* --- EXPORT HANDLERS --- */
+  function showStatus(msg) {
+    const el = document.getElementById("statusMsg");
+    el.innerText = msg;
+    setTimeout(() => { el.innerText = ""; }, 3000);
+  }
+
+  function exportMasterICS() {
+    const state = loadAppState();
+    const selectedYear = parseInt(document.getElementById("yearSelect").value, 10);
+    const nowString = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    
+    let icsLines = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Conductor Schedule Generator//EN",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+      `X-WR-CALNAME:Conductor Schedule ${selectedYear}`
+    ];
+
+    for (let month = 0; month < 12; month++) {
+      const sats = getMeetingSaturdays(selectedYear, month);
+      const meetingDays = [sats.second, sats.fourth];
+
+      meetingDays.forEach(day => {
+        if (!day) return;
+        const monthStr = String(month + 1).padStart(2, '0');
+        const dayStr = String(day).padStart(2, '0');
+        const dateKey = `${selectedYear}-${monthStr}-${dayStr}`;
+
+        if (state.blackouts[dateKey]) return; // Skip cancelled dates
+
+        const conductor = state.overrides[dateKey] || getRotationalConductor(selectedYear, month, day, state);
+        const dtStart = `${selectedYear}${monthStr}${dayStr}T093000`;
+        const dtEnd = `${selectedYear}${monthStr}${dayStr}T110000`;
+
+        icsLines.push(
           "BEGIN:VEVENT",
-          `SUMMARY:Meeting Conductor: ${ev.conductor}`,
-          `DTSTART;VALUE=DATE:${cleanDate}`,
-          `DTEND;VALUE=DATE:${cleanDate}`,
-          `DESCRIPTION:Assigned conductor for meeting on ${ev.date}`,
+          `UID:conductor-${dateKey}@conductorschedule.local`,
+          `DTSTAMP:${nowString}`,
+          `DTSTART:${dtStart}`,
+          `DTEND:${dtEnd}`,
+          `SUMMARY:Conductor Duty: ${conductor}`,
+          `DESCRIPTION:Assigned conductor duty for meeting.`,
+          "STATUS:CONFIRMED",
           "END:VEVENT"
         );
       });
-
-      ics.push("END:VCALENDAR");
-      return ics.join("\r\n");
     }
 
-    function downloadSingleICS(dateKey, conductor) {
-      const icsData = generateICSContent([{ date: dateKey, conductor }]);
-      const blob = new Blob([icsData], { type: "text/calendar;charset=utf-8" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = `conductor-${dateKey}.ics`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(link.href);
-    }
+    icsLines.push("END:VCALENDAR");
 
-    function exportMasterICS() {
-      const selectedYear = parseInt(document.getElementById("yearSelect").value, 10);
-      const schedule = generateSchedule(selectedYear).filter(item => !item.isBlackout);
-      const icsData = generateICSContent(schedule);
-      
-      const blob = new Blob([icsData], { type: "text/calendar;charset=utf-8" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = "schedule.ics";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(link.href);
-    }
+    const blob = new Blob([icsLines.join("\r\n")], { type: "text/calendar;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `Conductor_Schedule_${selectedYear}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showStatus("Exported Master .ics!");
+  }
 
-    // Initial render
-    window.addEventListener('DOMContentLoaded', renderUI);
-  </script>
+  function exportMonthICS() {
+    const state = loadAppState();
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const sats = getMeetingSaturdays(year, month);
+    const meetingDays = [sats.second, sats.fourth];
+
+    let icsLines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Conductor Schedule//EN"];
+
+    meetingDays.forEach(day => {
+      if (!day) return;
+      const monthStr = String(month + 1).padStart(2, '0');
+      const dayStr = String(day).padStart(2, '0');
+      const dateKey = `${year}-${monthStr}-${dayStr}`;
+
+      if (state.blackouts[dateKey]) return;
+
+      const conductor = state.overrides[dateKey] || getRotationalConductor(year, month, day, state);
+      const dateStr = `${year}${monthStr}${dayStr}`;
+
+      icsLines.push(
+        "BEGIN:VEVENT",
+        `SUMMARY:Conductor Duty - ${conductor}`,
+        `DTSTART;VALUE=DATE:${dateStr}`,
+        `DTEND;VALUE=DATE:${dateStr}`,
+        "END:VEVENT"
+      );
+    });
+
+    icsLines.push("END:VCALENDAR");
+
+    const blob = new Blob([icsLines.join("\r\n")], { type: "text/calendar;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `Conductor_Schedule_${monthNames[month]}_${year}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showStatus("Exported Month .ics!");
+  }
+
+  function copyTextSummary() {
+    const state = loadAppState();
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const sats = getMeetingSaturdays(year, month);
+
+    const getFormattedSlot = (day) => {
+      if (!day) return "";
+      const monthStr = String(month + 1).padStart(2, '0');
+      const dayStr = String(day).padStart(2, '0');
+      const dateKey = `${year}-${monthStr}-${dayStr}`;
+
+      if (state.blackouts[dateKey]) return "CANCELLED";
+      return state.overrides[dateKey] || getRotationalConductor(year, month, day, state);
+    };
+
+    const c2 = getFormattedSlot(sats.second);
+    const c4 = getFormattedSlot(sats.fourth);
+
+    const text = `Conductor Schedule - ${monthNames[month]} ${year}\n` +
+      `----------------------------------------\n` +
+      `• ${monthNames[month]} ${sats.second}, ${year} (2nd Sat): ${c2}\n` +
+      `• ${monthNames[month]} ${sats.fourth}, ${year} (4th Sat): ${c4}`;
+
+    navigator.clipboard.writeText(text).then(() => {
+      showStatus("Copied to clipboard!");
+    });
+  }
+
+  // Register PWA Service Worker if available
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    });
+  }
+
+  window.addEventListener("DOMContentLoaded", renderUI);
+</script>
+
 </body>
 </html>
