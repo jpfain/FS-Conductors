@@ -33,7 +33,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch Event: Serve cached response first, update cache from network in background
+// Fetch Event: Stale-While-Revalidate Strategy with Network Fallback
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
