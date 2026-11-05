@@ -260,7 +260,8 @@
     .conductor-select {
       width: 100%;
       padding: 4px;
-      font-size: 0.8rem;
+      font-size: 0.85rem;
+      font-weight: 600;
       min-height: 32px;
       border-radius: 4px;
     }
@@ -629,7 +630,7 @@
 
           const autoOpt = document.createElement("option");
           autoOpt.value = "";
-          autoOpt.innerText = `Auto: ${autoAssigned}`;
+          autoOpt.innerText = autoAssigned;
           select.appendChild(autoOpt);
 
           state.roster.forEach(name => {
