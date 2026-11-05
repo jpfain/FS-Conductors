@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-192.png">
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#1e3a8a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Conductor Schedule</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
   <style>
     :root {
       --primary: #1e3a8a;
@@ -366,6 +368,9 @@
       <button class="success" onclick="exportMasterICS()">📅 Export Full Year .ics</button>
       <button class="secondary" onclick="exportMonthICS()">🗓️ Month .ics</button>
       <button class="outline" onclick="copyTextSummary()">📋 Copy Text</button>
+      <button class="outline" onclick="exportJSONBackup()">💾 Backup Data (JSON)</button>
+      <button class="outline" onclick="document.getElementById('importFileInput').click()">📂 Restore Data</button>
+      <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="importJSONBackup(event)">
     </div>
     <span id="statusMsg" class="status-msg"></span>
   </div>
@@ -830,6 +835,43 @@
     navigator.clipboard.writeText(text).then(() => {
       showStatus("Copied to clipboard!");
     });
+  }
+
+  /* --- JSON BACKUP & RESTORE HANDLERS --- */
+  function exportJSONBackup() {
+    const state = loadAppState();
+    const jsonStr = JSON.stringify(state, null, 2);
+    const blob = new Blob([jsonStr], { type: "application/json" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    const dateStamp = new Date().toISOString().split('T')[0];
+    link.download = `conductor-schedule-backup-${dateStamp}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showStatus("Backup JSON downloaded!");
+  }
+
+  function importJSONBackup(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const importedData = JSON.parse(e.target.result);
+        if (importedData && Array.isArray(importedData.roster)) {
+          saveAppState(importedData);
+          showStatus("Schedule restored successfully!");
+        } else {
+          alert("Invalid backup file format. Expected a conductor schedule backup object.");
+        }
+      } catch (err) {
+        alert("Error reading JSON backup file: " + err.message);
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = "";
   }
 
   // Register PWA Service Worker if available
