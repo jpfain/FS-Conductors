@@ -941,12 +941,35 @@
     event.target.value = "";
   }
 
-  // Register PWA Service Worker if available
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js').catch(() => {});
-    });
-  }
+  // Register PWA Service Worker with auto-reload on update
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').then((registration) => {
+      // Check for SW updates every time the app opens
+      registration.addEventListener('updatefound', () => {
+        const newWorker = registration.installing;
+        if (newWorker) {
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              // New version available; force activation and reload page
+              newWorker.postMessage({ action: 'skipWaiting' });
+              window.location.reload();
+            }
+          });
+        }
+      });
+    }).catch(() => {});
+  });
+
+  // Listen for controlling SW change to reload automatically
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!refreshing) {
+      refreshing = true;
+      window.location.reload();
+    }
+  });
+}
 
   window.addEventListener("DOMContentLoaded", renderUI);
 </script>
