@@ -247,7 +247,7 @@
       font-weight: 700;
       color: #1d4ed8;
       text-transform: uppercase;
-      margin-bottom: 2px;
+      margin-bottom: 4px;
     }
 
     .blackout-tag {
@@ -264,24 +264,26 @@
       word-break: break-word;
     }
 
-    .conductor-name-display .first-name {
-      font-size: 0.95rem;
-      font-weight: 800;
-      color: #1e3a8a;
-    }
-
+    .conductor-name-display .first-name,
     .conductor-name-display .last-name {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: #2563eb;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #000000;
     }
 
     .conductor-select {
       width: 100%;
-      padding: 4px;
+      padding: 2px 4px;
       font-size: 0.75rem;
-      min-height: 28px;
+      font-weight: 500;
+      min-height: 24px;
+      height: 24px;
       border-radius: 4px;
+      border: 1px solid #cbd5e1;
+      background-color: #ffffff;
+      color: #475569;
+      margin-top: 2px;
+      margin-bottom: 2px;
     }
 
     .cell-actions {
@@ -342,7 +344,7 @@
 
     @media (max-width: 640px) {
       .calendar-grid { gap: 3px; }
-      .day-cell { min-height: 95px; padding: 4px; }
+      .day-cell { min-height: 85px; padding: 4px; }
       .day-header { font-size: 0.75rem; padding: 4px; }
       th:nth-child(3), td:nth-child(3) { display: none; }
     }
