@@ -804,16 +804,15 @@
         if (state.blackouts && state.blackouts[dateKey]) return;
 
         const conductor = (state.overrides && state.overrides[dateKey]) || getRotationalConductor(selectedYear, month, day, state);
-        const dtStart = `${selectedYear}${monthStr}${dayStr}T093000`;
-        const dtEnd = `${selectedYear}${monthStr}${dayStr}T093700`;
+        const dateStr = `${selectedYear}${monthStr}${dayStr}`;
 
         icsLines.push(
           "BEGIN:VEVENT",
           `UID:conductor-${dateKey}@conductorschedule.local`,
           `DTSTAMP:${nowString}`,
-          `DTSTART:${dtStart}`,
-          `DTEND:${dtEnd}`,
-          `SUMMARY:FS Conductor:\\n${conductor}`,
+          `DTSTART;VALUE=DATE:${dateStr}`,
+          `DTEND;VALUE=DATE:${dateStr}`,
+          `SUMMARY:FS Conductor: ${conductor} (9:30 AM)`,
           `LOCATION:Kingdom Hall`,
           `DESCRIPTION:Carefully examine km 3/15 pp. 3-6 for direction & suggestions.`,
           "STATUS:CONFIRMED",
@@ -863,16 +862,15 @@
       if (state.blackouts && state.blackouts[dateKey]) return;
 
       const conductor = (state.overrides && state.overrides[dateKey]) || getRotationalConductor(year, month, day, state);
-      const dtStart = `${year}${monthStr}${dayStr}T093000`;
-      const dtEnd = `${year}${monthStr}${dayStr}T093700`;
+      const dateStr = `${year}${monthStr}${dayStr}`;
 
       icsLines.push(
         "BEGIN:VEVENT",
         `UID:conductor-${dateKey}@conductorschedule.local`,
         `DTSTAMP:${nowString}`,
-        `DTSTART:${dtStart}`,
-        `DTEND:${dtEnd}`,
-        `SUMMARY:FS Conductor:\\n${conductor}`,
+        `DTSTART;VALUE=DATE:${dateStr}`,
+        `DTEND;VALUE=DATE:${dateStr}`,
+        `SUMMARY:FS Conductor: ${conductor} (9:30 AM)`,
         `LOCATION:Kingdom Hall`,
         `DESCRIPTION:Carefully examine km 3/15 pp. 3-6 for direction & suggestions.`,
         "STATUS:CONFIRMED",
