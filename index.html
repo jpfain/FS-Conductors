@@ -8,11 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Conductor Schedule</title>
   <link rel="manifest" href="manifest.json">
-  
-  <!-- Firebase Web SDK (Compat Version for single-file PWA) -->
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-
+  <link rel="apple-touch-icon" href="icon-192.png">
   <style>
     :root {
       --primary: #1e3a8a;
@@ -98,6 +94,7 @@
     button.outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
     button.active { background-color: var(--primary); color: white; border-color: var(--primary); }
 
+    /* Roster Panel */
     .roster-card {
       background: #f8fafc;
       border-radius: 8px;
@@ -169,6 +166,7 @@
 
     .tag-remove:hover { color: var(--danger); }
 
+    /* Action Toolbar */
     .toolbar {
       display: flex;
       gap: 8px;
@@ -193,6 +191,7 @@
       font-size: 0.8rem;
     }
 
+    /* Month Navigation Header */
     .nav-header {
       display: flex;
       justify-content: space-between;
@@ -202,6 +201,7 @@
 
     .nav-header h2 { font-size: 1.25rem; margin: 0; }
 
+    /* Calendar Grid View */
     .calendar-grid {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
@@ -305,6 +305,7 @@
       text-decoration: underline;
     }
 
+    /* Table View */
     table {
       width: 100%;
       border-collapse: collapse;
@@ -369,6 +370,7 @@
     </div>
   </header>
 
+  <!-- ROSTER MANAGEMENT PANEL -->
   <div class="roster-card">
     <div class="roster-header">
       <span>Approved Conductors Roster</span>
@@ -381,6 +383,7 @@
     <div class="roster-tags" id="rosterContainer"></div>
   </div>
 
+  <!-- ACTION TOOLBAR -->
   <div class="toolbar">
     <div class="controls-group">
       <button class="success" onclick="exportMasterICS()">📅 Export Full Year .ics</button>
@@ -393,6 +396,7 @@
     <span id="statusMsg" class="status-msg"></span>
   </div>
 
+  <!-- MONTHLY CALENDAR VIEW -->
   <div id="calendarViewSection">
     <div class="nav-header">
       <button class="secondary" onclick="changeMonth(-1)">&larr; Previous</button>
@@ -402,6 +406,7 @@
     <div class="calendar-grid" id="calendarGrid"></div>
   </div>
 
+  <!-- ANNUAL TABLE VIEW -->
   <div id="tableViewSection" style="display: none;">
     <table>
       <thead>
@@ -418,22 +423,6 @@
 </div>
 
 <script>
-  // --- PASTE YOUR FIREBASE CONFIG KEYS HERE ---
-  const firebaseConfig = {
-    apiKey: "AIzaSyCD92AArY85wsg7GQulY18GrINz8Gq6xfU",
-  authDomain: "conductor-schedule.firebaseapp.com",
-  databaseURL: "https://conductor-schedule-default-rtdb.firebaseio.com",
-  projectId: "conductor-schedule",
-  storageBucket: "conductor-schedule.firebasestorage.app",
-  messagingSenderId: "120626437548",
-  appId: "1:120626437548:web:8f19504b72ef91dd3f6e09"
-  };
-
-  // Initialize Firebase Realtime Sync
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
-  const dbStateRef = db.ref("conductor_schedule_state");
-
   let currentDate = new Date();
   let currentViewMode = "calendar";
   const monthNames = [
@@ -442,41 +431,53 @@
   ];
   const START_YEAR = 2026;
 
-  let appState = {
+  // Unified State Architecture
+  const DEFAULT_STATE = {
     roster: ["Conductor A", "Conductor B", "Conductor C"],
     overrides: {},
     blackouts: {}
   };
 
-  // Listen for live updates from Firebase Cloud across all devices
-  dbStateRef.on("value", (snapshot) => {
-    const data = snapshot.val();
-    if (data) {
-      appState = data;
-      if (!appState.overrides) appState.overrides = {};
-      if (!appState.blackouts) appState.blackouts = {};
-      if (!appState.roster) appState.roster = [];
-      localStorage.setItem("conductor_schedule_state", JSON.stringify(appState));
-    } else {
-      // If Cloud DB is empty, push local state to Cloud
-      const localSaved = localStorage.getItem("conductor_schedule_state");
-      if (localSaved) {
-        try { appState = JSON.parse(localSaved); } catch(e) {}
-      }
-      dbStateRef.set(appState);
-    }
-    renderUI();
-  });
+  function loadAppState() {
+    const saved = localStorage.getItem("conductor_schedule_state");
+    if (saved) return JSON.parse(saved);
 
-  function saveAppState(state) {
-    appState = state;
-    localStorage.setItem("conductor_schedule_state", JSON.stringify(state));
-    dbStateRef.set(state); // Instant cloud sync
-    renderUI();
+    const legacyRoster = localStorage.getItem("conductor_roster");
+    let migratedRoster = ["Conductor A", "Conductor B", "Conductor C"];
+
+    if (legacyRoster) {
+      try {
+        migratedRoster = JSON.parse(legacyRoster);
+      } catch(e) {}
+    }
+
+    const migratedOverrides = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith("conductor_override_")) {
+        const parts = key.split("_");
+        if (parts.length === 5) {
+          const y = parts[2];
+          const m = String(parts[3]).padStart(2, '0');
+          const d = String(parts[4]).padStart(2, '0');
+          migratedOverrides[`${y}-${m}-${d}`] = localStorage.getItem(key);
+        }
+      }
+    }
+
+    const newState = {
+      roster: migratedRoster,
+      overrides: migratedOverrides,
+      blackouts: {}
+    };
+
+    localStorage.setItem("conductor_schedule_state", JSON.stringify(newState));
+    return newState;
   }
 
-  function loadAppState() {
-    return appState;
+  function saveAppState(state) {
+    localStorage.setItem("conductor_schedule_state", JSON.stringify(state));
+    renderUI();
   }
 
   function getMeetingSaturdays(year, month) {
@@ -491,6 +492,7 @@
     return { second: saturdays[1], fourth: saturdays[3] };
   }
 
+  // Multi-Year Continuous Rotation Engine
   function getRotationalConductor(targetYear, targetMonth, targetDay, state) {
     if (!state.roster || state.roster.length === 0) return "Unassigned";
 
@@ -520,6 +522,7 @@
     return state.roster[0];
   }
 
+  /* --- ROSTER CONTROLLERS --- */
   function addConductor() {
     const input = document.getElementById("newConductorInput");
     const name = input.value.trim();
@@ -540,7 +543,7 @@
   function renderRoster(state) {
     const container = document.getElementById("rosterContainer");
     container.innerHTML = "";
-    if (!state.roster || state.roster.length === 0) {
+    if (state.roster.length === 0) {
       container.innerHTML = `<span style="font-size:0.85rem; color:#94a3b8;">No conductors added. Add names above.</span>`;
       return;
     }
@@ -556,6 +559,7 @@
     });
   }
 
+  /* --- VIEW & CALENDAR CONTROLLERS --- */
   function setViewMode(mode) {
     currentViewMode = mode;
     document.getElementById("btnViewCalendar").className = mode === 'calendar' ? 'active' : 'outline';
@@ -579,7 +583,6 @@
 
   function toggleBlackout(dateKey) {
     const state = loadAppState();
-    if (!state.blackouts) state.blackouts = {};
     if (state.blackouts[dateKey]) {
       delete state.blackouts[dateKey];
     } else {
@@ -590,7 +593,6 @@
 
   function setOverride(dateKey, conductorName) {
     const state = loadAppState();
-    if (!state.overrides) state.overrides = {};
     if (!conductorName) {
       delete state.overrides[dateKey];
     } else {
@@ -657,8 +659,8 @@
         const dayStr = String(day).padStart(2, '0');
         const dateKey = `${year}-${monthStr}-${dayStr}`;
 
-        const isBlackout = !!(state.blackouts && state.blackouts[dateKey]);
-        const savedOverride = state.overrides ? state.overrides[dateKey] : null;
+        const isBlackout = !!state.blackouts[dateKey];
+        const savedOverride = state.overrides[dateKey];
         const autoAssigned = getRotationalConductor(year, month, day, state);
 
         if (isBlackout) {
@@ -696,14 +698,12 @@
           autoOpt.innerText = `Auto (${autoAssigned})`;
           select.appendChild(autoOpt);
 
-          if (state.roster) {
-            state.roster.forEach(name => {
-              const opt = document.createElement("option");
-              opt.value = name;
-              opt.innerText = name;
-              select.appendChild(opt);
-            });
-          }
+          state.roster.forEach(name => {
+            const opt = document.createElement("option");
+            opt.value = name;
+            opt.innerText = name;
+            select.appendChild(opt);
+          });
 
           select.value = savedOverride || "";
           select.addEventListener("change", (e) => setOverride(dateKey, e.target.value));
@@ -735,8 +735,8 @@
         const dayStr = String(day).padStart(2, '0');
         const dateKey = `${selectedYear}-${monthStr}-${dayStr}`;
 
-        const isBlackout = !!(state.blackouts && state.blackouts[dateKey]);
-        const override = state.overrides ? state.overrides[dateKey] : null;
+        const isBlackout = !!state.blackouts[dateKey];
+        const override = state.overrides[dateKey];
         const autoAssigned = getRotationalConductor(selectedYear, month, day, state);
         const conductor = isBlackout ? "CANCELLED / NO MEETING" : (override || autoAssigned);
 
@@ -770,6 +770,7 @@
     }
   }
 
+  /* --- EXPORT HANDLERS --- */
   function showStatus(msg) {
     const el = document.getElementById("statusMsg");
     el.innerText = msg;
@@ -804,7 +805,7 @@
 
         const conductor = (state.overrides && state.overrides[dateKey]) || getRotationalConductor(selectedYear, month, day, state);
         const dtStart = `${selectedYear}${monthStr}${dayStr}T093000`;
-        const dtEnd = `${selectedYear}${monthStr}${dayStr}T110000`;
+        const dtEnd = `${selectedYear}${monthStr}${dayStr}T093700`;
 
         icsLines.push(
           "BEGIN:VEVENT",
@@ -812,9 +813,20 @@
           `DTSTAMP:${nowString}`,
           `DTSTART:${dtStart}`,
           `DTEND:${dtEnd}`,
-          `SUMMARY:Conductor Duty: ${conductor}`,
-          `DESCRIPTION:Assigned conductor duty for meeting.`,
+          `SUMMARY:FS Conductor:\\n${conductor}`,
+          `LOCATION:Kingdom Hall`,
+          `DESCRIPTION:Carefully examine km 3/15 pp. 3-6 for direction & suggestions.`,
           "STATUS:CONFIRMED",
+          "BEGIN:VALARM",
+          "TRIGGER:-PT24H",
+          "ACTION:DISPLAY",
+          `DESCRIPTION:Reminder: FS Conductor Duty Tomorrow - ${conductor}`,
+          "END:VALARM",
+          "BEGIN:VALARM",
+          "TRIGGER:-PT12H",
+          "ACTION:DISPLAY",
+          `DESCRIPTION:Reminder: FS Conductor Duty in 12 Hours - ${conductor}`,
+          "END:VALARM",
           "END:VEVENT"
         );
       });
@@ -838,6 +850,7 @@
     const month = currentDate.getMonth();
     const sats = getMeetingSaturdays(year, month);
     const meetingDays = [sats.second, sats.fourth];
+    const nowString = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 
     let icsLines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Conductor Schedule//EN"];
 
@@ -850,13 +863,29 @@
       if (state.blackouts && state.blackouts[dateKey]) return;
 
       const conductor = (state.overrides && state.overrides[dateKey]) || getRotationalConductor(year, month, day, state);
-      const dateStr = `${year}${monthStr}${dayStr}`;
+      const dtStart = `${year}${monthStr}${dayStr}T093000`;
+      const dtEnd = `${year}${monthStr}${dayStr}T093700`;
 
       icsLines.push(
         "BEGIN:VEVENT",
-        `SUMMARY:Conductor Duty - ${conductor}`,
-        `DTSTART;VALUE=DATE:${dateStr}`,
-        `DTEND;VALUE=DATE:${dateStr}`,
+        `UID:conductor-${dateKey}@conductorschedule.local`,
+        `DTSTAMP:${nowString}`,
+        `DTSTART:${dtStart}`,
+        `DTEND:${dtEnd}`,
+        `SUMMARY:FS Conductor:\\n${conductor}`,
+        `LOCATION:Kingdom Hall`,
+        `DESCRIPTION:Carefully examine km 3/15 pp. 3-6 for direction & suggestions.`,
+        "STATUS:CONFIRMED",
+        "BEGIN:VALARM",
+        "TRIGGER:-PT24H",
+        "ACTION:DISPLAY",
+        `DESCRIPTION:Reminder: FS Conductor Duty Tomorrow - ${conductor}`,
+        "END:VALARM",
+        "BEGIN:VALARM",
+        "TRIGGER:-PT12H",
+        "ACTION:DISPLAY",
+        `DESCRIPTION:Reminder: FS Conductor Duty in 12 Hours - ${conductor}`,
+        "END:VALARM",
         "END:VEVENT"
       );
     });
@@ -885,8 +914,8 @@
       const dayStr = String(day).padStart(2, '0');
       const dateKey = `${year}-${monthStr}-${dayStr}`;
 
-      if (state.blackouts && state.blackouts[dateKey]) return "CANCELLED";
-      return (state.overrides && state.overrides[dateKey]) || getRotationalConductor(year, month, day, state);
+      if (state.blackouts[dateKey]) return "CANCELLED";
+      return state.overrides[dateKey] || getRotationalConductor(year, month, day, state);
     };
 
     const c2 = getFormattedSlot(sats.second);
@@ -902,6 +931,7 @@
     });
   }
 
+  /* --- JSON BACKUP & RESTORE HANDLERS --- */
   function exportJSONBackup() {
     const state = loadAppState();
     const jsonStr = JSON.stringify(state, null, 2);
@@ -938,6 +968,7 @@
     event.target.value = "";
   }
 
+  // Register PWA Service Worker with auto-reload on update
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./sw.js').then((registration) => {
@@ -963,6 +994,8 @@
       }
     });
   }
+
+  window.addEventListener("DOMContentLoaded", renderUI);
 </script>
 
 </body>
