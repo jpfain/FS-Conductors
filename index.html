@@ -793,6 +793,7 @@
       `X-WR-CALNAME:${conductorName} - FS Conductor Schedule ${selectedYear}`
     ];
 
+    let assignedDates = [];
     let eventCount = 0;
 
     for (let month = 0; month < 12; month++) {
@@ -812,6 +813,8 @@
         if (conductor === conductorName) {
           eventCount++;
           const dateStr = `${selectedYear}${monthStr}${dayStr}`;
+          const formattedDate = new Date(selectedYear, month, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          assignedDates.push(`• ${formattedDate} (9:30 AM)`);
 
           icsLines.push(
             "BEGIN:VEVENT",
@@ -839,37 +842,16 @@
       });
     }
 
-    icsLines.push("END:VCALENDAR");
-
     if (eventCount === 0) {
       alert(`No scheduled dates found for ${conductorName} in ${selectedYear}.`);
       return;
     }
 
+    icsLines.push("END:VCALENDAR");
+
+    // 1. Download the .ics file automatically
     const icsData = icsLines.join("\r\n");
     const fileName = `FS_Conductor_${conductorName.replace(/\s+/g, '_')}_${selectedYear}.ics`;
-    const file = new File([icsData], fileName, { type: "text/calendar" });
-
-    // Native Web Share Sheet for iMessage / SMS / Mail
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try {
-        await navigator.share({
-          title: `FS Conductor Schedule - ${conductorName}`,
-          text: `Attached is your FS Conductor schedule for ${selectedYear}.`,
-          files: [file]
-        });
-        showStatus(`Shared schedule for ${conductorName}!`);
-        return;
-      } catch (err) {
-        if (err.name !== 'AbortError') {
-          console.error("Web Share failed:", err);
-        } else {
-          return;
-        }
-      }
-    }
-
-    // Fallback direct download if share sheet unavailable
     const blob = new Blob([icsData], { type: "text/calendar;charset=utf-8" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
@@ -877,7 +859,23 @@
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showStatus(`Downloaded .ics for ${conductorName}!`);
+
+    // 2. Open Native Share Sheet with formatted schedule text
+    const shareText = `FS Conductor Schedule for ${conductorName} (${selectedYear}):\n` + assignedDates.join("\n");
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `FS Conductor Schedule - ${conductorName}`,
+          text: shareText
+        });
+        showStatus(`Shared & downloaded for ${conductorName}!`);
+      } catch (err) {
+        // User dismissed share sheet
+      }
+    } else {
+      showStatus(`Downloaded .ics for ${conductorName}!`);
+    }
   }
 
   function exportMasterICS() {
