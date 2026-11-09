@@ -2,1100 +2,350 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#1e3a8a">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1a73e8">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Conductor Schedule</title>
+  <title>FS Conductor Schedule</title>
   <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="icon-192.png">
   <style>
     :root {
-      --primary: #1e3a8a;
-      --secondary: #059669;
-      --accent: #2563eb;
-      --danger: #ef4444;
-      --warning-bg: #fef3c7;
-      --warning-text: #92400e;
-      --blackout-bg: #fee2e2;
-      --blackout-text: #991b1b;
-      --meeting-bg: #dbeafe;
-      --meeting-border: #3b82f6;
-      --bg: #f8fafc;
+      --primary-color: #1a73e8;
+      --bg-color: #f8f9fa;
       --card-bg: #ffffff;
-      --text: #0f172a;
-      --border: #cbd5e1;
+      --text-color: #202124;
+      --border-color: #dadce0;
+      --accent-color: #34a853;
     }
-
-    * { box-sizing: border-box; }
-
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background-color: var(--bg);
-      color: var(--text);
+      background-color: var(--bg-color);
+      color: var(--text-color);
       margin: 0;
-      padding: clamp(12px, 3vw, 24px);
-      padding-bottom: calc(clamp(12px, 3vw, 24px) + env(safe-area-inset-bottom));
-      max-width: 960px;
-      margin-left: auto;
-      margin-right: auto;
+      padding: 16px;
+      line-height: 1.5;
     }
-
     .container {
-      background: var(--card-bg);
-      border-radius: 12px;
-      padding: clamp(16px, 3vw, 24px);
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-      border: 1px solid #e2e8f0;
+      max-width: 900px;
+      margin: 0 auto;
     }
-
     header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 16px;
-      padding-bottom: 12px;
-      border-bottom: 2px solid #f1f5f9;
-      flex-wrap: wrap;
-      gap: 12px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 20px;
     }
-
-    h1 { font-size: 1.5rem; margin: 0; color: var(--primary); }
-
-    .controls-group {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
+    h1 { margin: 0; font-size: 1.5rem; color: var(--primary-color); }
+    .controls { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; align-items: center; }
     button, select, input {
-      font-size: 0.875rem;
       padding: 8px 12px;
+      border: 1px solid var(--border-color);
       border-radius: 6px;
-      border: 1px solid var(--border);
-      min-height: 40px;
+      font-size: 0.9rem;
+      background: var(--card-bg);
     }
-
     button {
-      background-color: var(--primary);
+      background-color: var(--primary-color);
       color: white;
       border: none;
       cursor: pointer;
-      font-weight: 600;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
+      font-weight: 500;
     }
-
     button:hover { opacity: 0.9; }
-    button.secondary { background-color: #64748b; }
-    button.success { background-color: var(--secondary); }
-    button.outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
-    button.active { background-color: var(--primary); color: white; border-color: var(--primary); }
-
-    /* Roster Panel */
-    .roster-card {
-      background: #f8fafc;
+    button.btn-secondary { background-color: #5f6368; }
+    button.btn-success { background-color: var(--accent-color); }
+    
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
       border-radius: 8px;
       padding: 16px;
-      margin-bottom: 20px;
-      border: 1px solid #e2e8f0;
-    }
-
-    .roster-header {
-      font-size: 0.95rem;
-      font-weight: 700;
-      margin-bottom: 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .roster-form {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-
-    .roster-input {
-      flex: 1;
-      background: white;
-    }
-
-    .roster-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .tag {
-      background: #e0e7ff;
-      color: #3730a3;
-      padding: 4px 10px;
-      border-radius: 16px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .tag-num {
-      background: var(--primary);
-      color: white;
-      border-radius: 50%;
-      width: 18px;
-      height: 18px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.7rem;
-    }
-
-    .tag-remove {
-      color: #64748b;
-      cursor: pointer;
-      border: none;
-      background: none;
-      padding: 0;
-      font-size: 1rem;
-      line-height: 1;
-      min-height: auto;
-    }
-
-    .tag-remove:hover { color: var(--danger); }
-
-    /* Action Toolbar */
-    .toolbar {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .view-toggle {
-      display: flex;
-      background: #e2e8f0;
-      padding: 3px;
-      border-radius: 8px;
-      gap: 2px;
-    }
-
-    .view-toggle button {
-      min-height: 34px;
-      padding: 4px 12px;
-      border-radius: 6px;
-      font-size: 0.8rem;
-    }
-
-    /* Month Navigation Header */
-    .nav-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
       margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
-
-    .nav-header h2 { font-size: 1.25rem; margin: 0; }
-
-    /* Calendar Grid View */
-    .calendar-grid {
+    .schedule-grid {
       display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 6px;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
     }
-
-    .day-header {
-      text-align: center;
-      font-weight: 700;
-      padding: 8px;
-      background: #f1f5f9;
-      border-radius: 6px;
-      font-size: 0.85rem;
+    .assignment-card {
+      border-left: 4px solid var(--primary-color);
     }
-
-    .day-cell {
-      min-height: 105px;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      padding: 6px;
-      background: white;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-
-    .day-cell.empty { background: #f8fafc; border: none; }
-
-    .day-number { font-weight: 700; font-size: 0.85rem; margin-bottom: 4px; }
-
-    .day-cell.meeting {
-      background: var(--meeting-bg);
-      border: 2px solid var(--meeting-border);
-    }
-
-    .day-cell.blackout {
-      background: var(--blackout-bg);
-      border: 2px solid var(--danger);
-    }
-
-    .meeting-tag {
-      font-size: 0.7rem;
-      font-weight: 700;
-      color: #1d4ed8;
-      text-transform: uppercase;
+    .assignment-header {
+      font-weight: bold;
+      font-size: 1.1rem;
       margin-bottom: 4px;
     }
-
-    .blackout-tag {
-      font-size: 0.7rem;
-      font-weight: 700;
-      color: var(--blackout-text);
-      text-transform: uppercase;
-    }
-
-    .conductor-name-display {
-      margin: 3px 0;
-      line-height: 1.15;
-      text-align: left;
-      word-break: break-word;
-    }
-
-    .conductor-name-display .first-name,
-    .conductor-name-display .last-name {
+    .assignment-date {
+      color: #5f6368;
       font-size: 0.9rem;
-      font-weight: 700;
-      color: #000000;
+      margin-bottom: 12px;
     }
-
-    .conductor-select {
-      width: 100%;
-      padding: 2px 4px;
-      font-size: 0.75rem;
-      font-weight: 500;
-      min-height: 24px;
-      height: 24px;
-      border-radius: 4px;
-      border: 1px solid #cbd5e1;
-      background-color: #ffffff;
-      color: #475569;
-      margin-top: 2px;
-      margin-bottom: 2px;
+    .action-buttons {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 10px;
     }
-
-    .cell-actions {
+    .action-buttons button {
+      padding: 6px 10px;
+      font-size: 0.8rem;
+    }
+    .roster-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .roster-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-top: 4px;
-      gap: 4px;
-    }
-
-    .btn-link {
-      background: none;
-      border: none;
-      color: #64748b;
-      font-size: 0.75rem;
-      padding: 2px 4px;
-      min-height: auto;
-      cursor: pointer;
-      text-decoration: underline;
-    }
-
-    /* Table View */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: white;
-      border-radius: 8px;
-      overflow: hidden;
-      border: 1px solid var(--border);
-    }
-
-    th, td {
-      padding: 10px 12px;
-      text-align: left;
-      border-bottom: 1px solid #e2e8f0;
-      font-size: 0.9rem;
-    }
-
-    th { background: #f1f5f9; font-weight: 600; }
-
-    .badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 0.75rem;
-      font-weight: 600;
-    }
-
-    .badge-override { background: var(--warning-bg); color: var(--warning-text); }
-    .badge-blackout { background: var(--blackout-bg); color: var(--blackout-text); }
-    .badge-standard { background: #e2e8f0; color: #475569; }
-
-    .status-msg {
-      font-size: 0.85rem;
-      color: var(--secondary);
-      font-weight: 600;
-    }
-
-    @media (max-width: 640px) {
-      .calendar-grid { gap: 3px; }
-      .day-cell { min-height: 85px; padding: 4px; }
-      .day-header { font-size: 0.75rem; padding: 4px; }
-      th:nth-child(3), td:nth-child(3) { display: none; }
+      padding: 8px 12px;
+      background: #f1f3f4;
+      border-radius: 6px;
     }
   </style>
 </head>
 <body>
-
-<div class="container">
-  <header>
-    <h1>Conductor Schedule</h1>
-    <div class="controls-group">
-      <div class="view-toggle">
-        <button id="btnViewCalendar" class="active" onclick="setViewMode('calendar')">📅 Calendar</button>
-        <button id="btnViewTable" class="outline" onclick="setViewMode('table')">📋 Year List</button>
-      </div>
+  <div class="container">
+    <header>
+      <h1>FS Conductor Schedule</h1>
       <div>
-        <select id="yearSelect" onchange="handleYearChange()">
-          <option value="2026" selected>2026</option>
-          <option value="2027">2027</option>
-          <option value="2028">2028</option>
-        </select>
+        <button onclick="exportMasterICS()" class="btn-success">Export Master .ics</button>
+        <button onclick="backupState()" class="btn-secondary">Backup JSON</button>
       </div>
-    </div>
-  </header>
+    </header>
 
-  <!-- ROSTER MANAGEMENT PANEL -->
-  <div class="roster-card">
-    <div class="roster-header">
-      <span>Approved Conductors Roster</span>
-      <span style="font-size:0.8rem; font-weight:normal; color:#64748b;">Auto-rotates sequentially in order listed</span>
+    <div class="controls">
+      <label for="monthSelect">Month:</label>
+      <select id="monthSelect" onchange="renderSchedule()"></select>
+      <label for="yearSelect">Year:</label>
+      <select id="yearSelect" onchange="renderSchedule()"></select>
     </div>
-    <div class="roster-form">
-      <input type="text" id="newConductorInput" class="roster-input" placeholder="Enter conductor name..." onkeydown="if(event.key==='Enter') addConductor()">
-      <button onclick="addConductor()">+ Add</button>
-    </div>
-    <div class="roster-tags" id="rosterContainer"></div>
+
+    <main>
+      <section class="card">
+        <h2>Schedule Overview (2nd & 4th Saturdays)</h2>
+        <div id="scheduleContainer" class="schedule-grid"></div>
+      </section>
+
+      <section class="card">
+        <h2>Conductor Roster</h2>
+        <div id="rosterContainer" class="roster-list"></div>
+        <div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+          <input type="text" id="newName" placeholder="Name">
+          <input type="email" id="newEmail" placeholder="Email">
+          <input type="tel" id="newPhone" placeholder="Phone">
+          <button onclick="addConductor()">Add Conductor</button>
+        </div>
+      </section>
+    </main>
   </div>
 
-  <!-- ACTION TOOLBAR -->
-  <div class="toolbar">
-    <div class="controls-group">
-      <button class="success" onclick="exportMasterICS()">📅 Export Full Year .ics</button>
-      <button class="secondary" onclick="exportMonthICS()">🗓️ Month .ics</button>
-      <button class="outline" onclick="copyTextSummary()">📋 Copy Text</button>
-      <button class="outline" onclick="exportJSONBackup()">💾 Backup Data (JSON)</button>
-      <button class="outline" onclick="document.getElementById('importFileInput').click()">📂 Restore Data</button>
-      <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="importJSONBackup(event)">
-    </div>
-    <span id="statusMsg" class="status-msg"></span>
-  </div>
+  <script>
+    // --- Initial Roster & Data Persistence ---
+    let conductors = JSON.parse(localStorage.getItem('fs_conductors')) || [
+      { id: 1, name: "Julian Ramirez", email: "julian@example.com", phone: "904-555-0101" },
+      { id: 2, name: "Judy Fain", email: "judy@example.com", phone: "904-555-0102" },
+      { id: 3, name: "Dow Stephens", email: "dow@example.com", phone: "904-555-0103" },
+      { id: 4, name: "Martin Tavarez", email: "martin@example.com", phone: "904-555-0104" },
+      { id: 5, name: "Stacy Jaffnson", email: "stacy@example.com", phone: "904-555-0105" }
+    ];
 
-  <!-- MONTHLY CALENDAR VIEW -->
-  <div id="calendarViewSection">
-    <div class="nav-header">
-      <button class="secondary" onclick="changeMonth(-1)">&larr; Previous</button>
-      <h2 id="monthYearTitle"></h2>
-      <button class="secondary" onclick="changeMonth(1)">Next &rarr;</button>
-    </div>
-    <div class="calendar-grid" id="calendarGrid"></div>
-  </div>
+    const monthNames = ["January", "February", "March", "April", "May", "June", 
+                        "July", "August", "September", "October", "November", "December"];
 
-  <!-- ANNUAL TABLE VIEW -->
-  <div id="tableViewSection" style="display: none;">
-    <table>
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>Assigned Conductor</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="scheduleTableBody"></tbody>
-    </table>
-  </div>
-</div>
-
-<script>
-  let currentDate = new Date();
-  let currentViewMode = "calendar";
-  const monthNames = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
-  ];
-  const START_YEAR = 2026;
-
-  // Unified State Architecture
-  const DEFAULT_STATE = {
-    roster: ["Conductor A", "Conductor B", "Conductor C"],
-    overrides: {},
-    blackouts: {}
-  };
-
-  function loadAppState() {
-    const saved = localStorage.getItem("conductor_schedule_state");
-    if (saved) return JSON.parse(saved);
-
-    const legacyRoster = localStorage.getItem("conductor_roster");
-    let migratedRoster = ["Conductor A", "Conductor B", "Conductor C"];
-
-    if (legacyRoster) {
-      try {
-        migratedRoster = JSON.parse(legacyRoster);
-      } catch(e) {}
+    function saveState() {
+      localStorage.setItem('fs_conductors', JSON.stringify(conductors));
     }
 
-    const migratedOverrides = {};
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith("conductor_override_")) {
-        const parts = key.split("_");
-        if (parts.length === 5) {
-          const y = parts[2];
-          const m = String(parts[3]).padStart(2, '0');
-          const d = String(parts[4]).padStart(2, '0');
-          migratedOverrides[`${y}-${m}-${d}`] = localStorage.getItem(key);
+    // --- Date Utilities (2nd and 4th Saturdays) ---
+    function getMeetingDates(year, month) {
+      let dates = [];
+      let date = new Date(year, month, 1);
+      let saturdays = [];
+      
+      while (date.getMonth() === month) {
+        if (date.getDay() === 6) { // 6 = Saturday
+          saturdays.push(new Date(date));
         }
+        date.setDate(date.getDate() + 1);
+      }
+      
+      if (saturdays.length >= 2) dates.push(saturdays[1]); // 2nd Saturday
+      if (saturdays.length >= 4) dates.push(saturdays[3]); // 4th Saturday
+      
+      return dates;
+    }
+
+    // --- Non-Freezing Direct Communication Scripts ---
+
+    /**
+     * Send an Email via the default Mail application (mailto scheme)
+     */
+    function emailConductor(email, subject, bodyText) {
+      if (!email) {
+        alert("No email address found for this conductor.");
+        return;
+      }
+      const mailtoUrl = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`; window.location.href = mailtoUrl; }  /** * Send a Text message (SMS scheme on mobile) or copy to clipboard on macOS */ function textConductor(phoneNumber, bodyText) { const isMobile = /iPhone\vert{}iPad\vert{}iPod\vert{}Android/i.test(navigator.userAgent);  if (isMobile) { const cleanPhone = phoneNumber ? phoneNumber.replace(/\D/g, '') : ''; const smsUrl = cleanPhone ? `sms:${cleanPhone}&body=${encodeURIComponent(bodyText)}` : `sms:?body=${encodeURIComponent(bodyText)}`;
+        window.location.href = smsUrl;
+      } else {
+        // macOS Desktop: Copy directly to clipboard to prevent UI window freezes
+        navigator.clipboard.writeText(bodyText).then(() => {
+          alert("Schedule text copied to clipboard. Open Messages (Cmd + Space > Messages) and press Cmd + V to paste.");
+        }).catch(err => {
+          console.error("Clipboard copy failed:", err);
+        });
       }
     }
 
-    const newState = {
-      roster: migratedRoster,
-      overrides: migratedOverrides,
-      blackouts: {}
-    };
-
-    localStorage.setItem("conductor_schedule_state", JSON.stringify(newState));
-    return newState;
-  }
-
-  function saveAppState(state) {
-    localStorage.setItem("conductor_schedule_state", JSON.stringify(state));
-    renderUI();
-  }
-
-  function getMeetingSaturdays(year, month) {
-    let saturdays = [];
-    let date = new Date(year, month, 1);
-    while (date.getMonth() === month) {
-      if (date.getDay() === 6) {
-        saturdays.push(date.getDate());
-      }
-      date.setDate(date.getDate() + 1);
-    }
-    return { second: saturdays[1], fourth: saturdays[3] };
-  }
-
-  // Multi-Year Continuous Rotation Engine
-  function getRotationalConductor(targetYear, targetMonth, targetDay, state) {
-    if (!state.roster || state.roster.length === 0) return "Unassigned";
-
-    let meetingCount = 0;
-    for (let y = START_YEAR; y <= targetYear; y++) {
-      let maxMonth = (y === targetYear) ? targetMonth : 11;
-      for (let m = 0; m <= maxMonth; m++) {
-        const sats = getMeetingSaturdays(y, m);
-        const monthSats = [sats.second, sats.fourth];
-
-        for (let day of monthSats) {
-          if (!day) continue;
-          if (y === targetYear && m === targetMonth && day > targetDay) break;
-
-          const dateKey = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-          
-          if (y === targetYear && m === targetMonth && day === targetDay) {
-            return state.roster[meetingCount % state.roster.length];
-          }
-
-          if (!state.blackouts[dateKey]) {
-            meetingCount++;
-          }
-        }
-      }
-    }
-    return state.roster[0];
-  }
-
-  /* --- ROSTER CONTROLLERS --- */
-  function addConductor() {
-    const input = document.getElementById("newConductorInput");
-    const name = input.value.trim();
-    if (name) {
-      const state = loadAppState();
-      state.roster.push(name);
-      input.value = "";
-      saveAppState(state);
-    }
-  }
-
-  function removeConductor(index) {
-    const state = loadAppState();
-    state.roster.splice(index, 1);
-    saveAppState(state);
-  }
-
-  function renderRoster(state) {
-    const container = document.getElementById("rosterContainer");
-    container.innerHTML = "";
-    if (state.roster.length === 0) {
-      container.innerHTML = `<span style="font-size:0.85rem; color:#94a3b8;">No conductors added. Add names above.</span>`;
-      return;
-    }
-    state.roster.forEach((name, index) => {
-      const tag = document.createElement("div");
-      tag.className = "tag";
-      const safeName = name.replace(/'/g, "\\'");
-      tag.innerHTML = `
-        <span class="tag-num">${index + 1}</span>
-        <span>${name}</span>
-        <button class="btn-link" style="color:#3730a3; font-size:0.75rem; padding:0 4px; font-weight:600;" onclick="shareConductorICS('${safeName}')" title="Send individual .ics via text or email">📤 Share .ics</button>
-        <button class="tag-remove" onclick="removeConductor(${index})" title="Remove">&times;</button>
-      `;
-      container.appendChild(tag);
-    });
-  }
-
-  /* --- VIEW & CALENDAR CONTROLLERS --- */
-  function setViewMode(mode) {
-    currentViewMode = mode;
-    document.getElementById("btnViewCalendar").className = mode === 'calendar' ? 'active' : 'outline';
-    document.getElementById("btnViewTable").className = mode === 'table' ? 'active' : 'outline';
-    document.getElementById("calendarViewSection").style.display = mode === 'calendar' ? 'block' : 'none';
-    document.getElementById("tableViewSection").style.display = mode === 'table' ? 'block' : 'none';
-    renderUI();
-  }
-
-  function changeMonth(delta) {
-    currentDate.setMonth(currentDate.getMonth() + delta);
-    document.getElementById("yearSelect").value = currentDate.getFullYear();
-    renderUI();
-  }
-
-  function handleYearChange() {
-    const year = parseInt(document.getElementById("yearSelect").value, 10);
-    currentDate.setFullYear(year);
-    renderUI();
-  }
-
-  function toggleBlackout(dateKey) {
-    const state = loadAppState();
-    if (state.blackouts[dateKey]) {
-      delete state.blackouts[dateKey];
-    } else {
-      state.blackouts[dateKey] = true;
-    }
-    saveAppState(state);
-  }
-
-  function setOverride(dateKey, conductorName) {
-    const state = loadAppState();
-    if (!conductorName) {
-      delete state.overrides[dateKey];
-    } else {
-      state.overrides[dateKey] = conductorName;
-    }
-    saveAppState(state);
-  }
-
-  function renderUI() {
-    const state = loadAppState();
-    renderRoster(state);
-
-    if (currentViewMode === "calendar") {
-      renderCalendarView(state);
-    } else {
-      renderTableView(state);
-    }
-  }
-
-  function renderCalendarView(state) {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-
-    document.getElementById("monthYearTitle").innerText = `${monthNames[month]} ${year}`;
-    const grid = document.getElementById("calendarGrid");
-    grid.innerHTML = "";
-
-    const dayHeaders = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    dayHeaders.forEach(day => {
-      const header = document.createElement("div");
-      header.className = "day-header";
-      header.innerText = day;
-      grid.appendChild(header);
-    });
-
-    const firstDayIndex = new Date(year, month, 1).getDay();
-    const totalDays = new Date(year, month + 1, 0).getDate();
-    const meetingSaturdays = getMeetingSaturdays(year, month);
-    const today = new Date();
-
-    for (let i = 0; i < firstDayIndex; i++) {
-      const emptyCell = document.createElement("div");
-      emptyCell.className = "day-cell empty";
-      grid.appendChild(emptyCell);
-    }
-
-    for (let day = 1; day <= totalDays; day++) {
-      const cell = document.createElement("div");
-      cell.className = "day-cell";
-
-      const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day;
-      if (isToday) cell.style.border = "2px solid var(--danger)";
-
-      const dayNum = document.createElement("div");
-      dayNum.className = "day-number";
-      dayNum.innerText = day;
-      cell.appendChild(dayNum);
-
-      const is2ndSaturday = day === meetingSaturdays.second;
-      const is4thSaturday = day === meetingSaturdays.fourth;
-
-      if (is2ndSaturday || is4thSaturday) {
-        const monthStr = String(month + 1).padStart(2, '0');
-        const dayStr = String(day).padStart(2, '0');
-        const dateKey = `${year}-${monthStr}-${dayStr}`;
-
-        const isBlackout = !!state.blackouts[dateKey];
-        const savedOverride = state.overrides[dateKey];
-        const autoAssigned = getRotationalConductor(year, month, day, state);
-
-        if (isBlackout) {
-          cell.classList.add("blackout");
-          const tag = document.createElement("div");
-          tag.className = "blackout-tag";
-          tag.innerText = "Cancelled";
-          cell.appendChild(tag);
-        } else {
-          cell.classList.add("meeting");
-          const tag = document.createElement("div");
-          tag.className = "meeting-tag";
-          tag.innerText = is2ndSaturday ? "2nd Sat Meeting" : "4th Sat Meeting";
-          cell.appendChild(tag);
-
-          const activeConductor = savedOverride || autoAssigned;
-          const nameParts = (activeConductor || "").trim().split(/\s+/);
-          const firstName = nameParts[0] || "";
-          const lastName = nameParts.slice(1).join(" ") || "";
-
-          const nameDisplay = document.createElement("div");
-          nameDisplay.className = "conductor-name-display";
-          if (lastName) {
-            nameDisplay.innerHTML = `<div class="first-name">${firstName}</div><div class="last-name">${lastName}</div>`;
-          } else {
-            nameDisplay.innerHTML = `<div class="first-name">${firstName}</div>`;
-          }
-          cell.appendChild(nameDisplay);
-
-          const select = document.createElement("select");
-          select.className = "conductor-select";
-
-          const autoOpt = document.createElement("option");
-          autoOpt.value = "";
-          autoOpt.innerText = `Auto (${autoAssigned})`;
-          select.appendChild(autoOpt);
-
-          state.roster.forEach(name => {
-            const opt = document.createElement("option");
-            opt.value = name;
-            opt.innerText = name;
-            select.appendChild(opt);
+    /**
+     * Safe Native Share (Text-only payload to avoid macOS file-modal conflict)
+     */
+    async function shareScheduleText(title, text) {
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: title,
+            text: text
           });
-
-          select.value = savedOverride || "";
-          select.addEventListener("change", (e) => setOverride(dateKey, e.target.value));
-          cell.appendChild(select);
+        } catch (err) {
+          if (err.name !== 'AbortError') {
+            console.error('Sharing failed:', err);
+          }
         }
-
-        const actionsDiv = document.createElement("div");
-        actionsDiv.className = "cell-actions";
-        actionsDiv.innerHTML = `<button class="btn-link" onclick="toggleBlackout('${dateKey}')">${isBlackout ? 'Restore' : 'Cancel'}</button>`;
-        cell.appendChild(actionsDiv);
+      } else {
+        await navigator.clipboard.writeText(text);
+        alert('Schedule details copied to clipboard!');
       }
-
-      grid.appendChild(cell);
-    }
-  }
-
-  function renderTableView(state) {
-    const selectedYear = parseInt(document.getElementById("yearSelect").value, 10);
-    const tbody = document.getElementById("scheduleTableBody");
-    tbody.innerHTML = "";
-
-    for (let month = 0; month < 12; month++) {
-      const sats = getMeetingSaturdays(selectedYear, month);
-      const meetingDays = [sats.second, sats.fourth];
-
-      meetingDays.forEach(day => {
-        if (!day) return;
-        const monthStr = String(month + 1).padStart(2, '0');
-        const dayStr = String(day).padStart(2, '0');
-        const dateKey = `${selectedYear}-${monthStr}-${dayStr}`;
-
-        const isBlackout = !!state.blackouts[dateKey];
-        const override = state.overrides[dateKey];
-        const autoAssigned = getRotationalConductor(selectedYear, month, day, state);
-        const conductor = isBlackout ? "CANCELLED / NO MEETING" : (override || autoAssigned);
-
-        let statusBadge = `<span class="badge badge-standard">Standard</span>`;
-        if (isBlackout) statusBadge = `<span class="badge badge-blackout">Cancelled</span>`;
-        else if (override) statusBadge = `<span class="badge badge-override">Override</span>`;
-
-        const displayDate = new Date(selectedYear, month, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-
-        const row = document.createElement("tr");
-        row.innerHTML = `
-          <td><strong>${displayDate}</strong></td>
-          <td>${conductor}</td>
-          <td>${statusBadge}</td>
-          <td>
-            <button class="outline" style="padding:2px 6px; min-height:auto;" onclick="promptTableOverride('${dateKey}', '${override || ''}')">Override</button>
-            <button class="outline" style="padding:2px 6px; min-height:auto;" onclick="toggleBlackout('${dateKey}')">${isBlackout ? 'Restore' : 'Cancel'}</button>
-          </td>
-        `;
-        tbody.appendChild(row);
-      });
-    }
-  }
-
-  function promptTableOverride(dateKey, currentOverride) {
-    const state = loadAppState();
-    const conductorList = state.roster.join(", ");
-    const choice = prompt(`Select conductor for ${dateKey}:\nAvailable: ${conductorList}`, currentOverride);
-    if (choice !== null) {
-      setOverride(dateKey, choice.trim());
-    }
-  }
-
-  /* --- EXPORT & SHARE HANDLERS --- */
-  function showStatus(msg) {
-    const el = document.getElementById("statusMsg");
-    el.innerText = msg;
-    setTimeout(() => { el.innerText = ""; }, 3000);
-  }
-
-  async function shareConductorICS(conductorName) {
-    const state = loadAppState();
-    const selectedYear = parseInt(document.getElementById("yearSelect").value, 10);
-    const nowString = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-
-    let icsLines = [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "PRODID:-//Conductor Schedule Generator//EN",
-      "CALSCALE:GREGORIAN",
-      "METHOD:PUBLISH",
-      `X-WR-CALNAME:${conductorName} - FS Conductor Schedule ${selectedYear}`
-    ];
-
-    let assignedDates = [];
-    let eventCount = 0;
-
-    for (let month = 0; month < 12; month++) {
-      const sats = getMeetingSaturdays(selectedYear, month);
-      const meetingDays = [sats.second, sats.fourth];
-
-      meetingDays.forEach(day => {
-        if (!day) return;
-        const monthStr = String(month + 1).padStart(2, '0');
-        const dayStr = String(day).padStart(2, '0');
-        const dateKey = `${selectedYear}-${monthStr}-${dayStr}`;
-
-        if (state.blackouts && state.blackouts[dateKey]) return;
-
-        const conductor = (state.overrides && state.overrides[dateKey]) || getRotationalConductor(selectedYear, month, day, state);
-
-        if (conductor === conductorName) {
-          eventCount++;
-          const dateStr = `${selectedYear}${monthStr}${dayStr}`;
-          const formattedDate = new Date(selectedYear, month, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-          assignedDates.push(`• ${formattedDate} (9:30 AM)`);
-
-          icsLines.push(
-            "BEGIN:VEVENT",
-            `UID:conductor-${dateKey}@conductorschedule.local`,
-            `DTSTAMP:${nowString}`,
-            `DTSTART;VALUE=DATE:${dateStr}`,
-            `DTEND;VALUE=DATE:${dateStr}`,
-            `SUMMARY:FS Conductor: ${conductor} (9:30 AM)`,
-            `LOCATION:Kingdom Hall`,
-            `DESCRIPTION:Carefully examine km 3/15 pp. 3-6 for direction & suggestions.`,
-            "STATUS:CONFIRMED",
-            "BEGIN:VALARM",
-            "TRIGGER:-PT24H",
-            "ACTION:DISPLAY",
-            `DESCRIPTION:Reminder: FS Conductor Duty Tomorrow - ${conductor}`,
-            "END:VALARM",
-            "BEGIN:VALARM",
-            "TRIGGER:-PT12H",
-            "ACTION:DISPLAY",
-            `DESCRIPTION:Reminder: FS Conductor Duty in 12 Hours - ${conductor}`,
-            "END:VALARM",
-            "END:VEVENT"
-          );
-        }
-      });
     }
 
-    if (eventCount === 0) {
-      alert(`No scheduled dates found for ${conductorName} in ${selectedYear}.`);
-      return;
-    }
+    /**
+     * Notification Dispatcher
+     */
+    function notifyConductor(conductorName, dateStr, actionType, email = '', phone = '') {
+      const subject = `Conductor Assignment: ${dateStr}`;
+      const message = `Hello ${conductorName},\n\nYou are scheduled as Conductor for:${dateStr}.\n\nPlease let me know if you need to swap dates.`;
 
-    icsLines.push("END:VCALENDAR");
-
-    // 1. Download the .ics file automatically
-    const icsData = icsLines.join("\r\n");
-    const fileName = `FS_Conductor_${conductorName.replace(/\s+/g, '_')}_${selectedYear}.ics`;
-    const blob = new Blob([icsData], { type: "text/calendar;charset=utf-8" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    // 2. Open Native Share Sheet with formatted schedule text
-    const shareText = `FS Conductor Schedule for ${conductorName} (${selectedYear}):\n` + assignedDates.join("\n");
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `FS Conductor Schedule - ${conductorName}`,
-          text: shareText
-        });
-        showStatus(`Shared & downloaded for ${conductorName}!`);
-      } catch (err) {
-        // User dismissed share sheet
+      if (actionType === 'email') {
+        emailConductor(email, subject, message);
+      } else if (actionType === 'text') {
+        textConductor(phone, message);
+      } else if (actionType === 'share') {
+        shareScheduleText(subject, message);
       }
-    } else {
-      showStatus(`Downloaded .ics for ${conductorName}!`);
-    }
-  }
-
-  function exportMasterICS() {
-    const state = loadAppState();
-    const selectedYear = parseInt(document.getElementById("yearSelect").value, 10);
-    const nowString = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-    
-    let icsLines = [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "PRODID:-//Conductor Schedule Generator//EN",
-      "CALSCALE:GREGORIAN",
-      "METHOD:PUBLISH",
-      `X-WR-CALNAME:Conductor Schedule ${selectedYear}`
-    ];
-
-    for (let month = 0; month < 12; month++) {
-      const sats = getMeetingSaturdays(selectedYear, month);
-      const meetingDays = [sats.second, sats.fourth];
-
-      meetingDays.forEach(day => {
-        if (!day) return;
-        const monthStr = String(month + 1).padStart(2, '0');
-        const dayStr = String(day).padStart(2, '0');
-        const dateKey = `${selectedYear}-${monthStr}-${dayStr}`;
-
-        if (state.blackouts && state.blackouts[dateKey]) return;
-
-        const conductor = (state.overrides && state.overrides[dateKey]) || getRotationalConductor(selectedYear, month, day, state);
-        const dateStr = `${selectedYear}${monthStr}${dayStr}`;
-
-        icsLines.push(
-          "BEGIN:VEVENT",
-          `UID:conductor-${dateKey}@conductorschedule.local`,
-          `DTSTAMP:${nowString}`,
-          `DTSTART;VALUE=DATE:${dateStr}`,
-          `DTEND;VALUE=DATE:${dateStr}`,
-          `SUMMARY:FS Conductor: ${conductor} (9:30 AM)`,
-          `LOCATION:Kingdom Hall`,
-          `DESCRIPTION:Carefully examine km 3/15 pp. 3-6 for direction & suggestions.`,
-          "STATUS:CONFIRMED",
-          "BEGIN:VALARM",
-          "TRIGGER:-PT24H",
-          "ACTION:DISPLAY",
-          `DESCRIPTION:Reminder: FS Conductor Duty Tomorrow - ${conductor}`,
-          "END:VALARM",
-          "BEGIN:VALARM",
-          "TRIGGER:-PT12H",
-          "ACTION:DISPLAY",
-          `DESCRIPTION:Reminder: FS Conductor Duty in 12 Hours - ${conductor}`,
-          "END:VALARM",
-          "END:VEVENT"
-        );
-      });
     }
 
-    icsLines.push("END:VCALENDAR");
+    // --- .ICS Calendar Exporters ---
+    function generateICS(title, date, description) {
+      const start = date.toISOString().replace(/-|:|\.\d\d\d/g, "");
+      const end = new Date(date.getTime() + 2 * 60 * 60 * 1000).toISOString().replace(/-|:|\.\d\d\d/g, "");
+      return `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//FS Conductor Schedule//EN
+BEGIN:VEVENT
+SUMMARY:${title}
+DESCRIPTION:${description}
+DTSTART:${start}
+DTEND:${end}
+END:VEVENT
+END:VCALENDAR`;
+    }
 
-    const blob = new Blob([icsLines.join("\r\n")], { type: "text/calendar;charset=utf-8" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `Conductor_Schedule_${selectedYear}.ics`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showStatus("Exported Master .ics!");
-  }
+    function downloadICS(filename, content) {
+      const blob = new Blob([content], { type: 'text/calendar;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
 
-  function exportMonthICS() {
-    const state = loadAppState();
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const sats = getMeetingSaturdays(year, month);
-    const meetingDays = [sats.second, sats.fourth];
-    const nowString = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    function exportSingleICS(name, dateStr, isoDate) {
+      const date = new Date(isoDate);
+      const icsData = generateICS(`FS Conductor: ${name}`, date, `Scheduled assignment for ${name}`);
+      const filename = `FS_Conductor_${name.replace(/\s+/g, '_')}_${dateStr.replace(/[^a-zA-Z0-9]/g, '_')}.ics`;
+      downloadICS(filename, icsData);
+    }
 
-    let icsLines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Conductor Schedule//EN"];
-
-    meetingDays.forEach(day => {
-      if (!day) return;
-      const monthStr = String(month + 1).padStart(2, '0');
-      const dayStr = String(day).padStart(2, '0');
-      const dateKey = `${year}-${monthStr}-${dayStr}`;
-
-      if (state.blackouts && state.blackouts[dateKey]) return;
-
-      const conductor = (state.overrides && state.overrides[dateKey]) || getRotationalConductor(year, month, day, state);
-      const dateStr = `${year}${monthStr}${dayStr}`;
-
-      icsLines.push(
-        "BEGIN:VEVENT",
-        `UID:conductor-${dateKey}@conductorschedule.local`,
-        `DTSTAMP:${nowString}`,
-        `DTSTART;VALUE=DATE:${dateStr}`,
-        `DTEND;VALUE=DATE:${dateStr}`,
-        `SUMMARY:FS Conductor: ${conductor} (9:30 AM)`,
-        `LOCATION:Kingdom Hall`,
-        `DESCRIPTION:Carefully examine km 3/15 pp. 3-6 for direction & suggestions.`,
-        "STATUS:CONFIRMED",
-        "BEGIN:VALARM",
-        "TRIGGER:-PT24H",
-        "ACTION:DISPLAY",
-        `DESCRIPTION:Reminder: FS Conductor Duty Tomorrow - ${conductor}`,
-        "END:VALARM",
-        "BEGIN:VALARM",
-        "TRIGGER:-PT12H",
-        "ACTION:DISPLAY",
-        `DESCRIPTION:Reminder: FS Conductor Duty in 12 Hours - ${conductor}`,
-        "END:VALARM",
-        "END:VEVENT"
-      );
-    });
-
-    icsLines.push("END:VCALENDAR");
-
-    const blob = new Blob([icsLines.join("\r\n")], { type: "text/calendar;charset=utf-8" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `Conductor_Schedule_${monthNames[month]}_${year}.ics`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showStatus("Exported Month .ics!");
-  }
-
-  function copyTextSummary() {
-    const state = loadAppState();
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const sats = getMeetingSaturdays(year, month);
-
-    const getFormattedSlot = (day) => {
-      if (!day) return "";
-      const monthStr = String(month + 1).padStart(2, '0');
-      const dayStr = String(day).padStart(2, '0');
-      const dateKey = `${year}-${monthStr}-${dayStr}`;
-
-      if (state.blackouts[dateKey]) return "CANCELLED";
-      return state.overrides[dateKey] || getRotationalConductor(year, month, day, state);
-    };
-
-    const c2 = getFormattedSlot(sats.second);
-    const c4 = getFormattedSlot(sats.fourth);
-
-    const text = `Conductor Schedule - ${monthNames[month]} ${year}\n` +
-      `----------------------------------------\n` +
-      `• ${monthNames[month]} ${sats.second}, ${year} (2nd Sat): ${c2}\n` +
-      `• ${monthNames[month]} ${sats.fourth}, ${year} (4th Sat): ${c4}`;
-
-    navigator.clipboard.writeText(text).then(() => {
-      showStatus("Copied to clipboard!");
-    });
-  }
-
-  /* --- JSON BACKUP & RESTORE HANDLERS --- */
-  function exportJSONBackup() {
-    const state = loadAppState();
-    const jsonStr = JSON.stringify(state, null, 2);
-    const blob = new Blob([jsonStr], { type: "application/json" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    const dateStamp = new Date().toISOString().split('T')[0];
-    link.download = `conductor-schedule-backup-${dateStamp}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showStatus("Backup JSON downloaded!");
-  }
-
-  function importJSONBackup(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      try {
-        const importedData = JSON.parse(e.target.result);
-        if (importedData && Array.isArray(importedData.roster)) {
-          saveAppState(importedData);
-          showStatus("Schedule restored successfully!");
-        } else {
-          alert("Invalid backup file format. Expected a conductor schedule backup object.");
-        }
-      } catch (err) {
-        alert("Error reading JSON backup file: " + err.message);
-      }
-    };
-    reader.readAsText(file);
-    event.target.value = "";
-  }
-
-  // Register PWA Service Worker with auto-reload on update
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js').then((registration) => {
-        registration.addEventListener('updatefound', () => {
-          const newWorker = registration.installing;
-          if (newWorker) {
-            newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                newWorker.postMessage({ action: 'skipWaiting' });
-                window.location.reload();
-              }
-            });
+    function exportMasterICS() {
+      let masterContent = `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//FS Conductor Schedule Master//EN\n`;
+      const year = parseInt(document.getElementById('yearSelect').value);
+      
+      let count = 0;
+      for (let m = 0; m < 12; m++) {
+        const dates = getMeetingDates(year, m);
+        dates.forEach(d => {
+          if (conductors.length > 0) {
+            const conductor = conductors[count % conductors.length];
+            const start = d.toISOString().replace(/-|:|\.\d\d\d/g, "");
+            const end = new Date(d.getTime() + 2 * 60 * 60 * 1000).toISOString().replace(/-|:|\.\d\d\d/g, "");
+            masterContent += `BEGIN:VEVENT\nSUMMARY:FS Conductor: ${conductor.name}\nDTSTART:${start}\nDTEND:${end}\nEND:VEVENT\n`;
+            count++;
           }
         });
-      }).catch(() => {});
-    });
-
-    let refreshing = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!refreshing) {
-        refreshing = true;
-        window.location.reload();
       }
-    });
-  }
+      masterContent += `END:VCALENDAR`;
+      downloadICS("schedule.ics", masterContent);
+    }
 
-  window.addEventListener("DOMContentLoaded", renderUI);
-</script>
+    // --- Render Functions & Selectors ---
+    function initSelectors() {
+      const monthSel = document.getElementById('monthSelect');
+      const yearSel = document.getElementById('yearSelect');
+      const now = new Date();
+      
+      monthNames.forEach((m, i) => {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = m;
+        if (i === now.getMonth()) opt.selected = true;
+        monthSel.appendChild(opt);
+      });
 
-</body>
-</html>
+      const currentYear = now.getFullYear();
+      for (let y = currentYear - 1; y <= currentYear + 2; y++) {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = y;
+        if (y === currentYear) opt.selected = true;
+        yearSel.appendChild(opt);
+      }
+    }
+
+    function renderSchedule() {
+      const container = document.getElementById('scheduleContainer');
+      container.innerHTML = '';
+      
+      const year = parseInt(document.getElementById('yearSelect').value);
+      const month = parseInt(document.getElementById('monthSelect').value);
+      const dates = getMeetingDates(year, month);
+
+      if (conductors.length === 0) {
+        container.innerHTML = '<p>No conductors in roster.</p>';
+        return;
+      }
+
+      let totalMeetingsPrior = 0;
+      for (let m = 0; m < month; m++) {
+        totalMeetingsPrior += getMeetingDates(year, m).length;
+      }
+
+      dates.forEach((d, idx) => {
+        const conductorIndex = (totalMeetingsPrior + idx) % conductors.length;
+        const c = conductors[conductorIndex];
+        const dateStr = d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        
+        const card = document.createElement('div');
+        card.className = 'card assignment-card';
+        card.innerHTML = `
+          <div class="assignment-header">${c.name}</div>
+          <div class="assignment-date">${dateStr}</div>
+          <div class="action-buttons">
+            <button onclick="notifyConductor('${c.name}', '${dateStr}', 'email', '${c.email}', '${c.phone}')">Email</button>
+            <button onclick="notifyConductor('${c.name}', '${dateStr}', 'text', '${c.email}', '${c.phone}')">Text</button>
+            <button onclick="notifyConductor('${c.name}', '${dateStr}', 'share', '${c.email}', '${c.phone
