@@ -550,9 +550,11 @@
     state.roster.forEach((name, index) => {
       const tag = document.createElement("div");
       tag.className = "tag";
+      const safeName = name.replace(/'/g, "\\'");
       tag.innerHTML = `
         <span class="tag-num">${index + 1}</span>
         <span>${name}</span>
+        <button class="btn-link" style="color:#3730a3; font-size:0.75rem; padding:0 4px; font-weight:600;" onclick="shareConductorICS('${safeName}')" title="Send individual .ics via text or email">📤 Share .ics</button>
         <button class="tag-remove" onclick="removeConductor(${index})" title="Remove">&times;</button>
       `;
       container.appendChild(tag);
@@ -770,11 +772,112 @@
     }
   }
 
-  /* --- EXPORT HANDLERS --- */
+  /* --- EXPORT & SHARE HANDLERS --- */
   function showStatus(msg) {
     const el = document.getElementById("statusMsg");
     el.innerText = msg;
     setTimeout(() => { el.innerText = ""; }, 3000);
+  }
+
+  async function shareConductorICS(conductorName) {
+    const state = loadAppState();
+    const selectedYear = parseInt(document.getElementById("yearSelect").value, 10);
+    const nowString = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+
+    let icsLines = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Conductor Schedule Generator//EN",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+      `X-WR-CALNAME:${conductorName} - FS Conductor Schedule ${selectedYear}`
+    ];
+
+    let eventCount = 0;
+
+    for (let month = 0; month < 12; month++) {
+      const sats = getMeetingSaturdays(selectedYear, month);
+      const meetingDays = [sats.second, sats.fourth];
+
+      meetingDays.forEach(day => {
+        if (!day) return;
+        const monthStr = String(month + 1).padStart(2, '0');
+        const dayStr = String(day).padStart(2, '0');
+        const dateKey = `${selectedYear}-${monthStr}-${dayStr}`;
+
+        if (state.blackouts && state.blackouts[dateKey]) return;
+
+        const conductor = (state.overrides && state.overrides[dateKey]) || getRotationalConductor(selectedYear, month, day, state);
+
+        if (conductor === conductorName) {
+          eventCount++;
+          const dateStr = `${selectedYear}${monthStr}${dayStr}`;
+
+          icsLines.push(
+            "BEGIN:VEVENT",
+            `UID:conductor-${dateKey}@conductorschedule.local`,
+            `DTSTAMP:${nowString}`,
+            `DTSTART;VALUE=DATE:${dateStr}`,
+            `DTEND;VALUE=DATE:${dateStr}`,
+            `SUMMARY:FS Conductor: ${conductor} (9:30 AM)`,
+            `LOCATION:Kingdom Hall`,
+            `DESCRIPTION:Carefully examine km 3/15 pp. 3-6 for direction & suggestions.`,
+            "STATUS:CONFIRMED",
+            "BEGIN:VALARM",
+            "TRIGGER:-PT24H",
+            "ACTION:DISPLAY",
+            `DESCRIPTION:Reminder: FS Conductor Duty Tomorrow - ${conductor}`,
+            "END:VALARM",
+            "BEGIN:VALARM",
+            "TRIGGER:-PT12H",
+            "ACTION:DISPLAY",
+            `DESCRIPTION:Reminder: FS Conductor Duty in 12 Hours - ${conductor}`,
+            "END:VALARM",
+            "END:VEVENT"
+          );
+        }
+      });
+    }
+
+    icsLines.push("END:VCALENDAR");
+
+    if (eventCount === 0) {
+      alert(`No scheduled dates found for ${conductorName} in ${selectedYear}.`);
+      return;
+    }
+
+    const icsData = icsLines.join("\r\n");
+    const fileName = `FS_Conductor_${conductorName.replace(/\s+/g, '_')}_${selectedYear}.ics`;
+    const file = new File([icsData], fileName, { type: "text/calendar" });
+
+    // Native Web Share Sheet for iMessage / SMS / Mail
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          title: `FS Conductor Schedule - ${conductorName}`,
+          text: `Attached is your FS Conductor schedule for ${selectedYear}.`,
+          files: [file]
+        });
+        showStatus(`Shared schedule for ${conductorName}!`);
+        return;
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.error("Web Share failed:", err);
+        } else {
+          return;
+        }
+      }
+    }
+
+    // Fallback direct download if share sheet unavailable
+    const blob = new Blob([icsData], { type: "text/calendar;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showStatus(`Downloaded .ics for ${conductorName}!`);
   }
 
   function exportMasterICS() {
