@@ -203,6 +203,8 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 12px;
     }
 
     .nav-header h2 { font-size: 1.25rem; margin: 0; }
@@ -405,9 +407,12 @@
   <!-- MONTHLY CALENDAR VIEW -->
   <div id="calendarViewSection">
     <div class="nav-header">
-      <button class="secondary" onclick="changeMonth(-1)">&larr; Previous</button>
+      <div class="controls-group">
+        <button class="secondary" onclick="changeMonth(-1)">&larr; Previous</button>
+        <button class="outline" onclick="goToToday()">Today</button>
+        <button class="secondary" onclick="changeMonth(1)">Next &rarr;</button>
+      </div>
       <h2 id="monthYearTitle"></h2>
-      <button class="secondary" onclick="changeMonth(1)">Next &rarr;</button>
     </div>
     <div class="calendar-grid" id="calendarGrid"></div>
   </div>
@@ -459,93 +464,4 @@
         if (parts.length === 5) {
           const y = parts[2];
           const m = String(parts[3]).padStart(2, '0');
-          const d = String(parts[4]).padStart(2, '0');
-          migratedOverrides[`${y}-${m}-${d}`] = localStorage.getItem(key);
-        }
-      }
-    }
-
-    const newState = {
-      roster: migratedRoster,
-      overrides: migratedOverrides,
-      blackouts: {}
-    };
-
-    localStorage.setItem("conductor_schedule_state", JSON.stringify(newState));
-    return newState;
-  }
-
-  function saveAppState(state) {
-    localStorage.setItem("conductor_schedule_state", JSON.stringify(state));
-    renderUI();
-  }
-
-  function getMeetingSaturdays(year, month) {
-    let saturdays = [];
-    let date = new Date(year, month, 1);
-    while (date.getMonth() === month) {
-      if (date.getDay() === 6) {
-        saturdays.push(date.getDate());
-      }
-      date.setDate(date.getDate() + 1);
-    }
-    return { second: saturdays[1], fourth: saturdays[3] };
-  }
-
-  // Multi-Year Continuous Rotation Engine
-  function getRotationalConductor(targetYear, targetMonth, targetDay, state) {
-    if (!state.roster || state.roster.length === 0) return "Unassigned";
-
-    let meetingCount = 0;
-    for (let y = START_YEAR; y <= targetYear; y++) {
-      let maxMonth = (y === targetYear) ? targetMonth : 11;
-      for (let m = 0; m <= maxMonth; m++) {
-        const sats = getMeetingSaturdays(y, m);
-        const monthSats = [sats.second, sats.fourth];
-
-        for (let day of monthSats) {
-          if (!day) continue;
-          if (y === targetYear && m === targetMonth && day > targetDay) break;
-
-          const dateKey = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-          
-          if (y === targetYear && m === targetMonth && day === targetDay) {
-            return state.roster[meetingCount % state.roster.length];
-          }
-
-          if (!state.blackouts[dateKey]) {
-            meetingCount++;
-          }
-        }
-      }
-    }
-    return state.roster[0];
-  }
-
-  /* --- ROSTER CONTROLLERS --- */
-  function addConductor() {
-    const input = document.getElementById("newConductorInput");
-    const name = input.value.trim();
-    if (name) {
-      const state = loadAppState();
-      state.roster.push(name);
-      input.value = "";
-      saveAppState(state);
-    }
-  }
-
-  function removeConductor(index) {
-    const state = loadAppState();
-    state.roster.splice(index, 1);
-    saveAppState(state);
-  }
-
-  function renderRoster(state) {
-    const container = document.getElementById("rosterContainer");
-    container.innerHTML = "";
-    if (state.roster.length === 0) {
-      container.innerHTML = `<span style="font-size:0.85rem; color:#94a3b8;">No conductors added. Add names above.</span>`;
-      return;
-    }
-    state.roster.forEach((name, index) => {
-      const tag = document.createElement("div
+          const d = String(parts
