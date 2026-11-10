@@ -464,4 +464,681 @@
         if (parts.length === 5) {
           const y = parts[2];
           const m = String(parts[3]).padStart(2, '0');
-          const d = String(parts
+          const d = String(parts[4]).padStart(2, '0');
+          migratedOverrides[`${y}-${m}-${d}`] = localStorage.getItem(key);
+        }
+      }
+    }
+
+    const newState = {
+      roster: migratedRoster,
+      overrides: migratedOverrides,
+      blackouts: {}
+    };
+
+    localStorage.setItem("conductor_schedule_state", JSON.stringify(newState));
+    return newState;
+  }
+
+  function saveAppState(state) {
+    localStorage.setItem("conductor_schedule_state", JSON.stringify(state));
+    renderUI();
+  }
+
+  function getMeetingSaturdays(year, month) {
+    let saturdays = [];
+    let date = new Date(year, month, 1);
+    while (date.getMonth() === month) {
+      if (date.getDay() === 6) {
+        saturdays.push(date.getDate());
+      }
+      date.setDate(date.getDate() + 1);
+    }
+    return { second: saturdays[1], fourth: saturdays[3] };
+  }
+
+  // Multi-Year Continuous Rotation Engine
+  function getRotationalConductor(targetYear, targetMonth, targetDay, state) {
+    if (!state.roster || state.roster.length === 0) return "Unassigned";
+
+    let meetingCount = 0;
+    for (let y = START_YEAR; y <= targetYear; y++) {
+      let maxMonth = (y === targetYear) ? targetMonth : 11;
+      for (let m = 0; m <= maxMonth; m++) {
+        const sats = getMeetingSaturdays(y, m);
+        const monthSats = [sats.second, sats.fourth];
+
+        for (let day of monthSats) {
+          if (!day) continue;
+          if (y === targetYear && m === targetMonth && day > targetDay) break;
+
+          const dateKey = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          
+          if (y === targetYear && m === targetMonth && day === targetDay) {
+            return state.roster[meetingCount % state.roster.length];
+          }
+
+          if (!state.blackouts[dateKey]) {
+            meetingCount++;
+          }
+        }
+      }
+    }
+    return state.roster[0];
+  }
+
+  /* --- ROSTER CONTROLLERS --- */
+  function addConductor() {
+    const input = document.getElementById("newConductorInput");
+    const name = input.value.trim();
+    if (name) {
+      const state = loadAppState();
+      state.roster.push(name);
+      input.value = "";
+      saveAppState(state);
+    }
+  }
+
+  function removeConductor(index) {
+    const state = loadAppState();
+    state.roster.splice(index, 1);
+    saveAppState(state);
+  }
+
+  function renderRoster(state) {
+    const container = document.getElementById("rosterContainer");
+    container.innerHTML = "";
+    if (state.roster.length === 0) {
+      container.innerHTML = `<span style="font-size:0.85rem; color:#94a3b8;">No conductors added. Add names above.</span>`;
+      return;
+    }
+    state.roster.forEach((name, index) => {
+      const tag = document.createElement("div");
+      tag.className = "tag";
+      tag.innerHTML = `
+        <span class="tag-num">${index + 1}</span>
+        <span>${name}</span>
+        <div class="tag-actions">
+          <button class="btn-link btn-ics" data-name="${encodeURIComponent(name)}" style="color:#3730a3; font-size:0.75rem; padding:0 4px; font-weight:600;" title="Download .ics calendar file">📥 .ics</button>
+          <button class="btn-link btn-share" data-name="${encodeURIComponent(name)}" style="color:#059669; font-size:0.75rem; padding:0 4px; font-weight:600;" title="Share dates via text or email">📤 Share</button>
+          <button class="tag-remove" onclick="removeConductor(${index})" title="Remove">&times;</button>
+        </div>
+      `;
+      
+      tag.querySelector('.btn-ics').addEventListener('click', (e) => {
+        downloadConductorICS(decodeURIComponent(e.currentTarget.dataset.name));
+      });
+      tag.querySelector('.btn-share').addEventListener('click', (e) => {
+        shareConductorScheduleText(decodeURIComponent(e.currentTarget.dataset.name));
+      });
+
+      container.appendChild(tag);
+    });
+  }
+
+  /* --- VIEW & CALENDAR CONTROLLERS --- */
+  function setViewMode(mode) {
+    currentViewMode = mode;
+    document.getElementById("btnViewCalendar").className = mode === 'calendar' ? 'active' : 'outline';
+    document.getElementById("btnViewTable").className = mode === 'table' ? 'active' : 'outline';
+    document.getElementById("calendarViewSection").style.display = mode === 'calendar' ? 'block' : 'none';
+    document.getElementById("tableViewSection").style.display = mode === 'table' ? 'block' : 'none';
+    renderUI();
+  }
+
+  function changeMonth(delta) {
+    currentDate.setMonth(currentDate.getMonth() + delta);
+    document.getElementById("yearSelect").value = currentDate.getFullYear();
+    renderUI();
+  }
+
+  function goToToday() {
+    currentDate = new Date();
+    document.getElementById("yearSelect").value = currentDate.getFullYear();
+    renderUI();
+  }
+
+  function handleYearChange() {
+    const year = parseInt(document.getElementById("yearSelect").value, 10);
+    currentDate.setFullYear(year);
+    renderUI();
+  }
+
+  function toggleBlackout(dateKey) {
+    const state = loadAppState();
+    if (state.blackouts[dateKey]) {
+      delete state.blackouts[dateKey];
+    } else {
+      state.blackouts[dateKey] = true;
+    }
+    saveAppState(state);
+  }
+
+  function setOverride(dateKey, conductorName) {
+    const state = loadAppState();
+    if (!conductorName) {
+      delete state.overrides[dateKey];
+    } else {
+      state.overrides[dateKey] = conductorName;
+    }
+    saveAppState(state);
+  }
+
+  function renderUI() {
+    const state = loadAppState();
+    renderRoster(state);
+
+    if (currentViewMode === "calendar") {
+      renderCalendarView(state);
+    } else {
+      renderTableView(state);
+    }
+  }
+
+  function renderCalendarView(state) {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+
+    document.getElementById("monthYearTitle").innerText = `${monthNames[month]} ${year}`;
+    const grid = document.getElementById("calendarGrid");
+    grid.innerHTML = "";
+
+    const dayHeaders = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    dayHeaders.forEach(day => {
+      const header = document.createElement("div");
+      header.className = "day-header";
+      header.innerText = day;
+      grid.appendChild(header);
+    });
+
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const totalDays = new Date(year, month + 1, 0).getDate();
+    const meetingSaturdays = getMeetingSaturdays(year, month);
+    const today = new Date();
+
+    for (let i = 0; i < firstDayIndex; i++) {
+      const emptyCell = document.createElement("div");
+      emptyCell.className = "day-cell empty";
+      grid.appendChild(emptyCell);
+    }
+
+    for (let day = 1; day <= totalDays; day++) {
+      const cell = document.createElement("div");
+      cell.className = "day-cell";
+
+      const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day;
+      if (isToday) cell.style.border = "2px solid var(--danger)";
+
+      const dayNum = document.createElement("div");
+      dayNum.className = "day-number";
+      dayNum.innerText = day;
+      cell.appendChild(dayNum);
+
+      const is2ndSaturday = day === meetingSaturdays.second;
+      const is4thSaturday = day === meetingSaturdays.fourth;
+
+      if (is2ndSaturday || is4thSaturday) {
+        const monthStr = String(month + 1).padStart(2, '0');
+        const dayStr = String(day).padStart(2, '0');
+        const dateKey = `${year}-${monthStr}-${dayStr}`;
+
+        const isBlackout = !!state.blackouts[dateKey];
+        const savedOverride = state.overrides[dateKey];
+        const autoAssigned = getRotationalConductor(year, month, day, state);
+
+        if (isBlackout) {
+          cell.classList.add("blackout");
+          const tag = document.createElement("div");
+          tag.className = "blackout-tag";
+          tag.innerText = "Cancelled";
+          cell.appendChild(tag);
+        } else {
+          cell.classList.add("meeting");
+          const tag = document.createElement("div");
+          tag.className = "meeting-tag";
+          tag.innerText = is2ndSaturday ? "2nd Sat Meeting" : "4th Sat Meeting";
+          cell.appendChild(tag);
+
+          const activeConductor = savedOverride || autoAssigned;
+          const nameParts = (activeConductor || "").trim().split(/\s+/);
+          const firstName = nameParts[0] || "";
+          const lastName = nameParts.slice(1).join(" ") || "";
+
+          const nameDisplay = document.createElement("div");
+          nameDisplay.className = "conductor-name-display";
+          if (lastName) {
+            nameDisplay.innerHTML = `<div class="first-name">${firstName}</div><div class="last-name">${lastName}</div>`;
+          } else {
+            nameDisplay.innerHTML = `<div class="first-name">${firstName}</div>`;
+          }
+          cell.appendChild(nameDisplay);
+
+          const select = document.createElement("select");
+          select.className = "conductor-select";
+
+          const autoOpt = document.createElement("option");
+          autoOpt.value = "";
+          autoOpt.innerText = `Auto (${autoAssigned})`;
+          select.appendChild(autoOpt);
+
+          state.roster.forEach(name => {
+            const opt = document.createElement("option");
+            opt.value = name;
+            opt.innerText = name;
+            select.appendChild(opt);
+          });
+
+          select.value = savedOverride || "";
+          select.addEventListener("change", (e) => setOverride(dateKey, e.target.value));
+          cell.appendChild(select);
+        }
+
+        const actionsDiv = document.createElement("div");
+        actionsDiv.className = "cell-actions";
+        actionsDiv.innerHTML = `<button class="btn-link" onclick="toggleBlackout('${dateKey}')">${isBlackout ? 'Restore' : 'Cancel'}</button>`;
+        cell.appendChild(actionsDiv);
+      }
+
+      grid.appendChild(cell);
+    }
+  }
+
+  function renderTableView(state) {
+    const selectedYear = parseInt(document.getElementById("yearSelect").value, 10);
+    const tbody = document.getElementById("scheduleTableBody");
+    tbody.innerHTML = "";
+
+    for (let month = 0; month < 12; month++) {
+      const sats = getMeetingSaturdays(selectedYear, month);
+      const meetingDays = [sats.second, sats.fourth];
+
+      meetingDays.forEach(day => {
+        if (!day) return;
+        const monthStr = String(month + 1).padStart(2, '0');
+        const dayStr = String(day).padStart(2, '0');
+        const dateKey = `${selectedYear}-${monthStr}-${dayStr}`;
+
+        const isBlackout = !!state.blackouts[dateKey];
+        const override = state.overrides[dateKey];
+        const autoAssigned = getRotationalConductor(selectedYear, month, day, state);
+        const conductor = isBlackout ? "CANCELLED / NO MEETING" : (override || autoAssigned);
+
+        let statusBadge = `<span class="badge badge-standard">Standard</span>`;
+        if (isBlackout) statusBadge = `<span class="badge badge-blackout">Cancelled</span>`;
+        else if (override) statusBadge = `<span class="badge badge-override">Override</span>`;
+
+        const displayDate = new Date(selectedYear, month, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td><strong>${displayDate}</strong></td>
+          <td>${conductor}</td>
+          <td>${statusBadge}</td>
+          <td>
+            <button class="outline" style="padding:2px 6px; min-height:auto;" onclick="promptTableOverride('${dateKey}', '${override || ''}')">Override</button>
+            <button class="outline" style="padding:2px 6px; min-height:auto;" onclick="toggleBlackout('${dateKey}')">${isBlackout ? 'Restore' : 'Cancel'}</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+  }
+
+  function promptTableOverride(dateKey, currentOverride) {
+    const state = loadAppState();
+    const conductorList = state.roster.join(", ");
+    const choice = prompt(`Select conductor for ${dateKey}:\nAvailable: ${conductorList}`, currentOverride);
+    if (choice !== null) {
+      setOverride(dateKey, choice.trim());
+    }
+  }
+
+  /* --- EXPORT & SHARE HANDLERS --- */
+  function showStatus(msg) {
+    const el = document.getElementById("statusMsg");
+    el.innerText = msg;
+    setTimeout(() => { el.innerText = ""; }, 3000);
+  }
+
+  function getConductorAssignedDates(conductorName, selectedYear, state) {
+    let assignedDates = [];
+    for (let month = 0; month < 12; month++) {
+      const sats = getMeetingSaturdays(selectedYear, month);
+      const meetingDays = [sats.second, sats.fourth];
+
+      meetingDays.forEach(day => {
+        if (!day) return;
+        const monthStr = String(month + 1).padStart(2, '0');
+        const dayStr = String(day).padStart(2, '0');
+        const dateKey = `${selectedYear}-${monthStr}-${dayStr}`;
+
+        if (state.blackouts && state.blackouts[dateKey]) return;
+
+        const conductor = (state.overrides && state.overrides[dateKey]) || getRotationalConductor(selectedYear, month, day, state);
+
+        if (conductor === conductorName) {
+          const formattedDate = new Date(selectedYear, month, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          assignedDates.push({ dateKey, monthStr, dayStr, day, month, formattedDate });
+        }
+      });
+    }
+    return assignedDates;
+  }
+
+  function downloadConductorICS(conductorName) {
+    const state = loadAppState();
+    const selectedYear = parseInt(document.getElementById("yearSelect").value, 10);
+    const nowString = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const dates = getConductorAssignedDates(conductorName, selectedYear, state);
+
+    if (dates.length === 0) {
+      alert(`No scheduled dates found for ${conductorName} in ${selectedYear}.`);
+      return;
+    }
+
+    let icsLines = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Conductor Schedule Generator//EN",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+      `X-WR-CALNAME:${conductorName} - FS Conductor Schedule ${selectedYear}`
+    ];
+
+    dates.forEach(d => {
+      const dateStr = `${selectedYear}${d.monthStr}${d.dayStr}`;
+      icsLines.push(
+        "BEGIN:VEVENT",
+        `UID:conductor-${d.dateKey}@conductorschedule.local`,
+        `DTSTAMP:${nowString}`,
+        `DTSTART;VALUE=DATE:${dateStr}`,
+        `DTEND;VALUE=DATE:${dateStr}`,
+        `SUMMARY:FS Conductor: ${conductorName} (9:30 AM)`,
+        `LOCATION:Kingdom Hall`,
+        `DESCRIPTION:Carefully examine km 3/15 pp. 3-6 for direction & suggestions.`,
+        "STATUS:CONFIRMED",
+        "BEGIN:VALARM",
+        "TRIGGER:-PT24H",
+        "ACTION:DISPLAY",
+        `DESCRIPTION:Reminder: FS Conductor Duty Tomorrow - ${conductorName}`,
+        "END:VALARM",
+        "BEGIN:VALARM",
+        "TRIGGER:-PT12H",
+        "ACTION:DISPLAY",
+        `DESCRIPTION:Reminder: FS Conductor Duty in 12 Hours - ${conductorName}`,
+        "END:VALARM",
+        "END:VEVENT"
+      );
+    });
+
+    icsLines.push("END:VCALENDAR");
+
+    const icsData = icsLines.join("\r\n");
+    const fileName = `FS_Conductor_${conductorName.replace(/\s+/g, '_')}_${selectedYear}.ics`;
+    const blob = new Blob([icsData], { type: "text/calendar;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showStatus(`Downloaded .ics for ${conductorName}!`);
+  }
+
+  async function shareConductorScheduleText(conductorName) {
+    const state = loadAppState();
+    const selectedYear = parseInt(document.getElementById("yearSelect").value, 10);
+    const dates = getConductorAssignedDates(conductorName, selectedYear, state);
+
+    if (dates.length === 0) {
+      alert(`No scheduled dates found for ${conductorName} in ${selectedYear}.`);
+      return;
+    }
+
+    const dateList = dates.map(d => `• ${d.formattedDate} (9:30 AM)`).join("\n");
+    const shareText = `FS Conductor Schedule for ${conductorName} (${selectedYear}):\n${dateList}`;
+    const shareTitle = `FS Conductor Schedule - ${conductorName}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText
+        });
+        showStatus(`Shared schedule for ${conductorName}!`);
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.error("Web Share error:", err);
+        }
+      }
+    } else {
+      navigator.clipboard.writeText(shareText).then(() => {
+        alert(`Schedule for ${conductorName} copied to clipboard!\n\nYou can now paste (Cmd + V) directly into Messages or Mail.`);
+        showStatus(`Copied schedule to clipboard!`);
+      }).catch(err => {
+        alert(shareText);
+      });
+    }
+  }
+
+  function exportMasterICS() {
+    const state = loadAppState();
+    const selectedYear = parseInt(document.getElementById("yearSelect").value, 10);
+    const nowString = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    
+    let icsLines = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Conductor Schedule Generator//EN",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+      `X-WR-CALNAME:Conductor Schedule ${selectedYear}`
+    ];
+
+    for (let month = 0; month < 12; month++) {
+      const sats = getMeetingSaturdays(selectedYear, month);
+      const meetingDays = [sats.second, sats.fourth];
+
+      meetingDays.forEach(day => {
+        if (!day) return;
+        const monthStr = String(month + 1).padStart(2, '0');
+        const dayStr = String(day).padStart(2, '0');
+        const dateKey = `${selectedYear}-${monthStr}-${dayStr}`;
+
+        if (state.blackouts && state.blackouts[dateKey]) return;
+
+        const conductor = (state.overrides && state.overrides[dateKey]) || getRotationalConductor(selectedYear, month, day, state);
+        const dateStr = `${selectedYear}${monthStr}${dayStr}`;
+
+        icsLines.push(
+          "BEGIN:VEVENT",
+          `UID:conductor-${dateKey}@conductorschedule.local`,
+          `DTSTAMP:${nowString}`,
+          `DTSTART;VALUE=DATE:${dateStr}`,
+          `DTEND;VALUE=DATE:${dateStr}`,
+          `SUMMARY:FS Conductor: ${conductor} (9:30 AM)`,
+          `LOCATION:Kingdom Hall`,
+          `DESCRIPTION:Carefully examine km 3/15 pp. 3-6 for direction & suggestions.`,
+          "STATUS:CONFIRMED",
+          "BEGIN:VALARM",
+          "TRIGGER:-PT24H",
+          "ACTION:DISPLAY",
+          `DESCRIPTION:Reminder: FS Conductor Duty Tomorrow - ${conductor}`,
+          "END:VALARM",
+          "BEGIN:VALARM",
+          "TRIGGER:-PT12H",
+          "ACTION:DISPLAY",
+          `DESCRIPTION:Reminder: FS Conductor Duty in 12 Hours - ${conductor}`,
+          "END:VALARM",
+          "END:VEVENT"
+        );
+      });
+    }
+
+    icsLines.push("END:VCALENDAR");
+
+    const blob = new Blob([icsLines.join("\r\n")], { type: "text/calendar;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `Conductor_Schedule_${selectedYear}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showStatus("Exported Master .ics!");
+  }
+
+  function exportMonthICS() {
+    const state = loadAppState();
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const sats = getMeetingSaturdays(year, month);
+    const meetingDays = [sats.second, sats.fourth];
+    const nowString = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+
+    let icsLines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Conductor Schedule//EN"];
+
+    meetingDays.forEach(day => {
+      if (!day) return;
+      const monthStr = String(month + 1).padStart(2, '0');
+      const dayStr = String(day).padStart(2, '0');
+      const dateKey = `${year}-${monthStr}-${dayStr}`;
+
+      if (state.blackouts && state.blackouts[dateKey]) return;
+
+      const conductor = (state.overrides && state.overrides[dateKey]) || getRotationalConductor(year, month, day, state);
+      const dateStr = `${year}${monthStr}${dayStr}`;
+
+      icsLines.push(
+        "BEGIN:VEVENT",
+        `UID:conductor-${dateKey}@conductorschedule.local`,
+        `DTSTAMP:${nowString}`,
+        `DTSTART;VALUE=DATE:${dateStr}`,
+        `DTEND;VALUE=DATE:${dateStr}`,
+        `SUMMARY:FS Conductor: ${conductor} (9:30 AM)`,
+        `LOCATION:Kingdom Hall`,
+        `DESCRIPTION:Carefully examine km 3/15 pp. 3-6 for direction & suggestions.`,
+        "STATUS:CONFIRMED",
+        "BEGIN:VALARM",
+        "TRIGGER:-PT24H",
+        "ACTION:DISPLAY",
+        `DESCRIPTION:Reminder: FS Conductor Duty Tomorrow - ${conductor}`,
+        "END:VALARM",
+        "BEGIN:VALARM",
+        "TRIGGER:-PT12H",
+        "ACTION:DISPLAY",
+        `DESCRIPTION:Reminder: FS Conductor Duty in 12 Hours - ${conductor}`,
+        "END:VALARM",
+        "END:VEVENT"
+      );
+    });
+
+    icsLines.push("END:VCALENDAR");
+
+    const blob = new Blob([icsLines.join("\r\n")], { type: "text/calendar;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `Conductor_Schedule_${monthNames[month]}_${year}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showStatus("Exported Month .ics!");
+  }
+
+  function copyTextSummary() {
+    const state = loadAppState();
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const sats = getMeetingSaturdays(year, month);
+
+    const getFormattedSlot = (day) => {
+      if (!day) return "";
+      const monthStr = String(month + 1).padStart(2, '0');
+      const dayStr = String(day).padStart(2, '0');
+      const dateKey = `${year}-${monthStr}-${dayStr}`;
+
+      if (state.blackouts[dateKey]) return "CANCELLED";
+      return state.overrides[dateKey] || getRotationalConductor(year, month, day, state);
+    };
+
+    const c2 = getFormattedSlot(sats.second);
+    const c4 = getFormattedSlot(sats.fourth);
+
+    const text = `Conductor Schedule - ${monthNames[month]} ${year}\n` +
+      `----------------------------------------\n` +
+      `• ${monthNames[month]} ${sats.second}, ${year} (2nd Sat): ${c2}\n` +
+      `• ${monthNames[month]} ${sats.fourth}, ${year} (4th Sat): ${c4}`;
+
+    navigator.clipboard.writeText(text).then(() => {
+      showStatus("Copied to clipboard!");
+    });
+  }
+
+  /* --- JSON BACKUP & RESTORE HANDLERS --- */
+  function exportJSONBackup() {
+    const state = loadAppState();
+    const jsonStr = JSON.stringify(state, null, 2);
+    const blob = new Blob([jsonStr], { type: "application/json" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    const dateStamp = new Date().toISOString().split('T')[0];
+    link.download = `conductor-schedule-backup-${dateStamp}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showStatus("Backup JSON downloaded!");
+  }
+
+  function importJSONBackup(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const importedData = JSON.parse(e.target.result);
+        if (importedData && Array.isArray(importedData.roster)) {
+          saveAppState(importedData);
+          showStatus("Schedule restored successfully!");
+        } else {
+          alert("Invalid backup file format. Expected a conductor schedule backup object.");
+        }
+      } catch (err) {
+        alert("Error reading JSON backup file: " + err.message);
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = "";
+  }
+
+  // Register PWA Service Worker with auto-reload on update
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').then((registration) => {
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                newWorker.postMessage({ action: 'skipWaiting' });
+                window.location.reload();
+              }
+            });
+          }
+        });
+      }).catch(() => {});
+    });
+
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) {
+        refreshing = true;
+        window.location.reload();
+      }
+    });
+  }
+
+  window.addEventListener("DOMContentLoaded", renderUI);
+</script>
+
+</body>
+</html>
