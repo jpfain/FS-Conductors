@@ -800,39 +800,93 @@
     setTimeout(() => { el.innerText = ""; }, 3000);
   }
 
-  function getConductorAssignedDates(conductorName, selectedYear, state) {
+  // Get assigned dates filtered by timeframe starting from next upcoming assignment
+  function getConductorAssignedDates(conductorName, rangeOption, state) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const startYear = currentDate.getFullYear();
     let assignedDates = [];
-    for (let month = 0; month < 12; month++) {
-      const sats = getMeetingSaturdays(selectedYear, month);
-      const meetingDays = [sats.second, sats.fourth];
 
-      meetingDays.forEach(day => {
-        if (!day) return;
-        const monthStr = String(month + 1).padStart(2, '0');
-        const dayStr = String(day).padStart(2, '0');
-        const dateKey = `${selectedYear}-${monthStr}-${dayStr}`;
+    // Scan current year and next year to ensure 3-month ranges cross year boundaries smoothly
+    for (let y = startYear; y <= startYear + 1; y++) {
+      for (let month = 0; month < 12; month++) {
+        const sats = getMeetingSaturdays(y, month);
+        const meetingDays = [sats.second, sats.fourth];
 
-        if (state.blackouts && state.blackouts[dateKey]) return;
+        meetingDays.forEach(day => {
+          if (!day) return;
+          const monthStr = String(month + 1).padStart(2, '0');
+          const dayStr = String(day).padStart(2, '0');
+          const dateKey = `${y}-${monthStr}-${dayStr}`;
+          const slotDate = new Date(y, month, day);
 
-        const conductor = (state.overrides && state.overrides[dateKey]) || getRotationalConductor(selectedYear, month, day, state);
+          if (state.blackouts && state.blackouts[dateKey]) return;
 
-        if (conductor === conductorName) {
-          const formattedDate = new Date(selectedYear, month, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-          assignedDates.push({ dateKey, monthStr, dayStr, day, month, formattedDate });
-        }
-      });
+          const conductor = (state.overrides && state.overrides[dateKey]) || getRotationalConductor(y, month, day, state);
+
+          if (conductor === conductorName) {
+            const formattedDate = slotDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+            assignedDates.push({ dateKey, slotDate, monthStr, dayStr, day, month, year: y, formattedDate });
+          }
+        });
+      }
     }
-    return assignedDates;
+
+    const upcoming = assignedDates.filter(d => d.slotDate >= today);
+
+    if (rangeOption === "1") { // Next 1 Month
+      if (upcoming.length === 0) return [];
+      const cutoff = new Date(upcoming[0].slotDate);
+      cutoff.setMonth(cutoff.getMonth() + 1);
+      return upcoming.filter(d => d.slotDate <= cutoff);
+    } else if (rangeOption === "2") { // Next 3 Months
+      if (upcoming.length === 0) return [];
+      const cutoff = new Date(upcoming[0].slotDate);
+      cutoff.setMonth(cutoff.getMonth() + 3);
+      return upcoming.filter(d => d.slotDate <= cutoff);
+    } else if (rangeOption === "3") { // Rest of Current Year (Upcoming)
+      return upcoming.filter(d => d.year === startYear);
+    } else if (rangeOption === "4") { // Full Selected Year (All)
+      return assignedDates.filter(d => d.year === startYear);
+    }
+
+    return upcoming; // Default fallback to upcoming
+  }
+
+  // --- CUSTOMIZABLE MESSAGE TEMPLATE ---
+  function formatConductorMessage(conductorName, dates) {
+    const firstName = conductorName.trim().split(/\s+/)[0] || conductorName;
+    const dateList = dates.map(d => `• ${d.formattedDate} (9:30 AM)`).join("\n");
+
+    // YOU CAN EDIT OR CUSTOMIZE THIS MESSAGE TEXT ANY TIME BELOW:
+    return `Hi ${firstName},\n\n` +
+      `Here is your upcoming FS Conductor schedule:\n\n` +
+      `${dateList}\n\n` +
+      `Location: Kingdom Hall\n` +
+      `Direction: Please examine km 3/15 pp. 3-6 for suggestions.\n\n` +
+      `Thank you for your willing spirit!`;
   }
 
   function downloadConductorICS(conductorName) {
     const state = loadAppState();
-    const selectedYear = parseInt(document.getElementById("yearSelect").value, 10);
+    const choice = prompt(
+      `Select .ics calendar timeframe for ${conductorName}:\n\n` +
+      `1 = Next 1 Month\n` +
+      `2 = Next 3 Months\n` +
+      `3 = Rest of Year (Upcoming Only)\n` +
+      `4 = Entire Year (All Dates)\n\n` +
+      `Enter option number (1-4):`,
+      "2"
+    );
+
+    if (choice === null) return;
+
     const nowString = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-    const dates = getConductorAssignedDates(conductorName, selectedYear, state);
+    const dates = getConductorAssignedDates(conductorName, choice.trim(), state);
 
     if (dates.length === 0) {
-      alert(`No scheduled dates found for ${conductorName} in ${selectedYear}.`);
+      alert(`No scheduled dates found for ${conductorName}.`);
       return;
     }
 
@@ -842,11 +896,11 @@
       "PRODID:-//Conductor Schedule Generator//EN",
       "CALSCALE:GREGORIAN",
       "METHOD:PUBLISH",
-      `X-WR-CALNAME:${conductorName} - FS Conductor Schedule ${selectedYear}`
+      `X-WR-CALNAME:${conductorName} - FS Conductor Schedule`
     ];
 
     dates.forEach(d => {
-      const dateStr = `${selectedYear}${d.monthStr}${d.dayStr}`;
+      const dateStr = `${d.year}${d.monthStr}${d.dayStr}`;
       icsLines.push(
         "BEGIN:VEVENT",
         `UID:conductor-${d.dateKey}@conductorschedule.local`,
@@ -874,7 +928,7 @@
     icsLines.push("END:VCALENDAR");
 
     const icsData = icsLines.join("\r\n");
-    const fileName = `FS_Conductor_${conductorName.replace(/\s+/g, '_')}_${selectedYear}.ics`;
+    const fileName = `FS_Conductor_${conductorName.replace(/\s+/g, '_')}.ics`;
     const blob = new Blob([icsData], { type: "text/calendar;charset=utf-8" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
@@ -887,16 +941,26 @@
 
   async function shareConductorScheduleText(conductorName) {
     const state = loadAppState();
-    const selectedYear = parseInt(document.getElementById("yearSelect").value, 10);
-    const dates = getConductorAssignedDates(conductorName, selectedYear, state);
+    const choice = prompt(
+      `Select schedule timeframe for ${conductorName}:\n\n` +
+      `1 = Next 1 Month\n` +
+      `2 = Next 3 Months (Recommended)\n` +
+      `3 = Rest of Year (Upcoming Only)\n` +
+      `4 = Entire Year (All Dates)\n\n` +
+      `Enter option number (1-4):`,
+      "2"
+    );
+
+    if (choice === null) return;
+
+    const dates = getConductorAssignedDates(conductorName, choice.trim(), state);
 
     if (dates.length === 0) {
-      alert(`No scheduled dates found for ${conductorName} in ${selectedYear}.`);
+      alert(`No upcoming scheduled dates found for ${conductorName}.`);
       return;
     }
 
-    const dateList = dates.map(d => `• ${d.formattedDate} (9:30 AM)`).join("\n");
-    const shareText = `FS Conductor Schedule for ${conductorName} (${selectedYear}):\n${dateList}`;
+    const shareText = formatConductorMessage(conductorName, dates);
     const shareTitle = `FS Conductor Schedule - ${conductorName}`;
 
     if (navigator.share) {
@@ -913,7 +977,7 @@
       }
     } else {
       navigator.clipboard.writeText(shareText).then(() => {
-        alert(`Schedule for ${conductorName} copied to clipboard!\n\nYou can now paste (Cmd + V) directly into Messages or Mail.`);
+        alert(`Schedule for ${conductorName} copied to clipboard!\n\nYou can now paste (Cmd + V) into Messages or Mail.`);
         showStatus(`Copied schedule to clipboard!`);
       }).catch(err => {
         alert(shareText);
