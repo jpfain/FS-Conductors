@@ -69,13 +69,15 @@
       flex-wrap: wrap;
     }
 
-    button, select, input {
+    button, select, input, textarea {
+      font-family: inherit;
       font-size: 0.875rem;
       padding: 8px 12px;
       border-radius: 6px;
       border: 1px solid var(--border);
-      min-height: 40px;
     }
+
+    button, select, input { min-height: 40px; }
 
     button {
       background-color: var(--primary);
@@ -85,12 +87,14 @@
       font-weight: 600;
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 6px;
     }
 
     button:hover { opacity: 0.9; }
     button.secondary { background-color: #64748b; }
     button.success { background-color: var(--secondary); }
+    button.accent { background-color: var(--accent); }
     button.outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
     button.active { background-color: var(--primary); color: white; border-color: var(--primary); }
 
@@ -110,6 +114,8 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
     }
 
     .roster-form {
@@ -350,11 +356,112 @@
       font-weight: 600;
     }
 
+    /* Modal Styles */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.55);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .modal-backdrop.open { display: flex; }
+
+    .modal-card {
+      background: white;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 560px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 20px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
+      border: 1px solid #e2e8f0;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      font-size: 1.15rem;
+      color: var(--primary);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: #64748b;
+      font-size: 1.5rem;
+      padding: 0 6px;
+      min-height: auto;
+      line-height: 1;
+    }
+
+    .modal-field {
+      margin-bottom: 14px;
+    }
+
+    .modal-field label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: #334155;
+    }
+
+    .modal-field select, .modal-field textarea {
+      width: 100%;
+      background: #f8fafc;
+      color: var(--text);
+    }
+
+    .modal-field textarea {
+      min-height: 195px;
+      line-height: 1.4;
+      resize: vertical;
+    }
+
+    .template-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+      padding: 10px;
+      background: #f1f5f9;
+      border-radius: 8px;
+    }
+
+    .placeholder-hint {
+      font-size: 0.75rem;
+      color: #475569;
+      margin-top: 4px;
+    }
+
+    .modal-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
     @media (max-width: 640px) {
       .calendar-grid { gap: 3px; }
       .day-cell { min-height: 85px; padding: 4px; }
       .day-header { font-size: 0.75rem; padding: 4px; }
       th:nth-child(3), td:nth-child(3) { display: none; }
+      .modal-actions button { flex: 1 1 auto; }
     }
   </style>
 </head>
@@ -394,11 +501,12 @@
   <!-- ACTION TOOLBAR -->
   <div class="toolbar">
     <div class="controls-group">
-      <button class="success" onclick="exportMasterICS()">📅 Export Full Year .ics</button>
+      <button class="accent" onclick="openShareModal('all', null)">📢 Share All Schedules</button>
+      <button class="success" onclick="exportMasterICS()">📅 Full Year .ics</button>
       <button class="secondary" onclick="exportMonthICS()">🗓️ Month .ics</button>
-      <button class="outline" onclick="copyTextSummary()">📋 Copy Text</button>
-      <button class="outline" onclick="exportJSONBackup()">💾 Backup Data (JSON)</button>
-      <button class="outline" onclick="document.getElementById('importFileInput').click()">📂 Restore Data</button>
+      <button class="outline" onclick="copyTextSummary()">📋 Copy Month</button>
+      <button class="outline" onclick="exportJSONBackup()">💾 Backup (JSON)</button>
+      <button class="outline" onclick="document.getElementById('importFileInput').click()">📂 Restore</button>
       <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="importJSONBackup(event)">
     </div>
     <span id="statusMsg" class="status-msg"></span>
@@ -433,6 +541,46 @@
   </div>
 </div>
 
+<!-- SHARE & MESSAGE TEMPLATE MODAL -->
+<div id="shareModal" class="modal-backdrop" onclick="if(event.target === this) closeShareModal()">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 id="shareModalTitle">Share Schedule</h3>
+      <button class="modal-close" onclick="closeShareModal()" title="Close">&times;</button>
+    </div>
+
+    <div class="modal-field">
+      <label for="shareTimeframeSelect">Schedule Timeframe (Begins with Next Scheduled Date)</label>
+      <select id="shareTimeframeSelect" onchange="refreshShareModalPreview()">
+        <option value="1">Next 1 Month</option>
+        <option value="2" selected>Next 3 Months</option>
+        <option value="3">Rest of Selected Year (Upcoming Only)</option>
+        <option value="4">Entire Selected Year (All Dates)</option>
+      </select>
+    </div>
+
+    <div class="modal-field">
+      <label for="shareMessageTextarea">Message Content (Edit freely before sending or save as default)</label>
+      <textarea id="shareMessageTextarea"></textarea>
+      <div id="sharePlaceholdersHint" class="placeholder-hint"></div>
+    </div>
+
+    <div class="template-controls">
+      <span style="font-size:0.8rem; color:#334155; font-weight:600;">Default Template:</span>
+      <div class="controls-group">
+        <button type="button" class="outline" style="min-height:32px; padding:4px 10px; font-size:0.8rem;" onclick="saveModalAsDefaultTemplate()">💾 Save as Default</button>
+        <button type="button" class="outline" style="min-height:32px; padding:4px 10px; font-size:0.8rem;" onclick="resetModalDefaultTemplate()">↺ Reset Default</button>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="outline" onclick="copyModalMessage()">📋 Copy Text</button>
+      <button type="button" class="secondary" onclick="emailModalMessage()">✉️ Open in Email</button>
+      <button type="button" class="success" onclick="shareModalMessage()">📤 Share (Text / Mail)</button>
+    </div>
+  </div>
+</div>
+
 <script>
   let currentDate = new Date();
   let currentViewMode = "calendar";
@@ -442,10 +590,38 @@
   ];
   const START_YEAR = 2026;
 
+  const DEFAULT_TEMPLATES = {
+    individual:
+      "Hi {firstName},\n\n" +
+      "Here is your upcoming FS Conductor schedule:\n\n" +
+      "{dates}\n\n" +
+      "Location: Kingdom Hall\n" +
+      "Direction: Please examine km 3/15 pp. 3-6 for suggestions.\n\n" +
+      "Thank you for your willing spirit!",
+    group:
+      "Hello Brothers,\n\n" +
+      "Here is the updated FS Conductor schedule ({timeframe}):\n\n" +
+      "{schedules}\n\n" +
+      "Location: Kingdom Hall (9:30 AM)\n" +
+      "Direction: Please examine km 3/15 pp. 3-6 for suggestions.\n\n" +
+      "Thank you for your willing spirit!"
+  };
+
+  let activeShareContext = {
+    mode: "single", // "single" or "all"
+    conductorName: null
+  };
+
   // Unified State Architecture
   function loadAppState() {
     const saved = localStorage.getItem("conductor_schedule_state");
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (!parsed.templates) {
+        parsed.templates = { ...DEFAULT_TEMPLATES };
+      }
+      return parsed;
+    }
 
     const legacyRoster = localStorage.getItem("conductor_roster");
     let migratedRoster = ["Julian Ramirez", "Judy Fain", "Dow Stephens", "Martin Tavarez", "Stacy Jaffnson"];
@@ -473,7 +649,8 @@
     const newState = {
       roster: migratedRoster,
       overrides: migratedOverrides,
-      blackouts: {}
+      blackouts: {},
+      templates: { ...DEFAULT_TEMPLATES }
     };
 
     localStorage.setItem("conductor_schedule_state", JSON.stringify(newState));
@@ -560,7 +737,7 @@
         <span>${name}</span>
         <div class="tag-actions">
           <button class="btn-link btn-ics" data-name="${encodeURIComponent(name)}" style="color:#3730a3; font-size:0.75rem; padding:0 4px; font-weight:600;" title="Download .ics calendar file">📥 .ics</button>
-          <button class="btn-link btn-share" data-name="${encodeURIComponent(name)}" style="color:#059669; font-size:0.75rem; padding:0 4px; font-weight:600;" title="Share dates via text or email">📤 Share</button>
+          <button class="btn-link btn-share" data-name="${encodeURIComponent(name)}" style="color:#059669; font-size:0.75rem; padding:0 4px; font-weight:600;" title="Customize & share dates">📤 Share</button>
           <button class="tag-remove" onclick="removeConductor(${index})" title="Remove">&times;</button>
         </div>
       `;
@@ -569,7 +746,7 @@
         downloadConductorICS(decodeURIComponent(e.currentTarget.dataset.name));
       });
       tag.querySelector('.btn-share').addEventListener('click', (e) => {
-        shareConductorScheduleText(decodeURIComponent(e.currentTarget.dataset.name));
+        openShareModal('single', decodeURIComponent(e.currentTarget.dataset.name));
       });
 
       container.appendChild(tag);
@@ -793,28 +970,18 @@
     }
   }
 
-  /* --- EXPORT & SHARE HANDLERS --- */
-  function showStatus(msg) {
-    const el = document.getElementById("statusMsg");
-    el.innerText = msg;
-    setTimeout(() => { el.innerText = ""; }, 3000);
-  }
-
-  // Get assigned dates filtered by timeframe starting from next upcoming assignment
-  function getConductorAssignedDates(conductorName, rangeOption, state) {
+  /* --- SCHEDULE FILTERING & TEMPLATE HELPERS --- */
+  function getAllScheduleSlots(state) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const selectedYear = parseInt(document.getElementById("yearSelect").value, 10);
+    const maxYear = Math.max(today.getFullYear(), selectedYear) + 1;
 
-    const startYear = currentDate.getFullYear();
-    let assignedDates = [];
-
-    // Scan current year and next year to ensure 3-month ranges cross year boundaries smoothly
-    for (let y = startYear; y <= startYear + 1; y++) {
+    let allSlots = [];
+    for (let y = START_YEAR; y <= maxYear; y++) {
       for (let month = 0; month < 12; month++) {
         const sats = getMeetingSaturdays(y, month);
-        const meetingDays = [sats.second, sats.fourth];
-
-        meetingDays.forEach(day => {
+        [sats.second, sats.fourth].forEach(day => {
           if (!day) return;
           const monthStr = String(month + 1).padStart(2, '0');
           const dayStr = String(day).padStart(2, '0');
@@ -824,48 +991,224 @@
           if (state.blackouts && state.blackouts[dateKey]) return;
 
           const conductor = (state.overrides && state.overrides[dateKey]) || getRotationalConductor(y, month, day, state);
+          const formattedDate = slotDate.toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+          });
 
-          if (conductor === conductorName) {
-            const formattedDate = slotDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-            assignedDates.push({ dateKey, slotDate, monthStr, dayStr, day, month, year: y, formattedDate });
-          }
+          allSlots.push({
+            dateKey,
+            slotDate,
+            monthStr,
+            dayStr,
+            day,
+            month,
+            year: y,
+            conductor,
+            formattedDate
+          });
         });
       }
     }
-
-    const upcoming = assignedDates.filter(d => d.slotDate >= today);
-
-    if (rangeOption === "1") { // Next 1 Month
-      if (upcoming.length === 0) return [];
-      const cutoff = new Date(upcoming[0].slotDate);
-      cutoff.setMonth(cutoff.getMonth() + 1);
-      return upcoming.filter(d => d.slotDate <= cutoff);
-    } else if (rangeOption === "2") { // Next 3 Months
-      if (upcoming.length === 0) return [];
-      const cutoff = new Date(upcoming[0].slotDate);
-      cutoff.setMonth(cutoff.getMonth() + 3);
-      return upcoming.filter(d => d.slotDate <= cutoff);
-    } else if (rangeOption === "3") { // Rest of Current Year (Upcoming)
-      return upcoming.filter(d => d.year === startYear);
-    } else if (rangeOption === "4") { // Full Selected Year (All)
-      return assignedDates.filter(d => d.year === startYear);
-    }
-
-    return upcoming; // Default fallback to upcoming
+    return allSlots;
   }
 
-  // --- CUSTOMIZABLE MESSAGE TEMPLATE ---
-  function formatConductorMessage(conductorName, dates) {
-    const firstName = conductorName.trim().split(/\s+/)[0] || conductorName;
-    const dateList = dates.map(d => `• ${d.formattedDate} (9:30 AM)`).join("\n");
+  function getConductorAssignedDates(conductorName, rangeOption, state) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selectedYear = parseInt(document.getElementById("yearSelect").value, 10);
 
-    // YOU CAN EDIT OR CUSTOMIZE THIS MESSAGE TEXT ANY TIME BELOW:
-    return `Hi ${firstName},\n\n` +
-      `Here is your upcoming FS Conductor schedule:\n\n` +
-      `${dateList}\n\n` +
-      `Location: Kingdom Hall\n` +
-      `Direction: Please examine km 3/15 pp. 3-6 for suggestions.\n\n` +
-      `Thank you for your willing spirit!`;
+    const conductorSlots = getAllScheduleSlots(state).filter(s => s.conductor === conductorName);
+    const upcoming = conductorSlots.filter(s => s.slotDate >= today);
+
+    if (rangeOption === "1") {
+      if (upcoming.length === 0) return [];
+      const first = upcoming[0].slotDate;
+      const cutoff = new Date(first.getFullYear(), first.getMonth() + 1, first.getDate() + 6);
+      return upcoming.filter(d => d.slotDate <= cutoff);
+    } else if (rangeOption === "2") {
+      if (upcoming.length === 0) return [];
+      const first = upcoming[0].slotDate;
+      const cutoff = new Date(first.getFullYear(), first.getMonth() + 3, first.getDate() + 6);
+      return upcoming.filter(d => d.slotDate <= cutoff);
+    } else if (rangeOption === "3") {
+      return upcoming.filter(d => d.year === selectedYear);
+    } else if (rangeOption === "4") {
+      return conductorSlots.filter(d => d.year === selectedYear);
+    }
+    return upcoming;
+  }
+
+  function getAllConductorsGroupedSchedules(rangeOption, state) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selectedYear = parseInt(document.getElementById("yearSelect").value, 10);
+
+    const allSlots = getAllScheduleSlots(state);
+    const globalUpcoming = allSlots.filter(s => s.slotDate >= today);
+
+    let filteredSlots = [];
+    if (rangeOption === "1") {
+      if (globalUpcoming.length > 0) {
+        const first = globalUpcoming[0].slotDate;
+        const cutoff = new Date(first.getFullYear(), first.getMonth() + 1, first.getDate() + 6);
+        filteredSlots = globalUpcoming.filter(d => d.slotDate <= cutoff);
+      }
+    } else if (rangeOption === "2") {
+      if (globalUpcoming.length > 0) {
+        const first = globalUpcoming[0].slotDate;
+        const cutoff = new Date(first.getFullYear(), first.getMonth() + 3, first.getDate() + 6);
+        filteredSlots = globalUpcoming.filter(d => d.slotDate <= cutoff);
+      }
+    } else if (rangeOption === "3") {
+      filteredSlots = globalUpcoming.filter(d => d.year === selectedYear);
+    } else if (rangeOption === "4") {
+      filteredSlots = allSlots.filter(d => d.year === selectedYear);
+    }
+
+    return state.roster.map(name => {
+      const dates = filteredSlots.filter(s => s.conductor === name);
+      return { name, dates };
+    }).filter(entry => entry.dates.length > 0);
+  }
+
+  /* --- SHARE & TEMPLATE MODAL CONTROLLERS --- */
+  function openShareModal(mode, conductorName) {
+    activeShareContext = { mode, conductorName };
+    const titleEl = document.getElementById("shareModalTitle");
+    const hintEl = document.getElementById("sharePlaceholdersHint");
+
+    if (mode === "single") {
+      titleEl.innerText = `Share Schedule: ${conductorName}`;
+      hintEl.innerText = "Available tags: {firstName}, {fullName}, {dates}";
+    } else {
+      titleEl.innerText = "Share Schedule: All Conductors";
+      hintEl.innerText = "Available tags: {schedules}, {timeframe}";
+    }
+
+    refreshShareModalPreview();
+    document.getElementById("shareModal").classList.add("open");
+  }
+
+  function closeShareModal() {
+    document.getElementById("shareModal").classList.remove("open");
+  }
+
+  function refreshShareModalPreview() {
+    const state = loadAppState();
+    const rangeSelect = document.getElementById("shareTimeframeSelect");
+    const rangeOption = rangeSelect.value;
+    const timeframeLabel = rangeSelect.options[rangeSelect.selectedIndex].text;
+    const textarea = document.getElementById("shareMessageTextarea");
+
+    if (activeShareContext.mode === "single") {
+      const name = activeShareContext.conductorName;
+      const firstName = name.trim().split(/\s+/)[0] || name;
+      const dates = getConductorAssignedDates(name, rangeOption, state);
+      const dateList = dates.length > 0
+        ? dates.map(d => `• ${d.formattedDate} (9:30 AM)`).join("\n")
+        : "• No scheduled dates found in this timeframe.";
+
+      const template = (state.templates && state.templates.individual) || DEFAULT_TEMPLATES.individual;
+      textarea.value = template
+        .replace(/\{firstName\}/g, firstName)
+        .replace(/\{fullName\}/g, name)
+        .replace(/\{dates\}/g, dateList);
+    } else {
+      const grouped = getAllConductorsGroupedSchedules(rangeOption, state);
+      const scheduleBlocks = grouped.length > 0
+        ? grouped.map(g => {
+            const lines = g.dates.map(d => `  • ${d.formattedDate} (9:30 AM)`).join("\n");
+            return `${g.name}:\n${lines}`;
+          }).join("\n\n")
+        : "No scheduled dates found in this timeframe.";
+
+      const template = (state.templates && state.templates.group) || DEFAULT_TEMPLATES.group;
+      textarea.value = template
+        .replace(/\{schedules\}/g, scheduleBlocks)
+        .replace(/\{timeframe\}/g, timeframeLabel);
+    }
+  }
+
+  function saveModalAsDefaultTemplate() {
+    const state = loadAppState();
+    if (!state.templates) state.templates = { ...DEFAULT_TEMPLATES };
+
+    const rawText = document.getElementById("shareMessageTextarea").value;
+    if (activeShareContext.mode === "single") {
+      state.templates.individual = rawText;
+    } else {
+      state.templates.group = rawText;
+    }
+
+    saveAppState(state);
+    showStatus("Default message template saved!");
+    alert("Saved! Your updated wording will be used as the default for future schedules.");
+  }
+
+  function resetModalDefaultTemplate() {
+    const state = loadAppState();
+    if (!state.templates) state.templates = { ...DEFAULT_TEMPLATES };
+
+    if (activeShareContext.mode === "single") {
+      state.templates.individual = DEFAULT_TEMPLATES.individual;
+    } else {
+      state.templates.group = DEFAULT_TEMPLATES.group;
+    }
+
+    saveAppState(state);
+    refreshShareModalPreview();
+    showStatus("Template reset to original default.");
+  }
+
+  async function shareModalMessage() {
+    const text = document.getElementById("shareMessageTextarea").value;
+    const title = activeShareContext.mode === "single"
+      ? `FS Conductor Schedule - ${activeShareContext.conductorName}`
+      : "FS Conductor Schedule - All Conductors";
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, text });
+        showStatus("Schedule shared!");
+        closeShareModal();
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          console.error("Web Share error:", err);
+        }
+      }
+    } else {
+      copyModalMessage();
+    }
+  }
+
+  function emailModalMessage() {
+    const text = document.getElementById("shareMessageTextarea").value;
+    const subject = activeShareContext.mode === "single"
+      ? `FS Conductor Schedule - ${activeShareContext.conductorName}`
+      : "Updated FS Conductor Schedule";
+
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
+    showStatus("Opened in Email app!");
+  }
+
+  function copyModalMessage() {
+    const text = document.getElementById("shareMessageTextarea").value;
+    navigator.clipboard.writeText(text).then(() => {
+      showStatus("Schedule copied to clipboard!");
+      alert("Copied to clipboard! You can now paste (Cmd + V / Tap Paste) into Messages or Email.");
+    }).catch(() => {
+      alert(text);
+    });
+  }
+
+  /* --- .ICS & BACKUP HANDLERS --- */
+  function showStatus(msg) {
+    const el = document.getElementById("statusMsg");
+    el.innerText = msg;
+    setTimeout(() => { el.innerText = ""; }, 3000);
   }
 
   function downloadConductorICS(conductorName) {
@@ -937,52 +1280,6 @@
     link.click();
     document.body.removeChild(link);
     showStatus(`Downloaded .ics for ${conductorName}!`);
-  }
-
-  async function shareConductorScheduleText(conductorName) {
-    const state = loadAppState();
-    const choice = prompt(
-      `Select schedule timeframe for ${conductorName}:\n\n` +
-      `1 = Next 1 Month\n` +
-      `2 = Next 3 Months (Recommended)\n` +
-      `3 = Rest of Year (Upcoming Only)\n` +
-      `4 = Entire Year (All Dates)\n\n` +
-      `Enter option number (1-4):`,
-      "2"
-    );
-
-    if (choice === null) return;
-
-    const dates = getConductorAssignedDates(conductorName, choice.trim(), state);
-
-    if (dates.length === 0) {
-      alert(`No upcoming scheduled dates found for ${conductorName}.`);
-      return;
-    }
-
-    const shareText = formatConductorMessage(conductorName, dates);
-    const shareTitle = `FS Conductor Schedule - ${conductorName}`;
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: shareTitle,
-          text: shareText
-        });
-        showStatus(`Shared schedule for ${conductorName}!`);
-      } catch (err) {
-        if (err.name !== 'AbortError') {
-          console.error("Web Share error:", err);
-        }
-      }
-    } else {
-      navigator.clipboard.writeText(shareText).then(() => {
-        alert(`Schedule for ${conductorName} copied to clipboard!\n\nYou can now paste (Cmd + V) into Messages or Mail.`);
-        showStatus(`Copied schedule to clipboard!`);
-      }).catch(err => {
-        alert(shareText);
-      });
-    }
   }
 
   function exportMasterICS() {
@@ -1173,6 +1470,11 @@
     reader.readAsText(file);
     event.target.value = "";
   }
+
+  // Close modal on Escape key
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeShareModal();
+  });
 
   // Register PWA Service Worker with auto-reload on update
   if ('serviceWorker' in navigator) {
