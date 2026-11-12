@@ -450,26 +450,55 @@
       line-height: 1;
     }
 
+    .format-switcher {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      background: #e2e8f0;
+      padding: 4px;
+      border-radius: 8px;
+      gap: 4px;
+      margin-bottom: 14px;
+    }
+
+    .format-switcher button {
+      min-height: 36px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+
     .modal-field {
       margin-bottom: 14px;
+    }
+
+    .modal-field-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
     }
 
     .modal-field label {
       display: block;
       font-size: 0.85rem;
       font-weight: 700;
-      margin-bottom: 6px;
       color: #334155;
+      margin: 0;
     }
 
-    .modal-field select, .modal-field textarea {
+    .char-counter {
+      font-size: 0.75rem;
+      color: #64748b;
+      font-weight: 600;
+    }
+
+    .modal-field select, .modal-field input, .modal-field textarea {
       width: 100%;
       background: #f8fafc;
       color: var(--text);
     }
 
     .modal-field textarea {
-      min-height: 195px;
+      min-height: 185px;
       line-height: 1.4;
       resize: vertical;
     }
@@ -547,7 +576,7 @@
   <!-- ACTION TOOLBAR -->
   <div class="toolbar">
     <div class="controls-group">
-      <button class="accent" onclick="openShareModal('all', null)">📢 Share All Schedules</button>
+      <button class="accent" onclick="openShareModal('all', null, 'text')">📢 Share All Schedules</button>
       <button class="success" onclick="exportMasterICS()">📅 Full Year .ics</button>
       <button class="secondary" onclick="exportMonthICS()">🗓️ Month .ics</button>
       <button class="outline" onclick="copyTextSummary()">📋 Copy Month</button>
@@ -595,8 +624,16 @@
       <button class="modal-close" onclick="closeShareModal()" title="Close">&times;</button>
     </div>
 
+    <!-- FORMAT SWITCHER: SHORT TEXT VS LONGER EMAIL -->
+    <div class="format-switcher">
+      <button type="button" id="btnFormatText" class="active" onclick="setShareFormat('text')">💬 Short Text</button>
+      <button type="button" id="btnFormatEmail" class="outline" onclick="setShareFormat('email')">✉️ Longer Email</button>
+    </div>
+
     <div class="modal-field">
-      <label for="shareTimeframeSelect">Schedule Timeframe (Begins with Next Scheduled Date)</label>
+      <div class="modal-field-header">
+        <label for="shareTimeframeSelect">Schedule Timeframe (Begins with Next Scheduled Date)</label>
+      </div>
       <select id="shareTimeframeSelect" onchange="refreshShareModalPreview()">
         <option value="1">Next 1 Month</option>
         <option value="2" selected>Next 3 Months</option>
@@ -606,14 +643,25 @@
       </select>
     </div>
 
+    <!-- EMAIL SUBJECT (SHOWN IN EMAIL MODE) -->
+    <div class="modal-field" id="emailSubjectField" style="display: none;">
+      <div class="modal-field-header">
+        <label for="shareEmailSubject">Email Subject</label>
+      </div>
+      <input type="text" id="shareEmailSubject" value="FS Conductor Schedule">
+    </div>
+
     <div class="modal-field">
-      <label for="shareMessageTextarea">Message Content (Edit freely before sending or save as default)</label>
-      <textarea id="shareMessageTextarea"></textarea>
+      <div class="modal-field-header">
+        <label id="shareMessageLabel" for="shareMessageTextarea">Short Text Message</label>
+        <span id="shareCharCount" class="char-counter"></span>
+      </div>
+      <textarea id="shareMessageTextarea" oninput="updateCharCounter()"></textarea>
       <div id="sharePlaceholdersHint" class="placeholder-hint"></div>
     </div>
 
     <div class="template-controls">
-      <span style="font-size:0.8rem; color:#334155; font-weight:600;">Default Template:</span>
+      <span id="templateScopeLabel" style="font-size:0.8rem; color:#334155; font-weight:600;">Short Text Template:</span>
       <div class="controls-group">
         <button type="button" class="outline" style="min-height:32px; padding:4px 10px; font-size:0.8rem;" onclick="saveModalAsDefaultTemplate()">💾 Save as Default</button>
         <button type="button" class="outline" style="min-height:32px; padding:4px 10px; font-size:0.8rem;" onclick="resetModalDefaultTemplate()">↺ Reset Default</button>
@@ -621,9 +669,10 @@
     </div>
 
     <div class="modal-actions">
-      <button type="button" class="outline" onclick="copyModalMessage()">📋 Copy Text</button>
-      <button type="button" class="secondary" onclick="emailModalMessage()">✉️ Open in Email</button>
-      <button type="button" class="success" onclick="shareModalMessage()">📤 Share (Text / Mail)</button>
+      <button type="button" class="outline" onclick="copyModalMessage()">📋 Copy</button>
+      <button type="button" id="btnActionSms" class="secondary" onclick="smsModalMessage()">💬 Open in Messages</button>
+      <button type="button" id="btnActionEmail" class="secondary" style="display: none;" onclick="emailModalMessage()">✉️ Open in Email</button>
+      <button type="button" class="success" onclick="shareModalMessage()">📤 Share Sheet</button>
     </div>
   </div>
 </div>
@@ -639,25 +688,38 @@
   const DEFAULT_ANCHOR_DATE = "2026-11-14";
 
   const DEFAULT_TEMPLATES = {
-    individual:
+    individualText:
+      "Hi {firstName}, your upcoming FS Conductor dates (9:30 AM, Kingdom Hall):\n" +
+      "{dates}\n" +
+      "Please see km 3/15 pp. 3-6. Thanks!",
+    individualEmail:
       "Hi {firstName},\n\n" +
       "Here is your upcoming FS Conductor schedule:\n\n" +
       "{dates}\n\n" +
-      "Location: Kingdom Hall (9:30 - 9:37 AM).\n" +
-      "Direction: Please examine km 3/15 pp. 3-6 for suggestions.\n\n" +
+      "Time: 9:30 AM\n" +
+      "Location: Kingdom Hall\n" +
+      "Direction: Please carefully examine km 3/15 pp. 3-6 for suggestions and direction.\n\n" +
       "Thank you for your willing spirit!",
-    group:
+    groupText:
+      "Updated FS Conductor Schedule ({timeframe}, 9:30 AM):\n\n" +
+      "{schedules}\n\n" +
+      "Location: Kingdom Hall (km 3/15 pp. 3-6)",
+    groupEmail:
       "Hello Brothers,\n\n" +
       "Here is the updated FS Conductor schedule ({timeframe}):\n\n" +
       "{schedules}\n\n" +
-      "Location: Kingdom Hall (9:30 - 9:37 AM)\n" +
-      "Direction: Please examine km 3/15 pp. 3-6 for suggestions.\n\n" +
+      "Time: 9:30 AM\n" +
+      "Location: Kingdom Hall\n" +
+      "Direction: Please carefully examine km 3/15 pp. 3-6 for suggestions and direction.\n\n" +
       "Thank you for your willing spirit!"
   };
 
   let activeShareContext = {
-    mode: "single",
-    conductorName: null
+    mode: "single",       // "single" or "all"
+    conductorName: null,
+    format: "text",       // "text" or "email"
+    lastRenderedDates: "",
+    lastRenderedSchedules: ""
   };
 
   // Unified State Architecture
@@ -667,6 +729,15 @@
       const parsed = JSON.parse(saved);
       if (!parsed.templates) {
         parsed.templates = { ...DEFAULT_TEMPLATES };
+      } else {
+        // Migrate legacy single-template keys if present
+        if (parsed.templates.individual && !parsed.templates.individualEmail) {
+          parsed.templates.individualEmail = parsed.templates.individual;
+        }
+        if (parsed.templates.group && !parsed.templates.groupEmail) {
+          parsed.templates.groupEmail = parsed.templates.group;
+        }
+        parsed.templates = { ...DEFAULT_TEMPLATES, ...parsed.templates };
       }
       if (!parsed.rotationStartDate) {
         parsed.rotationStartDate = DEFAULT_ANCHOR_DATE;
@@ -827,7 +898,7 @@
           <button class="tag-move" onclick="moveConductor(${index}, -1)" title="Move earlier in rotation" ${isFirst ? 'disabled' : ''}>◀</button>
           <button class="tag-move" onclick="moveConductor(${index}, 1)" title="Move later in rotation" ${isLast ? 'disabled' : ''}>▶</button>
           <button class="btn-link btn-ics" data-name="${encodeURIComponent(name)}" style="color:#3730a3; font-size:0.75rem; padding:0 4px; font-weight:600;" title="Download .ics calendar file">📥 .ics</button>
-          <button class="btn-link btn-share" data-name="${encodeURIComponent(name)}" style="color:#059669; font-size:0.75rem; padding:0 4px; font-weight:600;" title="Customize & share dates">📤 Share</button>
+          <button class="btn-link btn-share" data-name="${encodeURIComponent(name)}" style="color:#059669; font-size:0.75rem; padding:0 4px; font-weight:600;" title="Send Text or Email schedule">📤 Share</button>
           <button class="tag-remove" onclick="removeConductor(${index})" title="Remove">&times;</button>
         </div>
       `;
@@ -836,7 +907,7 @@
         downloadConductorICS(decodeURIComponent(e.currentTarget.dataset.name));
       });
       tag.querySelector('.btn-share').addEventListener('click', (e) => {
-        openShareModal('single', decodeURIComponent(e.currentTarget.dataset.name));
+        openShareModal('single', decodeURIComponent(e.currentTarget.dataset.name), 'text');
       });
 
       container.appendChild(tag);
@@ -1180,25 +1251,69 @@
   }
 
   /* --- SHARE & TEMPLATE MODAL CONTROLLERS --- */
-  function openShareModal(mode, conductorName) {
-    activeShareContext = { mode, conductorName };
+  function getActiveTemplateKey() {
+    const isSingle = activeShareContext.mode === "single";
+    const isText = activeShareContext.format === "text";
+    if (isSingle && isText) return "individualText";
+    if (isSingle && !isText) return "individualEmail";
+    if (!isSingle && isText) return "groupText";
+    return "groupEmail";
+  }
+
+  function openShareModal(mode, conductorName, initialFormat = "text") {
+    activeShareContext = {
+      mode,
+      conductorName,
+      format: initialFormat,
+      lastRenderedDates: "",
+      lastRenderedSchedules: ""
+    };
+
     const titleEl = document.getElementById("shareModalTitle");
     const hintEl = document.getElementById("sharePlaceholdersHint");
 
     if (mode === "single") {
       titleEl.innerText = `Share Schedule: ${conductorName}`;
-      hintEl.innerText = "Available tags: {firstName}, {fullName}, {dates}";
+      hintEl.innerText = "Dynamic tags: {firstName}, {fullName}, {dates}";
     } else {
       titleEl.innerText = "Share Schedule: All Conductors";
-      hintEl.innerText = "Available tags: {schedules}, {timeframe}";
+      hintEl.innerText = "Dynamic tags: {schedules}, {timeframe}";
     }
 
-    refreshShareModalPreview();
+    setShareFormat(initialFormat);
     document.getElementById("shareModal").classList.add("open");
+  }
+
+  function setShareFormat(format) {
+    activeShareContext.format = format;
+    const isText = format === "text";
+
+    document.getElementById("btnFormatText").className = isText ? "active" : "outline";
+    document.getElementById("btnFormatEmail").className = !isText ? "active" : "outline";
+
+    document.getElementById("emailSubjectField").style.display = isText ? "none" : "block";
+    document.getElementById("btnActionSms").style.display = isText ? "inline-flex" : "none";
+    document.getElementById("btnActionEmail").style.display = !isText ? "inline-flex" : "none";
+
+    document.getElementById("shareMessageLabel").innerText = isText ? "Short Text Message" : "Longer Email Message";
+    document.getElementById("templateScopeLabel").innerText = isText ? "Short Text Template:" : "Longer Email Template:";
+
+    refreshShareModalPreview();
   }
 
   function closeShareModal() {
     document.getElementById("shareModal").classList.remove("open");
+  }
+
+  function updateCharCounter() {
+    const countEl = document.getElementById("shareCharCount");
+    const textarea = document.getElementById("shareMessageTextarea");
+    if (activeShareContext.format === "text") {
+      const len = textarea.value.length;
+      countEl.innerText = `${len} chars`;
+    } else {
+      countEl.innerText = "Email format";
+    }
   }
 
   function refreshShareModalPreview() {
@@ -1207,6 +1322,8 @@
     const rangeOption = rangeSelect.value;
     const timeframeLabel = rangeSelect.options[rangeSelect.selectedIndex].text;
     const textarea = document.getElementById("shareMessageTextarea");
+    const subjectInput = document.getElementById("shareEmailSubject");
+    const templateKey = getActiveTemplateKey();
 
     if (activeShareContext.mode === "single") {
       const name = activeShareContext.conductorName;
@@ -1216,7 +1333,10 @@
         ? dates.map(d => `• ${d.formattedDate} (9:30 AM)`).join("\n")
         : "• No scheduled dates found in this timeframe.";
 
-      const template = (state.templates && state.templates.individual) || DEFAULT_TEMPLATES.individual;
+      activeShareContext.lastRenderedDates = dateList;
+      subjectInput.value = `FS Conductor Schedule - ${name}`;
+
+      const template = (state.templates && state.templates[templateKey]) || DEFAULT_TEMPLATES[templateKey];
       textarea.value = template
         .replace(/\{firstName\}/g, firstName)
         .replace(/\{fullName\}/g, name)
@@ -1230,38 +1350,59 @@
           }).join("\n\n")
         : "No scheduled dates found in this timeframe.";
 
-      const template = (state.templates && state.templates.group) || DEFAULT_TEMPLATES.group;
+      activeShareContext.lastRenderedSchedules = scheduleBlocks;
+      subjectInput.value = `Updated FS Conductor Schedule (${timeframeLabel})`;
+
+      const template = (state.templates && state.templates[templateKey]) || DEFAULT_TEMPLATES[templateKey];
       textarea.value = template
         .replace(/\{schedules\}/g, scheduleBlocks)
         .replace(/\{timeframe\}/g, timeframeLabel);
     }
+
+    updateCharCounter();
   }
 
   function saveModalAsDefaultTemplate() {
     const state = loadAppState();
     if (!state.templates) state.templates = { ...DEFAULT_TEMPLATES };
 
-    const rawText = document.getElementById("shareMessageTextarea").value;
+    const templateKey = getActiveTemplateKey();
+    let templateToSave = document.getElementById("shareMessageTextarea").value;
+
+    // Preserve dynamic placeholders if the user edited the rendered preview directly
     if (activeShareContext.mode === "single") {
-      state.templates.individual = rawText;
+      const fullName = activeShareContext.conductorName;
+      const firstName = fullName.trim().split(/\s+/)[0] || fullName;
+      if (activeShareContext.lastRenderedDates && !templateToSave.includes("{dates}")) {
+        templateToSave = templateToSave.replace(activeShareContext.lastRenderedDates, "{dates}");
+      }
+      if (!templateToSave.includes("{fullName}")) {
+        templateToSave = templateToSave.split(fullName).join("{fullName}");
+      }
+      if (!templateToSave.includes("{firstName}")) {
+        const escapedFirst = firstName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        templateToSave = templateToSave.replace(new RegExp(`\\b${escapedFirst}\\b`), "{firstName}");
+      }
     } else {
-      state.templates.group = rawText;
+      if (activeShareContext.lastRenderedSchedules && !templateToSave.includes("{schedules}")) {
+        templateToSave = templateToSave.replace(activeShareContext.lastRenderedSchedules, "{schedules}");
+      }
     }
 
+    state.templates[templateKey] = templateToSave;
     saveAppState(state);
-    showStatus("Default message template saved!");
-    alert("Saved! Your updated wording will be used as the default for future schedules.");
+
+    const label = activeShareContext.format === "text" ? "Short Text" : "Longer Email";
+    showStatus(`Default ${label} template saved!`);
+    alert(`Saved! Your updated wording is now the default ${label} template.`);
   }
 
   function resetModalDefaultTemplate() {
     const state = loadAppState();
     if (!state.templates) state.templates = { ...DEFAULT_TEMPLATES };
 
-    if (activeShareContext.mode === "single") {
-      state.templates.individual = DEFAULT_TEMPLATES.individual;
-    } else {
-      state.templates.group = DEFAULT_TEMPLATES.group;
-    }
+    const templateKey = getActiveTemplateKey();
+    state.templates[templateKey] = DEFAULT_TEMPLATES[templateKey];
 
     saveAppState(state);
     refreshShareModalPreview();
@@ -1270,9 +1411,11 @@
 
   async function shareModalMessage() {
     const text = document.getElementById("shareMessageTextarea").value;
-    const title = activeShareContext.mode === "single"
-      ? `FS Conductor Schedule - ${activeShareContext.conductorName}`
-      : "FS Conductor Schedule - All Conductors";
+    const title = activeShareContext.format === "email"
+      ? (document.getElementById("shareEmailSubject").value || "FS Conductor Schedule")
+      : (activeShareContext.mode === "single"
+          ? `FS Conductor Schedule - ${activeShareContext.conductorName}`
+          : "FS Conductor Schedule - All Conductors");
 
     if (navigator.share) {
       try {
@@ -1289,11 +1432,15 @@
     }
   }
 
+  function smsModalMessage() {
+    const text = document.getElementById("shareMessageTextarea").value;
+    window.location.href = `sms:?&body=${encodeURIComponent(text)}`;
+    showStatus("Opened in Messages app!");
+  }
+
   function emailModalMessage() {
     const text = document.getElementById("shareMessageTextarea").value;
-    const subject = activeShareContext.mode === "single"
-      ? `FS Conductor Schedule - ${activeShareContext.conductorName}`
-      : "Updated FS Conductor Schedule";
+    const subject = document.getElementById("shareEmailSubject").value || "FS Conductor Schedule";
 
     window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
     showStatus("Opened in Email app!");
@@ -1302,7 +1449,7 @@
   function copyModalMessage() {
     const text = document.getElementById("shareMessageTextarea").value;
     navigator.clipboard.writeText(text).then(() => {
-      showStatus("Schedule copied to clipboard!");
+      showStatus("Copied to clipboard!");
       alert("Copied to clipboard! You can now paste (Cmd + V / Tap Paste) into Messages or Email.");
     }).catch(() => {
       alert(text);
