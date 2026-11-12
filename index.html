@@ -115,7 +115,28 @@
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .anchor-control {
+      display: flex;
+      align-items: center;
       gap: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #334155;
+      background: #ffffff;
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+    }
+
+    .anchor-control input[type="date"] {
+      min-height: 28px;
+      padding: 2px 6px;
+      font-size: 0.8rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
     }
 
     .roster-form {
@@ -511,7 +532,10 @@
   <div class="roster-card">
     <div class="roster-header">
       <span>Approved Conductors Roster</span>
-      <span style="font-size:0.8rem; font-weight:normal; color:#64748b;">Auto-rotates sequentially in order listed</span>
+      <div class="anchor-control">
+        <label for="rotationStartDateInput">Start #1 On:</label>
+        <input type="date" id="rotationStartDateInput" value="2026-11-14" onchange="updateRotationStartDate(this.value)">
+      </div>
     </div>
     <div class="roster-form">
       <input type="text" id="newConductorInput" class="roster-input" placeholder="Enter conductor name..." onkeydown="if(event.key==='Enter') addConductor()">
@@ -612,6 +636,7 @@
     "July", "August", "September", "October", "November", "December"
   ];
   const START_YEAR = 2026;
+  const DEFAULT_ANCHOR_DATE = "2026-11-14";
 
   const DEFAULT_TEMPLATES = {
     individual:
@@ -643,6 +668,9 @@
       if (!parsed.templates) {
         parsed.templates = { ...DEFAULT_TEMPLATES };
       }
+      if (!parsed.rotationStartDate) {
+        parsed.rotationStartDate = DEFAULT_ANCHOR_DATE;
+      }
       return parsed;
     }
 
@@ -673,7 +701,8 @@
       roster: migratedRoster,
       overrides: migratedOverrides,
       blackouts: {},
-      templates: { ...DEFAULT_TEMPLATES }
+      templates: { ...DEFAULT_TEMPLATES },
+      rotationStartDate: DEFAULT_ANCHOR_DATE
     };
 
     localStorage.setItem("conductor_schedule_state", JSON.stringify(newState));
@@ -683,6 +712,13 @@
   function saveAppState(state) {
     localStorage.setItem("conductor_schedule_state", JSON.stringify(state));
     renderUI();
+  }
+
+  function updateRotationStartDate(dateValue) {
+    const state = loadAppState();
+    state.rotationStartDate = dateValue || DEFAULT_ANCHOR_DATE;
+    saveAppState(state);
+    showStatus("Rotation start date updated!");
   }
 
   function getMeetingSaturdays(year, month) {
@@ -697,34 +733,39 @@
     return { second: saturdays[1], fourth: saturdays[3] };
   }
 
-  // Multi-Year Continuous Rotation Engine
+  // Anchored Multi-Year Continuous Rotation Engine
   function getRotationalConductor(targetYear, targetMonth, targetDay, state) {
     if (!state.roster || state.roster.length === 0) return "Unassigned";
 
-    let meetingCount = 0;
-    for (let y = START_YEAR; y <= targetYear; y++) {
-      let maxMonth = (y === targetYear) ? targetMonth : 11;
-      for (let m = 0; m <= maxMonth; m++) {
+    const anchorDateKey = state.rotationStartDate || DEFAULT_ANCHOR_DATE;
+    const anchorYear = parseInt(anchorDateKey.split("-")[0], 10) || START_YEAR;
+    const endYear = Math.max(targetYear, anchorYear, 2028);
+
+    let activeMeetings = [];
+    for (let y = START_YEAR; y <= endYear; y++) {
+      for (let m = 0; m < 12; m++) {
         const sats = getMeetingSaturdays(y, m);
-        const monthSats = [sats.second, sats.fourth];
-
-        for (let day of monthSats) {
-          if (!day) continue;
-          if (y === targetYear && m === targetMonth && day > targetDay) break;
-
+        [sats.second, sats.fourth].forEach(day => {
+          if (!day) return;
           const dateKey = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-          
-          if (y === targetYear && m === targetMonth && day === targetDay) {
-            return state.roster[meetingCount % state.roster.length];
+          if (!state.blackouts || !state.blackouts[dateKey]) {
+            activeMeetings.push(dateKey);
           }
-
-          if (!state.blackouts[dateKey]) {
-            meetingCount++;
-          }
-        }
+        });
       }
     }
-    return state.roster[0];
+
+    const targetKey = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}`;
+    const targetIndex = activeMeetings.indexOf(targetKey);
+    if (targetIndex === -1) return state.roster[0];
+
+    let anchorIndex = activeMeetings.findIndex(k => k >= anchorDateKey);
+    if (anchorIndex === -1) anchorIndex = 0;
+
+    const offset = targetIndex - anchorIndex;
+    const len = state.roster.length;
+    const rosterIndex = ((offset % len) + len) % len;
+    return state.roster[rosterIndex];
   }
 
   /* --- ROSTER CONTROLLERS --- */
@@ -757,6 +798,11 @@
   }
 
   function renderRoster(state) {
+    const dateInput = document.getElementById("rotationStartDateInput");
+    if (dateInput) {
+      dateInput.value = state.rotationStartDate || DEFAULT_ANCHOR_DATE;
+    }
+
     const container = document.getElementById("rosterContainer");
     container.innerHTML = "";
     if (state.roster.length === 0) {

@@ -1,11 +1,11 @@
-const CACHE_NAME = 'conductor-schedule-v18';
+const CACHE_NAME = 'conductor-schedule-v19';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
-  './manifest.json'
+  './manifest.json',
+  './icon-192.png'
 ];
 
-// Install Event: Cache core PWA assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -16,7 +16,6 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Activate Event: Clean up legacy caches and take control immediately
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -33,7 +32,6 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch Event: Stale-While-Revalidate Strategy with Network Fallback
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
@@ -56,7 +54,6 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Listen for skipWaiting message from main thread
 self.addEventListener('message', (event) => {
   if (event.data && event.data.action === 'skipWaiting') {
     self.skipWaiting();
