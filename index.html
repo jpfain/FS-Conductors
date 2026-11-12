@@ -165,6 +165,28 @@
       gap: 4px;
     }
 
+    .tag-move {
+      color: #475569;
+      cursor: pointer;
+      border: none;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 0.75rem;
+      line-height: 1;
+      min-height: auto;
+    }
+
+    .tag-move:hover:not(:disabled) {
+      background: #ffffff;
+      color: var(--primary);
+    }
+
+    .tag-move:disabled {
+      opacity: 0.3;
+      cursor: default;
+    }
+
     .tag-remove {
       color: #64748b;
       cursor: pointer;
@@ -608,7 +630,7 @@
   };
 
   let activeShareContext = {
-    mode: "single", // "single" or "all"
+    mode: "single",
     conductorName: null
   };
 
@@ -722,6 +744,17 @@
     saveAppState(state);
   }
 
+  function moveConductor(index, direction) {
+    const state = loadAppState();
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= state.roster.length) return;
+
+    const temp = state.roster[index];
+    state.roster[index] = state.roster[newIndex];
+    state.roster[newIndex] = temp;
+    saveAppState(state);
+  }
+
   function renderRoster(state) {
     const container = document.getElementById("rosterContainer");
     container.innerHTML = "";
@@ -732,10 +765,15 @@
     state.roster.forEach((name, index) => {
       const tag = document.createElement("div");
       tag.className = "tag";
+      const isFirst = index === 0;
+      const isLast = index === state.roster.length - 1;
+
       tag.innerHTML = `
         <span class="tag-num">${index + 1}</span>
         <span>${name}</span>
         <div class="tag-actions">
+          <button class="tag-move" onclick="moveConductor(${index}, -1)" title="Move earlier in rotation" ${isFirst ? 'disabled' : ''}>◀</button>
+          <button class="tag-move" onclick="moveConductor(${index}, 1)" title="Move later in rotation" ${isLast ? 'disabled' : ''}>▶</button>
           <button class="btn-link btn-ics" data-name="${encodeURIComponent(name)}" style="color:#3730a3; font-size:0.75rem; padding:0 4px; font-weight:600;" title="Download .ics calendar file">📥 .ics</button>
           <button class="btn-link btn-share" data-name="${encodeURIComponent(name)}" style="color:#059669; font-size:0.75rem; padding:0 4px; font-weight:600;" title="Customize & share dates">📤 Share</button>
           <button class="tag-remove" onclick="removeConductor(${index})" title="Remove">&times;</button>
