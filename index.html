@@ -721,6 +721,7 @@
     showStatus("Rotation start date updated!");
   }
 
+  // Returns 2nd, 4th, and (when present) 5th Saturday of the month
   function getMeetingSaturdays(year, month) {
     let saturdays = [];
     let date = new Date(year, month, 1);
@@ -730,10 +731,14 @@
       }
       date.setDate(date.getDate() + 1);
     }
-    return { second: saturdays[1], fourth: saturdays[3] };
+    return {
+      second: saturdays[1],
+      fourth: saturdays[3],
+      fifth: saturdays[4]
+    };
   }
 
-  // Anchored Multi-Year Continuous Rotation Engine
+  // Anchored Multi-Year Continuous Rotation Engine (2nd, 4th, and 5th Saturdays)
   function getRotationalConductor(targetYear, targetMonth, targetDay, state) {
     if (!state.roster || state.roster.length === 0) return "Unassigned";
 
@@ -745,7 +750,7 @@
     for (let y = START_YEAR; y <= endYear; y++) {
       for (let m = 0; m < 12; m++) {
         const sats = getMeetingSaturdays(y, m);
-        [sats.second, sats.fourth].forEach(day => {
+        [sats.second, sats.fourth, sats.fifth].forEach(day => {
           if (!day) return;
           const dateKey = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
           if (!state.blackouts || !state.blackouts[dateKey]) {
@@ -938,8 +943,9 @@
 
       const is2ndSaturday = day === meetingSaturdays.second;
       const is4thSaturday = day === meetingSaturdays.fourth;
+      const is5thSaturday = day === meetingSaturdays.fifth;
 
-      if (is2ndSaturday || is4thSaturday) {
+      if (is2ndSaturday || is4thSaturday || is5thSaturday) {
         const monthStr = String(month + 1).padStart(2, '0');
         const dayStr = String(day).padStart(2, '0');
         const dateKey = `${year}-${monthStr}-${dayStr}`;
@@ -958,7 +964,9 @@
           cell.classList.add("meeting");
           const tag = document.createElement("div");
           tag.className = "meeting-tag";
-          tag.innerText = is2ndSaturday ? "2nd Sat Meeting" : "4th Sat Meeting";
+          if (is2ndSaturday) tag.innerText = "2nd Sat Meeting";
+          else if (is4thSaturday) tag.innerText = "4th Sat Meeting";
+          else tag.innerText = "5th Sat Meeting";
           cell.appendChild(tag);
 
           const activeConductor = savedOverride || autoAssigned;
@@ -1012,7 +1020,7 @@
 
     for (let month = 0; month < 12; month++) {
       const sats = getMeetingSaturdays(selectedYear, month);
-      const meetingDays = [sats.second, sats.fourth];
+      const meetingDays = [sats.second, sats.fourth, sats.fifth];
 
       meetingDays.forEach(day => {
         if (!day) return;
@@ -1030,10 +1038,11 @@
         else if (override) statusBadge = `<span class="badge badge-override">Override</span>`;
 
         const displayDate = new Date(selectedYear, month, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const satLabel = day === sats.fifth ? ' <span style="font-size:0.75rem; color:#2563eb; font-weight:600;">(5th Sat)</span>' : '';
 
         const row = document.createElement("tr");
         row.innerHTML = `
-          <td><strong>${displayDate}</strong></td>
+          <td><strong>${displayDate}</strong>${satLabel}</td>
           <td>${conductor}</td>
           <td>${statusBadge}</td>
           <td>
@@ -1066,7 +1075,7 @@
     for (let y = START_YEAR; y <= maxYear; y++) {
       for (let month = 0; month < 12; month++) {
         const sats = getMeetingSaturdays(y, month);
-        [sats.second, sats.fourth].forEach(day => {
+        [sats.second, sats.fourth, sats.fifth].forEach(day => {
           if (!day) return;
           const monthStr = String(month + 1).padStart(2, '0');
           const dayStr = String(day).padStart(2, '0');
@@ -1395,7 +1404,7 @@
 
     for (let month = 0; month < 12; month++) {
       const sats = getMeetingSaturdays(selectedYear, month);
-      const meetingDays = [sats.second, sats.fourth];
+      const meetingDays = [sats.second, sats.fourth, sats.fifth];
 
       meetingDays.forEach(day => {
         if (!day) return;
@@ -1450,7 +1459,7 @@
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     const sats = getMeetingSaturdays(year, month);
-    const meetingDays = [sats.second, sats.fourth];
+    const meetingDays = [sats.second, sats.fourth, sats.fifth];
     const nowString = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 
     let icsLines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Conductor Schedule//EN"];
@@ -1521,12 +1530,19 @@
     const c2 = getFormattedSlot(sats.second);
     const c4 = getFormattedSlot(sats.fourth);
 
-    const text = `Conductor Schedule - ${monthNames[month]} ${year}\n` +
-      `----------------------------------------\n` +
-      `• ${monthNames[month]} ${sats.second}, ${year} (2nd Sat): ${c2}\n` +
-      `• ${monthNames[month]} ${sats.fourth}, ${year} (4th Sat): ${c4}`;
+    const lines = [
+      `Conductor Schedule - ${monthNames[month]} ${year}`,
+      `----------------------------------------`,
+      `• ${monthNames[month]} ${sats.second}, ${year} (2nd Sat): ${c2}`,
+      `• ${monthNames[month]} ${sats.fourth}, ${year} (4th Sat): ${c4}`
+    ];
 
-    navigator.clipboard.writeText(text).then(() => {
+    if (sats.fifth) {
+      const c5 = getFormattedSlot(sats.fifth);
+      lines.push(`• ${monthNames[month]} ${sats.fifth}, ${year} (5th Sat): ${c5}`);
+    }
+
+    navigator.clipboard.writeText(lines.join("\n")).then(() => {
       showStatus("Copied to clipboard!");
     });
   }
