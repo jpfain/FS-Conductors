@@ -576,8 +576,9 @@
       <select id="shareTimeframeSelect" onchange="refreshShareModalPreview()">
         <option value="1">Next 1 Month</option>
         <option value="2" selected>Next 3 Months</option>
-        <option value="3">Rest of Selected Year (Upcoming Only)</option>
-        <option value="4">Entire Selected Year (All Dates)</option>
+        <option value="3">Next 6 Months</option>
+        <option value="4">Rest of Selected Year (Upcoming Only)</option>
+        <option value="5">Entire Selected Year (All Dates)</option>
       </select>
     </div>
 
@@ -1072,8 +1073,13 @@
       const cutoff = new Date(first.getFullYear(), first.getMonth() + 3, first.getDate() + 6);
       return upcoming.filter(d => d.slotDate <= cutoff);
     } else if (rangeOption === "3") {
-      return upcoming.filter(d => d.year === selectedYear);
+      if (upcoming.length === 0) return [];
+      const first = upcoming[0].slotDate;
+      const cutoff = new Date(first.getFullYear(), first.getMonth() + 6, first.getDate() + 6);
+      return upcoming.filter(d => d.slotDate <= cutoff);
     } else if (rangeOption === "4") {
+      return upcoming.filter(d => d.year === selectedYear);
+    } else if (rangeOption === "5") {
       return conductorSlots.filter(d => d.year === selectedYear);
     }
     return upcoming;
@@ -1101,8 +1107,14 @@
         filteredSlots = globalUpcoming.filter(d => d.slotDate <= cutoff);
       }
     } else if (rangeOption === "3") {
-      filteredSlots = globalUpcoming.filter(d => d.year === selectedYear);
+      if (globalUpcoming.length > 0) {
+        const first = globalUpcoming[0].slotDate;
+        const cutoff = new Date(first.getFullYear(), first.getMonth() + 6, first.getDate() + 6);
+        filteredSlots = globalUpcoming.filter(d => d.slotDate <= cutoff);
+      }
     } else if (rangeOption === "4") {
+      filteredSlots = globalUpcoming.filter(d => d.year === selectedYear);
+    } else if (rangeOption === "5") {
       filteredSlots = allSlots.filter(d => d.year === selectedYear);
     }
 
@@ -1255,9 +1267,10 @@
       `Select .ics calendar timeframe for ${conductorName}:\n\n` +
       `1 = Next 1 Month\n` +
       `2 = Next 3 Months\n` +
-      `3 = Rest of Year (Upcoming Only)\n` +
-      `4 = Entire Year (All Dates)\n\n` +
-      `Enter option number (1-4):`,
+      `3 = Next 6 Months\n` +
+      `4 = Rest of Year (Upcoming Only)\n` +
+      `5 = Entire Year (All Dates)\n\n` +
+      `Enter option number (1-5):`,
       "2"
     );
 
