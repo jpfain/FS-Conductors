@@ -1,0 +1,22 @@
+{
+  "roster": [
+    "Sergio Knowles",
+    "Dow Stephens",
+    "Eddie Chacon",
+    "Alex Gonzales",
+    "Paul Fain",
+    "Josh Perkins",
+    "Mason Hedland",
+    "Larry Thomas",
+    "Julian Ramirez"
+  ],
+  "overrides": {
+    "2026-11-14": "Sergio Knowles",
+    "2027-01-09": "Eddie Chacon"
+  },
+  "blackouts": {},
+  "templates": {
+    "individual": "Hi Eddie,\n\nHere is your upcoming FS Conductor schedule:\n\n• Sat, Nov 28, 2026 (9:30 AM)\n• Sat, Jan 9, 2027 (9:30 AM)\n\nLocation: Kingdom Hall\nDirection: Please examine km 3/15 pp. 3-6 for suggestions.\n\nThank you for your willing spirit!",
+    "group": "Hello Brothers,\n\nHere is the updated FS Conductor schedule ({timeframe}):\n\n{schedules}\n\nLocation: Kingdom Hall (9:30 AM)\nDirection: Please examine km 3/15 pp. 3-6 for suggestions.\n\nThank you for your willing spirit!"
+  }
+}
