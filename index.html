@@ -141,12 +141,18 @@
 
     .roster-form {
       display: flex;
+      flex-wrap: wrap;
       gap: 8px;
       margin-bottom: 12px;
     }
 
     .roster-input {
-      flex: 1;
+      flex: 2 1 180px;
+      background: white;
+    }
+
+    .roster-contact-input {
+      flex: 1 1 140px;
       background: white;
     }
 
@@ -178,6 +184,12 @@
       align-items: center;
       justify-content: center;
       font-size: 0.75rem;
+    }
+
+    .tag-contact-badges {
+      font-size: 0.72rem;
+      opacity: 0.85;
+      letter-spacing: 1px;
     }
 
     .tag-actions {
@@ -475,6 +487,7 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 6px;
+      gap: 8px;
     }
 
     .modal-field label {
@@ -498,7 +511,7 @@
     }
 
     .modal-field textarea {
-      min-height: 185px;
+      min-height: 175px;
       line-height: 1.4;
       resize: vertical;
     }
@@ -534,6 +547,7 @@
       .day-header { font-size: 0.75rem; padding: 4px; }
       th:nth-child(3), td:nth-child(3) { display: none; }
       .modal-actions button { flex: 1 1 auto; }
+      .roster-form button { width: 100%; }
     }
   </style>
 </head>
@@ -567,7 +581,9 @@
       </div>
     </div>
     <div class="roster-form">
-      <input type="text" id="newConductorInput" class="roster-input" placeholder="Enter conductor name..." onkeydown="if(event.key==='Enter') addConductor()">
+      <input type="text" id="newConductorInput" class="roster-input" placeholder="Conductor name..." onkeydown="if(event.key==='Enter') addConductor()">
+      <input type="tel" id="newConductorPhone" class="roster-contact-input" placeholder="Mobile # (optional)" onkeydown="if(event.key==='Enter') addConductor()">
+      <input type="email" id="newConductorEmail" class="roster-contact-input" placeholder="Email (optional)" onkeydown="if(event.key==='Enter') addConductor()">
       <button onclick="addConductor()">+ Add</button>
     </div>
     <div class="roster-tags" id="rosterContainer"></div>
@@ -616,6 +632,42 @@
   </div>
 </div>
 
+<!-- EDIT CONDUCTOR CONTACT MODAL -->
+<div id="contactModal" class="modal-backdrop" onclick="if(event.target === this) closeContactModal()">
+  <div class="modal-card" style="max-width: 440px;">
+    <div class="modal-header">
+      <h3>Edit Conductor Details</h3>
+      <button class="modal-close" onclick="closeContactModal()" title="Close">&times;</button>
+    </div>
+
+    <div class="modal-field">
+      <div class="modal-field-header">
+        <label for="editConductorName">Full Name</label>
+      </div>
+      <input type="text" id="editConductorName" placeholder="Conductor name" onkeydown="if(event.key==='Enter') saveConductorContact()">
+    </div>
+
+    <div class="modal-field">
+      <div class="modal-field-header">
+        <label for="editConductorPhone">Mobile Number (for Text / Messages)</label>
+      </div>
+      <input type="tel" id="editConductorPhone" placeholder="e.g., 904-555-0123" onkeydown="if(event.key==='Enter') saveConductorContact()">
+    </div>
+
+    <div class="modal-field">
+      <div class="modal-field-header">
+        <label for="editConductorEmail">Email Address</label>
+      </div>
+      <input type="email" id="editConductorEmail" placeholder="e.g., name@example.com" onkeydown="if(event.key==='Enter') saveConductorContact()">
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="outline" onclick="closeContactModal()">Cancel</button>
+      <button type="button" class="success" onclick="saveConductorContact()">💾 Save Contact</button>
+    </div>
+  </div>
+</div>
+
 <!-- SHARE & MESSAGE TEMPLATE MODAL -->
 <div id="shareModal" class="modal-backdrop" onclick="if(event.target === this) closeShareModal()">
   <div class="modal-card">
@@ -628,6 +680,15 @@
     <div class="format-switcher">
       <button type="button" id="btnFormatText" class="active" onclick="setShareFormat('text')">💬 Short Text</button>
       <button type="button" id="btnFormatEmail" class="outline" onclick="setShareFormat('email')">✉️ Longer Email</button>
+    </div>
+
+    <!-- RECIPIENT TO: FIELD (AUTO-FILLED FROM SAVED CONTACTS) -->
+    <div class="modal-field">
+      <div class="modal-field-header">
+        <label id="shareRecipientLabel" for="shareRecipientInput">To (Mobile Number):</label>
+        <button type="button" id="btnQuickEditContact" class="btn-link" style="font-size:0.75rem; color:var(--accent);" onclick="editContactFromShareModal()">Edit Saved Contact</button>
+      </div>
+      <input type="text" id="shareRecipientInput" placeholder="Auto-filled when saved in roster...">
     </div>
 
     <div class="modal-field">
@@ -715,12 +776,23 @@
   };
 
   let activeShareContext = {
-    mode: "single",       // "single" or "all"
+    mode: "single",
     conductorName: null,
-    format: "text",       // "text" or "email"
+    format: "text",
     lastRenderedDates: "",
     lastRenderedSchedules: ""
   };
+
+  let editingRosterIndex = null;
+
+  function escapeHtml(str) {
+    return String(str || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
 
   // Unified State Architecture
   function loadAppState() {
@@ -730,7 +802,6 @@
       if (!parsed.templates) {
         parsed.templates = { ...DEFAULT_TEMPLATES };
       } else {
-        // Migrate legacy single-template keys if present
         if (parsed.templates.individual && !parsed.templates.individualEmail) {
           parsed.templates.individualEmail = parsed.templates.individual;
         }
@@ -741,6 +812,9 @@
       }
       if (!parsed.rotationStartDate) {
         parsed.rotationStartDate = DEFAULT_ANCHOR_DATE;
+      }
+      if (!parsed.contacts) {
+        parsed.contacts = {};
       }
       return parsed;
     }
@@ -770,6 +844,7 @@
 
     const newState = {
       roster: migratedRoster,
+      contacts: {},
       overrides: migratedOverrides,
       blackouts: {},
       templates: { ...DEFAULT_TEMPLATES },
@@ -792,7 +867,6 @@
     showStatus("Rotation start date updated!");
   }
 
-  // Returns 2nd, 4th, and (when present) 5th Saturday of the month
   function getMeetingSaturdays(year, month) {
     let saturdays = [];
     let date = new Date(year, month, 1);
@@ -809,7 +883,6 @@
     };
   }
 
-  // Anchored Multi-Year Continuous Rotation Engine (2nd, 4th, and 5th Saturdays)
   function getRotationalConductor(targetYear, targetMonth, targetDay, state) {
     if (!state.roster || state.roster.length === 0) return "Unassigned";
 
@@ -844,15 +917,28 @@
     return state.roster[rosterIndex];
   }
 
-  /* --- ROSTER CONTROLLERS --- */
+  /* --- ROSTER & CONTACT CONTROLLERS --- */
   function addConductor() {
-    const input = document.getElementById("newConductorInput");
-    const name = input.value.trim();
+    const nameInput = document.getElementById("newConductorInput");
+    const phoneInput = document.getElementById("newConductorPhone");
+    const emailInput = document.getElementById("newConductorEmail");
+
+    const name = nameInput.value.trim();
+    const phone = phoneInput.value.trim();
+    const email = emailInput.value.trim();
+
     if (name) {
       const state = loadAppState();
+      if (!state.contacts) state.contacts = {};
       state.roster.push(name);
-      input.value = "";
+      if (phone || email) {
+        state.contacts[name] = { phone, email };
+      }
+      nameInput.value = "";
+      phoneInput.value = "";
+      emailInput.value = "";
       saveAppState(state);
+      showStatus(`Added ${name} to roster!`);
     }
   }
 
@@ -873,6 +959,72 @@
     saveAppState(state);
   }
 
+  function openContactModal(index) {
+    const state = loadAppState();
+    const name = state.roster[index];
+    if (!name) return;
+
+    editingRosterIndex = index;
+    const contact = (state.contacts && state.contacts[name]) || { phone: "", email: "" };
+
+    document.getElementById("editConductorName").value = name;
+    document.getElementById("editConductorPhone").value = contact.phone || "";
+    document.getElementById("editConductorEmail").value = contact.email || "";
+    document.getElementById("contactModal").classList.add("open");
+  }
+
+  function closeContactModal() {
+    document.getElementById("contactModal").classList.remove("open");
+    editingRosterIndex = null;
+  }
+
+  function saveConductorContact() {
+    if (editingRosterIndex === null) return;
+    const state = loadAppState();
+    if (!state.contacts) state.contacts = {};
+
+    const oldName = state.roster[editingRosterIndex];
+    const newName = document.getElementById("editConductorName").value.trim();
+    const phone = document.getElementById("editConductorPhone").value.trim();
+    const email = document.getElementById("editConductorEmail").value.trim();
+
+    if (!newName) {
+      alert("Conductor name cannot be empty.");
+      return;
+    }
+
+    state.roster[editingRosterIndex] = newName;
+
+    if (oldName !== newName) {
+      delete state.contacts[oldName];
+      // Update any manual overrides referencing the previous name
+      if (state.overrides) {
+        Object.keys(state.overrides).forEach(dateKey => {
+          if (state.overrides[dateKey] === oldName) {
+            state.overrides[dateKey] = newName;
+          }
+        });
+      }
+      if (activeShareContext.conductorName === oldName) {
+        activeShareContext.conductorName = newName;
+      }
+    }
+
+    state.contacts[newName] = { phone, email };
+    saveAppState(state);
+    closeContactModal();
+    showStatus(`Saved contact info for ${newName}!`);
+
+    // If the Share modal is currently open, refresh its recipient field and preview
+    if (document.getElementById("shareModal").classList.contains("open")) {
+      if (activeShareContext.mode === "single") {
+        document.getElementById("shareModalTitle").innerText = `Share Schedule: ${activeShareContext.conductorName}`;
+      }
+      populateShareRecipients();
+      refreshShareModalPreview();
+    }
+  }
+
   function renderRoster(state) {
     const dateInput = document.getElementById("rotationStartDateInput");
     if (dateInput) {
@@ -885,18 +1037,26 @@
       container.innerHTML = `<span style="font-size:0.85rem; color:#94a3b8;">No conductors added. Add names above.</span>`;
       return;
     }
+
     state.roster.forEach((name, index) => {
       const tag = document.createElement("div");
       tag.className = "tag";
       const isFirst = index === 0;
       const isLast = index === state.roster.length - 1;
+      const contact = (state.contacts && state.contacts[name]) || {};
+
+      let badges = "";
+      if (contact.phone) badges += `<span title="Mobile: ${escapeHtml(contact.phone)}">📱</span>`;
+      if (contact.email) badges += `<span title="Email: ${escapeHtml(contact.email)}">✉️</span>`;
 
       tag.innerHTML = `
         <span class="tag-num">${index + 1}</span>
-        <span>${name}</span>
+        <span>${escapeHtml(name)}</span>
+        ${badges ? `<span class="tag-contact-badges">${badges}</span>` : ""}
         <div class="tag-actions">
           <button class="tag-move" onclick="moveConductor(${index}, -1)" title="Move earlier in rotation" ${isFirst ? 'disabled' : ''}>◀</button>
           <button class="tag-move" onclick="moveConductor(${index}, 1)" title="Move later in rotation" ${isLast ? 'disabled' : ''}>▶</button>
+          <button class="tag-move" onclick="openContactModal(${index})" title="Edit phone & email">✏️</button>
           <button class="btn-link btn-ics" data-name="${encodeURIComponent(name)}" style="color:#3730a3; font-size:0.75rem; padding:0 4px; font-weight:600;" title="Download .ics calendar file">📥 .ics</button>
           <button class="btn-link btn-share" data-name="${encodeURIComponent(name)}" style="color:#059669; font-size:0.75rem; padding:0 4px; font-weight:600;" title="Send Text or Email schedule">📤 Share</button>
           <button class="tag-remove" onclick="removeConductor(${index})" title="Remove">&times;</button>
@@ -1048,9 +1208,9 @@
           const nameDisplay = document.createElement("div");
           nameDisplay.className = "conductor-name-display";
           if (lastName) {
-            nameDisplay.innerHTML = `<div class="first-name">${firstName}</div><div class="last-name">${lastName}</div>`;
+            nameDisplay.innerHTML = `<div class="first-name">${escapeHtml(firstName)}</div><div class="last-name">${escapeHtml(lastName)}</div>`;
           } else {
-            nameDisplay.innerHTML = `<div class="first-name">${firstName}</div>`;
+            nameDisplay.innerHTML = `<div class="first-name">${escapeHtml(firstName)}</div>`;
           }
           cell.appendChild(nameDisplay);
 
@@ -1114,10 +1274,10 @@
         const row = document.createElement("tr");
         row.innerHTML = `
           <td><strong>${displayDate}</strong>${satLabel}</td>
-          <td>${conductor}</td>
+          <td>${escapeHtml(conductor)}</td>
           <td>${statusBadge}</td>
           <td>
-            <button class="outline" style="padding:2px 6px; min-height:auto;" onclick="promptTableOverride('${dateKey}', '${override || ''}')">Override</button>
+            <button class="outline" style="padding:2px 6px; min-height:auto;" onclick="promptTableOverride('${dateKey}', '${escapeHtml(override || '')}')">Override</button>
             <button class="outline" style="padding:2px 6px; min-height:auto;" onclick="toggleBlackout('${dateKey}')">${isBlackout ? 'Restore' : 'Cancel'}</button>
           </td>
         `;
@@ -1260,6 +1420,49 @@
     return "groupEmail";
   }
 
+  function populateShareRecipients() {
+    const state = loadAppState();
+    const isText = activeShareContext.format === "text";
+    const labelEl = document.getElementById("shareRecipientLabel");
+    const inputEl = document.getElementById("shareRecipientInput");
+    const editBtn = document.getElementById("btnQuickEditContact");
+
+    labelEl.innerText = isText ? "To (Mobile Number):" : "To (Email Address):";
+
+    if (activeShareContext.mode === "single") {
+      editBtn.style.display = "inline-block";
+      const contact = (state.contacts && state.contacts[activeShareContext.conductorName]) || {};
+      const val = isText ? (contact.phone || "") : (contact.email || "");
+      inputEl.value = val;
+      inputEl.placeholder = isText
+        ? "No mobile # saved (click Edit Saved Contact or type here)"
+        : "No email saved (click Edit Saved Contact or type here)";
+    } else {
+      editBtn.style.display = "none";
+      const list = state.roster
+        .map(name => {
+          const contact = (state.contacts && state.contacts[name]) || {};
+          return isText ? (contact.phone || "") : (contact.email || "");
+        })
+        .map(v => v.trim())
+        .filter(Boolean);
+
+      inputEl.value = list.join(", ");
+      inputEl.placeholder = isText
+        ? "Add mobile numbers to conductors in roster to auto-fill..."
+        : "Add emails to conductors in roster to auto-fill...";
+    }
+  }
+
+  function editContactFromShareModal() {
+    if (activeShareContext.mode !== "single") return;
+    const state = loadAppState();
+    const idx = state.roster.indexOf(activeShareContext.conductorName);
+    if (idx !== -1) {
+      openContactModal(idx);
+    }
+  }
+
   function openShareModal(mode, conductorName, initialFormat = "text") {
     activeShareContext = {
       mode,
@@ -1298,6 +1501,7 @@
     document.getElementById("shareMessageLabel").innerText = isText ? "Short Text Message" : "Longer Email Message";
     document.getElementById("templateScopeLabel").innerText = isText ? "Short Text Template:" : "Longer Email Template:";
 
+    populateShareRecipients();
     refreshShareModalPreview();
   }
 
@@ -1369,7 +1573,6 @@
     const templateKey = getActiveTemplateKey();
     let templateToSave = document.getElementById("shareMessageTextarea").value;
 
-    // Preserve dynamic placeholders if the user edited the rendered preview directly
     if (activeShareContext.mode === "single") {
       const fullName = activeShareContext.conductorName;
       const firstName = fullName.trim().split(/\s+/)[0] || fullName;
@@ -1434,15 +1637,33 @@
 
   function smsModalMessage() {
     const text = document.getElementById("shareMessageTextarea").value;
-    window.location.href = `sms:?&body=${encodeURIComponent(text)}`;
+    const rawRecipients = document.getElementById("shareRecipientInput").value;
+    const phones = rawRecipients
+      .split(",")
+      .map(p => p.replace(/[^\d+]/g, ""))
+      .filter(Boolean);
+
+    if (phones.length === 1) {
+      window.location.href = `sms:${phones[0]}?&body=${encodeURIComponent(text)}`;
+    } else if (phones.length > 1) {
+      window.location.href = `sms://open?addresses=${phones.join(",")}&body=${encodeURIComponent(text)}`;
+    } else {
+      window.location.href = `sms:?&body=${encodeURIComponent(text)}`;
+    }
     showStatus("Opened in Messages app!");
   }
 
   function emailModalMessage() {
     const text = document.getElementById("shareMessageTextarea").value;
     const subject = document.getElementById("shareEmailSubject").value || "FS Conductor Schedule";
+    const rawRecipients = document.getElementById("shareRecipientInput").value;
+    const emails = rawRecipients
+      .split(",")
+      .map(e => e.trim())
+      .filter(Boolean);
 
-    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
+    const toParam = emails.map(e => encodeURIComponent(e)).join(",");
+    window.location.href = `mailto:${toParam}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
     showStatus("Opened in Email app!");
   }
 
@@ -1731,9 +1952,15 @@
     event.target.value = "";
   }
 
-  // Close modal on Escape key
+  // Close modals on Escape key
   window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeShareModal();
+    if (e.key === "Escape") {
+      if (document.getElementById("contactModal").classList.contains("open")) {
+        closeContactModal();
+      } else {
+        closeShareModal();
+      }
+    }
   });
 
   // Register PWA Service Worker with auto-reload on update
