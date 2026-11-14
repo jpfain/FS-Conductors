@@ -1,0 +1,62 @@
+{
+  "roster": [
+    "Dow Stephens",
+    "Sergio Knowles",
+    "Eddie Chacon",
+    "Alex Gonzales",
+    "Paul Fain",
+    "Larry Thomas",
+    "Mason Hedland",
+    "Josh Perkins",
+    "Julian Ramirez"
+  ],
+  "overrides": {},
+  "blackouts": {},
+  "templates": {
+    "individualText": "Hi {firstName}, your upcoming FS Conductor dates (9:30 AM, Kingdom Hall):\n{dates}\nPlease see km 3/15 pp. 3-6. Thanks!",
+    "individualEmail": "\nHere is your upcoming FS Conductor schedule:\n\n• Sat, Jan 23, 2027 (9:30 - 9:37 AM)\n• Sat, Jun 12, 2027 (9:30 - 9:37 AM)\n\nLocation: Kingdom Hall\nSuggestions for discusion: Please see mwb21 November p. 7 \"Tips for Making Meetings for Field Service Practical\" and km 3/15 pp. 3-6 \"Meetings for Field Service That Accomplish Their Purpose.\"\n\nThank you for your willing spirit!",
+    "groupText": "Updated FS Conductor Schedule ({timeframe}, 9:30 AM):\n\n{schedules}\n\nLocation: Kingdom Hall (km 3/15 pp. 3-6)",
+    "groupEmail": "Hello Brothers,\n\nHere is the updated FS Conductor schedule ({timeframe}):\n\n{schedules}\n\nLocation: Kingdom Hall (9:30 AM)\nDirection: Please examine km 3/15 pp. 3-6 for suggestions.\n\nThank you for your willing spirit!",
+    "individual": "\nHere is your upcoming FS Conductor schedule:\n\n• Sat, Jan 23, 2027 (9:30 - 9:37 AM)\n• Sat, Jun 12, 2027 (9:30 - 9:37 AM)\n\nLocation: Kingdom Hall\nSuggestions for discusion: Please see mwb21 November p. 7 \"Tips for Making Meetings for Field Service Practical\" and km 3/15 pp. 3-6 \"Meetings for Field Service That Accomplish Their Purpose.\"\n\nThank you for your willing spirit!",
+    "group": "Hello Brothers,\n\nHere is the updated FS Conductor schedule ({timeframe}):\n\n{schedules}\n\nLocation: Kingdom Hall (9:30 AM)\nDirection: Please examine km 3/15 pp. 3-6 for suggestions.\n\nThank you for your willing spirit!"
+  },
+  "rotationStartDate": "2026-11-14",
+  "contacts": {
+    "Dow Stephens": {
+      "phone": "(917) 224-3979",
+      "email": "dow1264@gmail.com"
+    },
+    "Paul Fain": {
+      "phone": "(770 312-1224",
+      "email": "jpfain@gmail.com"
+    },
+    "Sergio Knowles": {
+      "phone": "(904) 609-9760",
+      "email": "sknow1112@gmail.com"
+    },
+    "Eddie Chacon": {
+      "phone": "(904) 885-0576",
+      "email": "dafee39@gmail.com"
+    },
+    "Alex Gonzales": {
+      "phone": "(904) 219-1964",
+      "email": "zanders.gonzalez@gmail.com"
+    },
+    "Larry Thomas": {
+      "phone": "904-477-2002",
+      "email": "LTCalif@yahoo.com"
+    },
+    "Mason Hedland": {
+      "phone": "(541) 953-0526",
+      "email": "mrhedlund01@icloud.com"
+    },
+    "Josh Perkins": {
+      "phone": "(904) 790-2824",
+      "email": "jtaperkins@gmail.com"
+    },
+    "Julian Ramirez": {
+      "phone": "904-333-5969",
+      "email": "julram1914@gmail.com"
+    }
+  }
+}
