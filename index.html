@@ -573,7 +573,7 @@
       flex-wrap: wrap;
     }
 
-    .quick-swap-box {
+    .quick-replace-box {
       display: none;
       align-items: center;
       gap: 6px;
@@ -583,11 +583,11 @@
       border: 1px solid #cbd5e1;
     }
 
-    .quick-swap-box.open {
+    .quick-replace-box.open {
       display: inline-flex;
     }
 
-    .quick-swap-box select {
+    .quick-replace-box select {
       min-height: 30px;
       padding: 2px 8px;
       font-size: 0.8rem;
@@ -921,6 +921,53 @@
       resize: vertical;
     }
 
+    /* Trade Dates Preview Box */
+    .trade-preview-box {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+
+    .trade-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0;
+      flex-wrap: wrap;
+    }
+
+    .trade-row + .trade-row {
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .trade-date-label {
+      font-weight: 700;
+      color: #334155;
+    }
+
+    .trade-shift {
+      color: #0f172a;
+      font-weight: 600;
+    }
+
+    .trade-shift .new-name {
+      color: var(--secondary);
+      font-weight: 700;
+    }
+
+    .trade-note {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px dashed #cbd5e1;
+      font-size: 0.78rem;
+      color: #475569;
+    }
+
     /* Unavailability Pills in Contact Modal */
     .unavail-input-row {
       display: flex;
@@ -1024,7 +1071,7 @@
   <header>
     <div class="title-group">
       <h1>Conductor Schedule</h1>
-      <span id="appVersionBadge" class="version-badge">v27</span>
+      <span id="appVersionBadge" class="version-badge">v28</span>
       <span id="cloudSyncPill" class="sync-pill" onclick="openCloudSyncModal()" title="Configure or check GitHub Gist Cloud Sync">☁️ Local Only</span>
     </div>
     <div class="controls-group">
@@ -1080,6 +1127,7 @@
   <div class="toolbar">
     <div class="toolbar-left">
       <button type="button" class="accent" onclick="openShareModal('all', null, 'text')">📢 Share All Schedules</button>
+      <button type="button" class="outline" onclick="openTradeModal()">⇄ Trade Dates</button>
       <button type="button" class="outline" onclick="copyTextSummary()">📋 Copy Month</button>
     </div>
 
@@ -1133,11 +1181,11 @@
     </div>
 
     <div class="up-next-actions">
-      <div id="quickSwapBox" class="quick-swap-box">
-        <select id="quickSwapSelect" onchange="applyQuickSwap(this.value)" aria-label="Quick Swap Conductor"></select>
-        <button type="button" class="btn-link" onclick="toggleQuickSwap(false)">Done</button>
+      <div id="quickReplaceBox" class="quick-replace-box">
+        <select id="quickReplaceSelect" onchange="applyQuickReplace(this.value)" aria-label="Quick Replace Conductor"></select>
+        <button type="button" class="btn-link" onclick="toggleQuickReplace(false)">Done</button>
       </div>
-      <button type="button" id="btnOpenQuickSwap" class="outline" style="min-height: 34px; padding: 4px 10px; font-size: 0.82rem;" onclick="toggleQuickSwap()">🔄 Quick Swap</button>
+      <button type="button" id="btnOpenQuickReplace" class="outline" style="min-height: 34px; padding: 4px 10px; font-size: 0.82rem;" onclick="toggleQuickReplace()">🔄 Quick Replace</button>
       <button type="button" class="success" style="min-height: 34px; padding: 4px 12px; font-size: 0.82rem;" onclick="remindUpNextConductor()">📤 Send Reminder</button>
     </div>
   </div>
@@ -1170,6 +1218,37 @@
       </thead>
       <tbody id="scheduleTableBody"></tbody>
     </table>
+  </div>
+</div>
+
+<!-- TWO-WAY TRADE DATES MODAL -->
+<div id="tradeModal" class="modal-backdrop" onclick="if(event.target === this) closeTradeModal()">
+  <div class="modal-card" style="max-width: 480px;">
+    <div class="modal-header">
+      <h3>⇄ Trade Two Scheduled Dates</h3>
+      <button type="button" class="modal-close-pill" onclick="closeTradeModal()">✕ Close</button>
+    </div>
+
+    <div class="modal-field">
+      <div class="modal-field-header">
+        <label for="tradeDate1Select">First Meeting Date</label>
+      </div>
+      <select id="tradeDate1Select" onchange="refreshTradePreview()"></select>
+    </div>
+
+    <div class="modal-field">
+      <div class="modal-field-header">
+        <label for="tradeDate2Select">Second Meeting Date</label>
+      </div>
+      <select id="tradeDate2Select" onchange="refreshTradePreview()"></select>
+    </div>
+
+    <div id="tradePreviewBox" class="trade-preview-box"></div>
+
+    <div class="modal-actions-split">
+      <button type="button" class="outline" style="min-height: 36px;" onclick="closeTradeModal()">← Back</button>
+      <button type="button" id="btnConfirmTrade" class="success" style="min-height: 36px;" onclick="applyDateTrade()">⇄ Confirm Trade</button>
+    </div>
   </div>
 </div>
 
@@ -1356,7 +1435,7 @@
 </div>
 
 <script>
-  const APP_VERSION = "v27";
+  const APP_VERSION = "v28";
   let currentDate = new Date();
   let currentViewMode = "calendar";
   const monthNames = [
@@ -1409,6 +1488,7 @@
   let editingRosterIndex = null;
   let tempUnavailableDates = [];
   let currentUpNextSlot = null;
+  let tradeCandidateSlots = [];
   let swRegistration = null;
   let lastAutoUpdateCheck = 0;
   let cloudPushTimer = null;
@@ -1937,6 +2017,128 @@
     return counts;
   }
 
+  /* --- TWO-WAY TRADE DATES MODAL CONTROLLERS --- */
+  function openTradeModal() {
+    const state = loadAppState();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const allSlots = getAllScheduleSlots(state);
+    const upcomingSlots = allSlots.filter(s => s.slotDate >= today);
+    tradeCandidateSlots = upcomingSlots.length >= 2 ? upcomingSlots : allSlots;
+
+    if (tradeCandidateSlots.length < 2) {
+      alert("At least two active meeting dates are needed to trade dates.");
+      return;
+    }
+
+    const sel1 = document.getElementById("tradeDate1Select");
+    const sel2 = document.getElementById("tradeDate2Select");
+    sel1.innerHTML = "";
+    sel2.innerHTML = "";
+
+    tradeCandidateSlots.forEach(slot => {
+      const overrideLabel = slot.isOverride ? " [Override]" : "";
+      const text = `${slot.formattedDate} — ${slot.conductor}${overrideLabel}`;
+
+      const opt1 = document.createElement("option");
+      opt1.value = slot.dateKey;
+      opt1.innerText = text;
+      sel1.appendChild(opt1);
+
+      const opt2 = document.createElement("option");
+      opt2.value = slot.dateKey;
+      opt2.innerText = text;
+      sel2.appendChild(opt2);
+    });
+
+    // Default Date 1 to next upcoming meeting, and Date 2 to next meeting with a different conductor
+    sel1.selectedIndex = 0;
+    const firstConductor = tradeCandidateSlots[0].conductor;
+    const diffIdx = tradeCandidateSlots.findIndex((s, idx) => idx > 0 && s.conductor !== firstConductor);
+    sel2.selectedIndex = diffIdx !== -1 ? diffIdx : 1;
+
+    refreshTradePreview();
+    document.getElementById("tradeModal").classList.add("open");
+    syncModalBodyLock();
+  }
+
+  function closeTradeModal() {
+    document.getElementById("tradeModal").classList.remove("open");
+    syncModalBodyLock();
+  }
+
+  function refreshTradePreview() {
+    const key1 = document.getElementById("tradeDate1Select").value;
+    const key2 = document.getElementById("tradeDate2Select").value;
+    const previewBox = document.getElementById("tradePreviewBox");
+    const confirmBtn = document.getElementById("btnConfirmTrade");
+
+    const slot1 = tradeCandidateSlots.find(s => s.dateKey === key1);
+    const slot2 = tradeCandidateSlots.find(s => s.dateKey === key2);
+
+    if (!slot1 || !slot2) return;
+
+    if (key1 === key2) {
+      confirmBtn.disabled = true;
+      previewBox.innerHTML = `<span style="color: var(--danger); font-weight: 600;">Select two different meeting dates to trade.</span>`;
+      return;
+    }
+
+    if (slot1.conductor === slot2.conductor) {
+      confirmBtn.disabled = true;
+      previewBox.innerHTML = `<span style="color: var(--warning-text); font-weight: 600;">Both selected dates are already assigned to ${escapeHtml(slot1.conductor)}. Choose a date with a different conductor.</span>`;
+      return;
+    }
+
+    confirmBtn.disabled = false;
+    previewBox.innerHTML = `
+      <div class="trade-row">
+        <span class="trade-date-label">${escapeHtml(slot1.formattedDate)}</span>
+        <span class="trade-shift">${escapeHtml(slot1.conductor)} &rarr; <span class="new-name">${escapeHtml(slot2.conductor)}</span></span>
+      </div>
+      <div class="trade-row">
+        <span class="trade-date-label">${escapeHtml(slot2.formattedDate)}</span>
+        <span class="trade-shift">${escapeHtml(slot2.conductor)} &rarr; <span class="new-name">${escapeHtml(slot1.conductor)}</span></span>
+      </div>
+      <div class="trade-note">
+        Yearly assignment counts stay balanced, and all other future rotation dates remain unchanged.
+      </div>
+    `;
+  }
+
+  function applyDateTrade() {
+    const key1 = document.getElementById("tradeDate1Select").value;
+    const key2 = document.getElementById("tradeDate2Select").value;
+
+    const slot1 = tradeCandidateSlots.find(s => s.dateKey === key1);
+    const slot2 = tradeCandidateSlots.find(s => s.dateKey === key2);
+    if (!slot1 || !slot2 || key1 === key2 || slot1.conductor === slot2.conductor) return;
+
+    const state = loadAppState();
+    if (!state.overrides) state.overrides = {};
+
+    const newCond1 = slot2.conductor;
+    const newCond2 = slot1.conductor;
+
+    // If a traded conductor matches the date's automatic assignment, remove override cleanly
+    if (newCond1 === slot1.autoConductor) {
+      delete state.overrides[key1];
+    } else {
+      state.overrides[key1] = newCond1;
+    }
+
+    if (newCond2 === slot2.autoConductor) {
+      delete state.overrides[key2];
+    } else {
+      state.overrides[key2] = newCond2;
+    }
+
+    saveAppState(state);
+    closeTradeModal();
+    showStatus(`Traded ${slot1.conductor} (${slot1.formattedDate}) with ${slot2.conductor} (${slot2.formattedDate})!`);
+  }
+
   /* --- ROSTER, CONTACT & UNAVAILABILITY CONTROLLERS --- */
   function addConductor() {
     const nameInput = document.getElementById("newConductorInput");
@@ -2204,35 +2406,35 @@
     }
     document.getElementById("upNextBadges").innerHTML = badgesHtml;
 
-    const swapSelect = document.getElementById("quickSwapSelect");
-    swapSelect.innerHTML = "";
+    const replaceSelect = document.getElementById("quickReplaceSelect");
+    replaceSelect.innerHTML = "";
     const autoOpt = document.createElement("option");
     autoOpt.value = "";
     autoOpt.innerText = `Auto (${nextSlot.autoConductor})`;
-    swapSelect.appendChild(autoOpt);
+    replaceSelect.appendChild(autoOpt);
 
     state.roster.forEach(name => {
       const opt = document.createElement("option");
       opt.value = name;
       opt.innerText = name;
-      swapSelect.appendChild(opt);
+      replaceSelect.appendChild(opt);
     });
-    swapSelect.value = (state.overrides && state.overrides[nextSlot.dateKey]) || "";
+    replaceSelect.value = (state.overrides && state.overrides[nextSlot.dateKey]) || "";
   }
 
-  function toggleQuickSwap(forceState) {
-    const box = document.getElementById("quickSwapBox");
-    const btn = document.getElementById("btnOpenQuickSwap");
+  function toggleQuickReplace(forceState) {
+    const box = document.getElementById("quickReplaceBox");
+    const btn = document.getElementById("btnOpenQuickReplace");
     const shouldOpen = typeof forceState === "boolean" ? forceState : !box.classList.contains("open");
     box.classList.toggle("open", shouldOpen);
     btn.style.display = shouldOpen ? "none" : "inline-flex";
   }
 
-  function applyQuickSwap(conductorName) {
+  function applyQuickReplace(conductorName) {
     if (!currentUpNextSlot) return;
     setOverride(currentUpNextSlot.dateKey, conductorName);
-    toggleQuickSwap(false);
-    showStatus(conductorName ? `Swapped ${currentUpNextSlot.formattedDate} to ${conductorName}` : "Restored automatic rotation");
+    toggleQuickReplace(false);
+    showStatus(conductorName ? `Replaced ${currentUpNextSlot.formattedDate} with ${conductorName}` : "Restored automatic rotation");
   }
 
   function remindUpNextConductor() {
@@ -3255,7 +3457,9 @@
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       closeAllDropdowns();
-      if (document.getElementById("cloudSyncModal").classList.contains("open")) {
+      if (document.getElementById("tradeModal").classList.contains("open")) {
+        closeTradeModal();
+      } else if (document.getElementById("cloudSyncModal").classList.contains("open")) {
         closeCloudSyncModal();
       } else if (document.getElementById("contactModal").classList.contains("open")) {
         closeContactModal();
