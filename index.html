@@ -14,16 +14,17 @@
       --primary: #1e3a8a;
       --secondary: #059669;
       --accent: #2563eb;
-      --danger: #ef4444;
+      --danger: #dc2626;
       --warning-bg: #fef3c7;
       --warning-text: #92400e;
       --blackout-bg: #fee2e2;
       --blackout-text: #991b1b;
       --meeting-bg: #dbeafe;
       --meeting-border: #3b82f6;
-      --bg: #f8fafc;
+      --bg: #f1f5f9;
       --card-bg: #ffffff;
       --text: #0f172a;
+      --muted: #64748b;
       --border: #cbd5e1;
     }
 
@@ -34,8 +35,8 @@
       background-color: var(--bg);
       color: var(--text);
       margin: 0;
-      padding: clamp(12px, 3vw, 24px);
-      padding-bottom: calc(clamp(12px, 3vw, 24px) + env(safe-area-inset-bottom));
+      padding: clamp(10px, 2.5vw, 24px);
+      padding-bottom: calc(clamp(16px, 3vw, 28px) + env(safe-area-inset-bottom));
       max-width: 960px;
       margin-left: auto;
       margin-right: auto;
@@ -43,19 +44,20 @@
 
     .container {
       background: var(--card-bg);
-      border-radius: 12px;
-      padding: clamp(16px, 3vw, 24px);
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      border-radius: 14px;
+      padding: clamp(14px, 3vw, 24px);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
       border: 1px solid #e2e8f0;
     }
 
+    /* Top Header */
     header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 16px;
-      padding-bottom: 12px;
-      border-bottom: 2px solid #f1f5f9;
+      padding-bottom: 14px;
+      border-bottom: 1px solid #e2e8f0;
       flex-wrap: wrap;
       gap: 12px;
     }
@@ -66,17 +68,21 @@
       gap: 8px;
     }
 
-    h1 { font-size: 1.5rem; margin: 0; color: var(--primary); }
+    h1 {
+      font-size: 1.4rem;
+      margin: 0;
+      color: var(--primary);
+      letter-spacing: -0.01em;
+    }
 
     .version-badge {
-      background: #e0e7ff;
+      background: #eff6ff;
       color: var(--primary);
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       font-weight: 700;
-      padding: 3px 8px;
+      padding: 2px 8px;
       border-radius: 999px;
-      border: 1px solid #c7d2fe;
-      letter-spacing: 0.3px;
+      border: 1px solid #bfdbfe;
     }
 
     .controls-group {
@@ -89,12 +95,12 @@
     button, select, input, textarea {
       font-family: inherit;
       font-size: 0.875rem;
-      padding: 8px 12px;
-      border-radius: 6px;
+      padding: 7px 12px;
+      border-radius: 8px;
       border: 1px solid var(--border);
     }
 
-    button, select, input { min-height: 40px; }
+    button, select, input { min-height: 38px; }
 
     button {
       background-color: var(--primary);
@@ -106,73 +112,146 @@
       align-items: center;
       justify-content: center;
       gap: 6px;
+      transition: opacity 0.15s ease, background-color 0.15s ease;
     }
 
-    button:hover { opacity: 0.9; }
-    button.secondary { background-color: #64748b; }
+    button:hover { opacity: 0.92; }
+    button.secondary { background-color: #475569; }
     button.success { background-color: var(--secondary); }
     button.accent { background-color: var(--accent); }
-    button.outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    button.danger { background-color: var(--danger); }
+    button.outline { background: #ffffff; color: var(--text); border: 1px solid var(--border); }
+    button.outline:hover { background: #f8fafc; }
     button.active { background-color: var(--primary); color: white; border-color: var(--primary); }
+
+    .view-toggle {
+      display: flex;
+      background: #e2e8f0;
+      padding: 3px;
+      border-radius: 9px;
+      gap: 2px;
+    }
+
+    .view-toggle button {
+      min-height: 32px;
+      padding: 4px 12px;
+      border-radius: 7px;
+      font-size: 0.82rem;
+      border: none;
+    }
+
+    .view-toggle button.outline {
+      background: transparent;
+      color: #475569;
+    }
 
     /* Roster Panel */
     .roster-card {
       background: #f8fafc;
-      border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 20px;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 16px;
       border: 1px solid #e2e8f0;
     }
 
     .roster-header {
-      font-size: 0.95rem;
-      font-weight: 700;
-      margin-bottom: 10px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .roster-title-wrap {
+      display: flex;
+      align-items: center;
       gap: 8px;
+    }
+
+    .roster-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .roster-count {
+      background: #e2e8f0;
+      color: #475569;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 999px;
+    }
+
+    .roster-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
     }
 
     .anchor-control {
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       font-weight: 600;
-      color: #334155;
+      color: #475569;
       background: #ffffff;
-      padding: 4px 10px;
-      border-radius: 6px;
+      padding: 3px 9px;
+      border-radius: 8px;
       border: 1px solid #cbd5e1;
     }
 
     .anchor-control input[type="date"] {
       min-height: 28px;
-      padding: 2px 6px;
-      font-size: 0.8rem;
-      border: 1px solid #cbd5e1;
-      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 0.78rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 5px;
+      background: #f8fafc;
     }
 
-    .roster-form {
+    /* Collapsible Add Conductor Drawer */
+    .add-conductor-drawer {
+      display: none;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 9px;
+      padding: 12px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+    }
+
+    .add-conductor-drawer.open {
+      display: block;
+    }
+
+    .drawer-inputs {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
 
     .roster-input {
       flex: 2 1 180px;
-      background: white;
+      background: #f8fafc;
     }
 
     .roster-contact-input {
       flex: 1 1 140px;
-      background: white;
+      background: #f8fafc;
     }
 
+    .drawer-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    /* Conductor Pills */
     .roster-tags {
       display: flex;
       flex-wrap: wrap;
@@ -180,15 +259,17 @@
     }
 
     .tag {
-      background: #e0e7ff;
-      color: #3730a3;
-      padding: 6px 12px;
-      border-radius: 20px;
-      font-size: 0.85rem;
+      background: #ffffff;
+      color: #1e293b;
+      border: 1px solid #cbd5e1;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 0.84rem;
       font-weight: 600;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 7px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
     }
 
     .tag-num {
@@ -200,7 +281,8 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
+      flex-shrink: 0;
     }
 
     .tag-contact-badges {
@@ -210,69 +292,136 @@
     }
 
     .tag-actions {
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      gap: 4px;
+      gap: 3px;
+      padding-left: 4px;
+      border-left: 1px solid #e2e8f0;
     }
 
-    .tag-move {
+    .tag-icon-btn {
       color: #475569;
       cursor: pointer;
       border: none;
-      background: rgba(255, 255, 255, 0.7);
-      border-radius: 4px;
-      padding: 2px 6px;
+      background: #f1f5f9;
+      border-radius: 6px;
+      padding: 3px 6px;
       font-size: 0.75rem;
-      line-height: 1;
-      min-height: auto;
+      line-height: 1.1;
+      min-height: 24px;
     }
 
-    .tag-move:hover:not(:disabled) {
-      background: #ffffff;
+    .tag-icon-btn:hover:not(:disabled) {
+      background: #e2e8f0;
       color: var(--primary);
     }
 
-    .tag-move:disabled {
+    .tag-icon-btn:disabled {
       opacity: 0.3;
       cursor: default;
     }
 
-    .tag-remove {
-      color: #64748b;
-      cursor: pointer;
-      border: none;
-      background: none;
-      padding: 0 4px;
-      font-size: 1.1rem;
-      line-height: 1;
-      min-height: auto;
+    .tag-icon-btn.share-btn {
+      background: #ecfdf5;
+      color: #047857;
     }
 
-    .tag-remove:hover { color: var(--danger); }
+    .tag-icon-btn.share-btn:hover {
+      background: #d1fae5;
+    }
 
-    /* Action Toolbar */
+    .tag-icon-btn.ics-btn {
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+
+    .tag-icon-btn.ics-btn:hover {
+      background: #dbeafe;
+    }
+
+    /* Organized Action Toolbar & Dropdowns */
     .toolbar {
       display: flex;
       gap: 8px;
-      margin-bottom: 20px;
+      margin-bottom: 18px;
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
+      padding-bottom: 14px;
+      border-bottom: 1px solid #f1f5f9;
     }
 
-    .view-toggle {
+    .toolbar-left, .toolbar-right {
       display: flex;
-      background: #e2e8f0;
-      padding: 3px;
-      border-radius: 8px;
-      gap: 2px;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
     }
 
-    .view-toggle button {
-      min-height: 34px;
-      padding: 4px 12px;
-      border-radius: 6px;
-      font-size: 0.8rem;
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .dropdown-menu {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: calc(100% + 6px);
+      min-width: 215px;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15);
+      padding: 6px;
+      z-index: 200;
+    }
+
+    .dropdown-menu.open {
+      display: block;
+    }
+
+    .dropdown-item {
+      width: 100%;
+      background: transparent;
+      color: var(--text);
+      border: none;
+      border-radius: 7px;
+      padding: 9px 12px;
+      min-height: 36px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      justify-content: flex-start;
+      text-align: left;
+    }
+
+    .dropdown-item:hover {
+      background: #f1f5f9;
+      color: var(--primary);
+      opacity: 1;
+    }
+
+    .dropdown-divider {
+      height: 1px;
+      background: #e2e8f0;
+      margin: 4px 0;
+    }
+
+    .status-banner {
+      display: none;
+      background: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      margin-bottom: 14px;
+      text-align: center;
+    }
+
+    .status-banner.visible {
+      display: block;
     }
 
     /* Month Navigation Header */
@@ -280,12 +429,16 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
       flex-wrap: wrap;
-      gap: 12px;
+      gap: 10px;
     }
 
-    .nav-header h2 { font-size: 1.25rem; margin: 0; }
+    .nav-header h2 {
+      font-size: 1.2rem;
+      margin: 0;
+      color: #1e293b;
+    }
 
     /* Calendar Grid View */
     .calendar-grid {
@@ -300,7 +453,8 @@
       padding: 8px;
       background: #f1f5f9;
       border-radius: 6px;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
+      color: #475569;
     }
 
     .day-cell {
@@ -329,7 +483,7 @@
     }
 
     .meeting-tag {
-      font-size: 0.7rem;
+      font-size: 0.68rem;
       font-weight: 700;
       color: #1d4ed8;
       text-transform: uppercase;
@@ -337,7 +491,7 @@
     }
 
     .blackout-tag {
-      font-size: 0.7rem;
+      font-size: 0.68rem;
       font-weight: 700;
       color: var(--blackout-text);
       text-transform: uppercase;
@@ -421,12 +575,6 @@
     .badge-override { background: var(--warning-bg); color: var(--warning-text); }
     .badge-blackout { background: var(--blackout-bg); color: var(--blackout-text); }
     .badge-standard { background: #e2e8f0; color: #475569; }
-
-    .status-msg {
-      font-size: 0.85rem;
-      color: var(--secondary);
-      font-weight: 600;
-    }
 
     /* Modal Styles */
     .modal-backdrop {
@@ -558,77 +706,119 @@
       justify-content: flex-end;
     }
 
+    .modal-actions-split {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 18px;
+      padding-top: 12px;
+      border-top: 1px solid #f1f5f9;
+    }
+
     @media (max-width: 640px) {
       .calendar-grid { gap: 3px; }
       .day-cell { min-height: 85px; padding: 4px; }
       .day-header { font-size: 0.75rem; padding: 4px; }
       th:nth-child(3), td:nth-child(3) { display: none; }
       .modal-actions button { flex: 1 1 auto; }
-      .roster-form button { width: 100%; }
+      .dropdown-menu { left: 0; right: auto; }
     }
   </style>
 </head>
 <body>
 
 <div class="container">
+  <!-- STREAMLINED HEADER -->
   <header>
     <div class="title-group">
       <h1>Conductor Schedule</h1>
-      <span id="appVersionBadge" class="version-badge">v24</span>
+      <span id="appVersionBadge" class="version-badge">v25</span>
     </div>
     <div class="controls-group">
-      <button type="button" class="outline" style="min-height: 34px; padding: 4px 10px; font-size: 0.8rem;" onclick="forceAppUpdate()" title="Clear cached app shell and reload latest version">🔄 Check for Update</button>
       <div class="view-toggle">
         <button id="btnViewCalendar" class="active" onclick="setViewMode('calendar')">📅 Calendar</button>
         <button id="btnViewTable" class="outline" onclick="setViewMode('table')">📋 Year List</button>
       </div>
-      <div>
-        <select id="yearSelect" onchange="handleYearChange()">
-          <option value="2026" selected>2026</option>
-          <option value="2027">2027</option>
-          <option value="2028">2028</option>
-        </select>
-      </div>
+      <select id="yearSelect" onchange="handleYearChange()" aria-label="Select Year">
+        <option value="2026" selected>2026</option>
+        <option value="2027">2027</option>
+        <option value="2028">2028</option>
+      </select>
     </div>
   </header>
 
   <!-- ROSTER MANAGEMENT PANEL -->
   <div class="roster-card">
     <div class="roster-header">
-      <span>Approved Conductors Roster</span>
-      <div class="anchor-control">
-        <label for="rotationStartDateInput">Start #1 On:</label>
-        <input type="date" id="rotationStartDateInput" value="2026-11-14" onchange="updateRotationStartDate(this.value)">
+      <div class="roster-title-wrap">
+        <span class="roster-title">Approved Conductors</span>
+        <span id="rosterCountBadge" class="roster-count">0</span>
+      </div>
+      <div class="roster-header-actions">
+        <div class="anchor-control">
+          <label for="rotationStartDateInput">Start #1:</label>
+          <input type="date" id="rotationStartDateInput" value="2026-11-14" onchange="updateRotationStartDate(this.value)">
+        </div>
+        <button type="button" id="btnToggleAddConductor" class="accent" style="min-height: 34px; padding: 4px 12px; font-size: 0.82rem;" onclick="toggleAddConductorDrawer()">+ Add Conductor</button>
       </div>
     </div>
-    <div class="roster-form">
-      <input type="text" id="newConductorInput" class="roster-input" placeholder="Conductor name..." onkeydown="if(event.key==='Enter') addConductor()">
-      <input type="tel" id="newConductorPhone" class="roster-contact-input" placeholder="Mobile # (optional)" onkeydown="if(event.key==='Enter') addConductor()">
-      <input type="email" id="newConductorEmail" class="roster-contact-input" placeholder="Email (optional)" onkeydown="if(event.key==='Enter') addConductor()">
-      <button onclick="addConductor()">+ Add</button>
+
+    <!-- HIDDEN ENTRY FIELDS (REVEALED ON CLICK) -->
+    <div id="addConductorDrawer" class="add-conductor-drawer">
+      <div class="drawer-inputs">
+        <input type="text" id="newConductorInput" class="roster-input" placeholder="Full name (required)..." onkeydown="if(event.key==='Enter') addConductor()">
+        <input type="tel" id="newConductorPhone" class="roster-contact-input" placeholder="Mobile # (optional)" onkeydown="if(event.key==='Enter') addConductor()">
+        <input type="email" id="newConductorEmail" class="roster-contact-input" placeholder="Email (optional)" onkeydown="if(event.key==='Enter') addConductor()">
+      </div>
+      <div class="drawer-actions">
+        <button type="button" class="outline" style="min-height: 34px;" onclick="toggleAddConductorDrawer(false)">Cancel</button>
+        <button type="button" class="success" style="min-height: 34px;" onclick="addConductor()">Save Conductor</button>
+      </div>
     </div>
+
     <div class="roster-tags" id="rosterContainer"></div>
   </div>
 
-  <!-- ACTION TOOLBAR -->
+  <!-- ORGANIZED ACTION TOOLBAR -->
   <div class="toolbar">
-    <div class="controls-group">
-      <button class="accent" onclick="openShareModal('all', null, 'text')">📢 Share All Schedules</button>
-      <button class="success" onclick="exportMasterICS()">📅 Full Year .ics</button>
-      <button class="secondary" onclick="exportMonthICS()">🗓️ Month .ics</button>
-      <button class="outline" onclick="copyTextSummary()">📋 Copy Month</button>
-      <button class="outline" onclick="exportJSONBackup()">💾 Backup (JSON)</button>
-      <button class="outline" onclick="document.getElementById('importFileInput').click()">📂 Restore</button>
+    <div class="toolbar-left">
+      <button type="button" class="accent" onclick="openShareModal('all', null, 'text')">📢 Share All Schedules</button>
+      <button type="button" class="outline" onclick="copyTextSummary()">📋 Copy Month</button>
+    </div>
+
+    <div class="toolbar-right">
+      <!-- EXPORT CALENDAR DROPDOWN -->
+      <div class="dropdown">
+        <button type="button" class="outline" onclick="toggleDropdown('exportMenu', event)">📅 Export .ics ▾</button>
+        <div id="exportMenu" class="dropdown-menu">
+          <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); exportMonthICS()">🗓️ Current Month (.ics)</button>
+          <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); exportMasterICS()">📅 Full Selected Year (.ics)</button>
+        </div>
+      </div>
+
+      <!-- SYNC & TOOLS DROPDOWN -->
+      <div class="dropdown">
+        <button type="button" class="outline" onclick="toggleDropdown('toolsMenu', event)">⚙️ Sync &amp; Tools ▾</button>
+        <div id="toolsMenu" class="dropdown-menu">
+          <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); exportJSONBackup()">💾 Backup Data (JSON)</button>
+          <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); document.getElementById('importFileInput').click()">📂 Restore Backup (JSON)</button>
+          <div class="dropdown-divider"></div>
+          <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); forceAppUpdate()">🔄 Check for App Update</button>
+        </div>
+      </div>
       <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="importJSONBackup(event)">
     </div>
-    <span id="statusMsg" class="status-msg"></span>
   </div>
+
+  <div id="statusMsg" class="status-banner"></div>
 
   <!-- MONTHLY CALENDAR VIEW -->
   <div id="calendarViewSection">
     <div class="nav-header">
       <div class="controls-group">
-        <button class="secondary" onclick="changeMonth(-1)">&larr; Previous</button>
+        <button class="secondary" onclick="changeMonth(-1)">&larr; Prev</button>
         <button class="outline" onclick="goToToday()">Today</button>
         <button class="secondary" onclick="changeMonth(1)">Next &rarr;</button>
       </div>
@@ -653,7 +843,7 @@
   </div>
 </div>
 
-<!-- EDIT CONDUCTOR CONTACT MODAL -->
+<!-- EDIT CONDUCTOR CONTACT & MANAGEMENT MODAL -->
 <div id="contactModal" class="modal-backdrop" onclick="if(event.target === this) closeContactModal()">
   <div class="modal-card" style="max-width: 440px;">
     <div class="modal-header">
@@ -682,9 +872,12 @@
       <input type="email" id="editConductorEmail" placeholder="e.g., name@example.com" onkeydown="if(event.key==='Enter') saveConductorContact()">
     </div>
 
-    <div class="modal-actions">
-      <button type="button" class="outline" onclick="closeContactModal()">Cancel</button>
-      <button type="button" class="success" onclick="saveConductorContact()">💾 Save Contact</button>
+    <div class="modal-actions-split">
+      <button type="button" class="danger" style="min-height: 36px; font-size: 0.82rem;" onclick="removeConductorFromModal()">🗑️ Remove</button>
+      <div class="controls-group">
+        <button type="button" class="outline" style="min-height: 36px;" onclick="closeContactModal()">Cancel</button>
+        <button type="button" class="success" style="min-height: 36px;" onclick="saveConductorContact()">💾 Save</button>
+      </div>
     </div>
   </div>
 </div>
@@ -697,13 +890,11 @@
       <button class="modal-close" onclick="closeShareModal()" title="Close">&times;</button>
     </div>
 
-    <!-- FORMAT SWITCHER: SHORT TEXT VS LONGER EMAIL -->
     <div class="format-switcher">
       <button type="button" id="btnFormatText" class="active" onclick="setShareFormat('text')">💬 Short Text</button>
       <button type="button" id="btnFormatEmail" class="outline" onclick="setShareFormat('email')">✉️ Longer Email</button>
     </div>
 
-    <!-- RECIPIENT TO: FIELD (AUTO-FILLED FROM SAVED CONTACTS) -->
     <div class="modal-field">
       <div class="modal-field-header">
         <label id="shareRecipientLabel" for="shareRecipientInput">To (Mobile Number):</label>
@@ -725,7 +916,6 @@
       </select>
     </div>
 
-    <!-- EMAIL SUBJECT (SHOWN IN EMAIL MODE) -->
     <div class="modal-field" id="emailSubjectField" style="display: none;">
       <div class="modal-field-header">
         <label for="shareEmailSubject">Email Subject</label>
@@ -760,7 +950,7 @@
 </div>
 
 <script>
-  const APP_VERSION = "v24";
+  const APP_VERSION = "v25";
   let currentDate = new Date();
   let currentViewMode = "calendar";
   const monthNames = [
@@ -818,6 +1008,47 @@
       .replace(/'/g, "&#39;");
   }
 
+  /* --- UI DRAWERS & DROPDOWN MENUS --- */
+  function toggleAddConductorDrawer(forceState) {
+    const drawer = document.getElementById("addConductorDrawer");
+    const btn = document.getElementById("btnToggleAddConductor");
+    const shouldOpen = typeof forceState === "boolean" ? forceState : !drawer.classList.contains("open");
+
+    if (shouldOpen) {
+      drawer.classList.add("open");
+      btn.style.display = "none";
+      setTimeout(() => document.getElementById("newConductorInput").focus(), 40);
+    } else {
+      drawer.classList.remove("open");
+      btn.style.display = "inline-flex";
+      document.getElementById("newConductorInput").value = "";
+      document.getElementById("newConductorPhone").value = "";
+      document.getElementById("newConductorEmail").value = "";
+    }
+  }
+
+  function toggleDropdown(menuId, event) {
+    if (event) event.stopPropagation();
+    const target = document.getElementById(menuId);
+    const wasOpen = target.classList.contains("open");
+    closeAllDropdowns();
+    if (!wasOpen) {
+      target.classList.add("open");
+    }
+  }
+
+  function closeAllDropdowns() {
+    document.querySelectorAll(".dropdown-menu.open").forEach(menu => {
+      menu.classList.remove("open");
+    });
+  }
+
+  window.addEventListener("click", (e) => {
+    if (!e.target.closest(".dropdown")) {
+      closeAllDropdowns();
+    }
+  });
+
   /* --- AUTOMATIC & MANUAL PWA UPDATE HANDLERS --- */
   function activateWaitingServiceWorker(registration) {
     if (registration && registration.waiting) {
@@ -842,9 +1073,7 @@
       if (activateWaitingServiceWorker(reg)) return;
       await reg.update();
       activateWaitingServiceWorker(reg);
-    } catch (err) {
-      // Offline or CDN unreachable; continue using cached PWA
-    }
+    } catch (err) {}
   }
 
   async function forceAppUpdate() {
@@ -1005,25 +1234,36 @@
     const phone = phoneInput.value.trim();
     const email = emailInput.value.trim();
 
-    if (name) {
-      const state = loadAppState();
-      if (!state.contacts) state.contacts = {};
-      state.roster.push(name);
-      if (phone || email) {
-        state.contacts[name] = { phone, email };
-      }
-      nameInput.value = "";
-      phoneInput.value = "";
-      emailInput.value = "";
-      saveAppState(state);
-      showStatus(`Added ${name} to roster!`);
+    if (!name) {
+      nameInput.focus();
+      return;
     }
+
+    const state = loadAppState();
+    if (!state.contacts) state.contacts = {};
+    state.roster.push(name);
+    if (phone || email) {
+      state.contacts[name] = { phone, email };
+    }
+
+    toggleAddConductorDrawer(false);
+    saveAppState(state);
+    showStatus(`Added ${name} to roster!`);
   }
 
-  function removeConductor(index) {
+  function removeConductorFromModal() {
+    if (editingRosterIndex === null) return;
     const state = loadAppState();
-    state.roster.splice(index, 1);
-    saveAppState(state);
+    const name = state.roster[editingRosterIndex];
+    if (!name) return;
+
+    if (confirm(`Remove "${name}" from the Approved Conductors roster?`)) {
+      state.roster.splice(editingRosterIndex, 1);
+      if (state.contacts) delete state.contacts[name];
+      closeContactModal();
+      saveAppState(state);
+      showStatus(`Removed ${name} from roster.`);
+    }
   }
 
   function moveConductor(index, direction) {
@@ -1090,7 +1330,7 @@
     state.contacts[newName] = { phone, email };
     saveAppState(state);
     closeContactModal();
-    showStatus(`Saved contact info for ${newName}!`);
+    showStatus(`Saved details for ${newName}!`);
 
     if (document.getElementById("shareModal").classList.contains("open")) {
       if (activeShareContext.mode === "single") {
@@ -1107,10 +1347,15 @@
       dateInput.value = state.rotationStartDate || DEFAULT_ANCHOR_DATE;
     }
 
+    const countBadge = document.getElementById("rosterCountBadge");
+    if (countBadge) {
+      countBadge.innerText = state.roster.length;
+    }
+
     const container = document.getElementById("rosterContainer");
     container.innerHTML = "";
     if (state.roster.length === 0) {
-      container.innerHTML = `<span style="font-size:0.85rem; color:#94a3b8;">No conductors added. Add names above.</span>`;
+      container.innerHTML = `<span style="font-size:0.85rem; color:#94a3b8;">No conductors added yet. Click "+ Add Conductor" above.</span>`;
       return;
     }
 
@@ -1130,19 +1375,18 @@
         <span>${escapeHtml(name)}</span>
         ${badges ? `<span class="tag-contact-badges">${badges}</span>` : ""}
         <div class="tag-actions">
-          <button class="tag-move" onclick="moveConductor(${index}, -1)" title="Move earlier in rotation" ${isFirst ? 'disabled' : ''}>◀</button>
-          <button class="tag-move" onclick="moveConductor(${index}, 1)" title="Move later in rotation" ${isLast ? 'disabled' : ''}>▶</button>
-          <button class="tag-move" onclick="openContactModal(${index})" title="Edit phone & email">✏️</button>
-          <button class="btn-link btn-ics" data-name="${encodeURIComponent(name)}" style="color:#3730a3; font-size:0.75rem; padding:0 4px; font-weight:600;" title="Download .ics calendar file">📥 .ics</button>
-          <button class="btn-link btn-share" data-name="${encodeURIComponent(name)}" style="color:#059669; font-size:0.75rem; padding:0 4px; font-weight:600;" title="Send Text or Email schedule">📤 Share</button>
-          <button class="tag-remove" onclick="removeConductor(${index})" title="Remove">&times;</button>
+          <button type="button" class="tag-icon-btn" onclick="moveConductor(${index}, -1)" title="Move earlier in rotation" ${isFirst ? 'disabled' : ''}>◀</button>
+          <button type="button" class="tag-icon-btn" onclick="moveConductor(${index}, 1)" title="Move later in rotation" ${isLast ? 'disabled' : ''}>▶</button>
+          <button type="button" class="tag-icon-btn share-btn" data-name="${encodeURIComponent(name)}" title="Send Text or Email schedule">📤</button>
+          <button type="button" class="tag-icon-btn ics-btn" data-name="${encodeURIComponent(name)}" title="Download personal .ics file">📥</button>
+          <button type="button" class="tag-icon-btn" onclick="openContactModal(${index})" title="Edit name, phone, email, or remove">✏️</button>
         </div>
       `;
       
-      tag.querySelector('.btn-ics').addEventListener('click', (e) => {
+      tag.querySelector('.ics-btn').addEventListener('click', (e) => {
         downloadConductorICS(decodeURIComponent(e.currentTarget.dataset.name));
       });
-      tag.querySelector('.btn-share').addEventListener('click', (e) => {
+      tag.querySelector('.share-btn').addEventListener('click', (e) => {
         openShareModal('single', decodeURIComponent(e.currentTarget.dataset.name), 'text');
       });
 
@@ -1760,7 +2004,11 @@
   function showStatus(msg) {
     const el = document.getElementById("statusMsg");
     el.innerText = msg;
-    setTimeout(() => { el.innerText = ""; }, 3000);
+    el.classList.add("visible");
+    setTimeout(() => {
+      el.classList.remove("visible");
+      el.innerText = "";
+    }, 3200);
   }
 
   function downloadConductorICS(conductorName) {
@@ -1898,7 +2146,7 @@
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showStatus("Exported Master .ics!");
+    showStatus(`Exported ${selectedYear} Master .ics!`);
   }
 
   function exportMonthICS() {
@@ -1955,7 +2203,7 @@
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showStatus("Exported Month .ics!");
+    showStatus(`Exported ${monthNames[month]} .ics!`);
   }
 
   function copyTextSummary() {
@@ -1990,7 +2238,7 @@
     }
 
     navigator.clipboard.writeText(lines.join("\n")).then(() => {
-      showStatus("Copied to clipboard!");
+      showStatus(`Copied ${monthNames[month]} ${year} summary to clipboard!`);
     });
   }
 
@@ -2031,13 +2279,16 @@
     event.target.value = "";
   }
 
-  // Close modals on Escape key
+  // Close modals, drawers, and dropdowns on Escape key
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
+      closeAllDropdowns();
       if (document.getElementById("contactModal").classList.contains("open")) {
         closeContactModal();
-      } else {
+      } else if (document.getElementById("shareModal").classList.contains("open")) {
         closeShareModal();
+      } else if (document.getElementById("addConductorDrawer").classList.contains("open")) {
+        toggleAddConductorDrawer(false);
       }
     }
   });
@@ -2048,8 +2299,6 @@
       navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then((registration) => {
         swRegistration = registration;
         lastAutoUpdateCheck = Date.now();
-
-        // If a newer worker was already downloaded while backgrounded, activate it immediately
         activateWaitingServiceWorker(registration);
 
         registration.addEventListener('updatefound', () => {
@@ -2065,7 +2314,6 @@
       }).catch(() => {});
     });
 
-    // Automatically check when returning to the PWA on iPhone/iPad or switching windows on Mac
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
         checkForServiceWorkerUpdate();
