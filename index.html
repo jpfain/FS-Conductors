@@ -574,7 +574,7 @@
   <header>
     <div class="title-group">
       <h1>Conductor Schedule</h1>
-      <span id="appVersionBadge" class="version-badge">v23</span>
+      <span id="appVersionBadge" class="version-badge">v24</span>
     </div>
     <div class="controls-group">
       <button type="button" class="outline" style="min-height: 34px; padding: 4px 10px; font-size: 0.8rem;" onclick="forceAppUpdate()" title="Clear cached app shell and reload latest version">🔄 Check for Update</button>
@@ -760,7 +760,7 @@
 </div>
 
 <script>
-  const APP_VERSION = "v23";
+  const APP_VERSION = "v24";
   let currentDate = new Date();
   let currentViewMode = "calendar";
   const monthNames = [
@@ -806,6 +806,8 @@
   };
 
   let editingRosterIndex = null;
+  let swRegistration = null;
+  let lastAutoUpdateCheck = 0;
 
   function escapeHtml(str) {
     return String(str || "")
@@ -816,7 +818,35 @@
       .replace(/'/g, "&#39;");
   }
 
-  /* --- ONE-TAP PWA UPDATE HANDLER --- */
+  /* --- AUTOMATIC & MANUAL PWA UPDATE HANDLERS --- */
+  function activateWaitingServiceWorker(registration) {
+    if (registration && registration.waiting) {
+      registration.waiting.postMessage({ action: 'skipWaiting' });
+      return true;
+    }
+    return false;
+  }
+
+  async function checkForServiceWorkerUpdate() {
+    if (!('serviceWorker' in navigator)) return;
+
+    const now = Date.now();
+    if (now - lastAutoUpdateCheck < 15000) return;
+    lastAutoUpdateCheck = now;
+
+    try {
+      const reg = swRegistration || await navigator.serviceWorker.getRegistration();
+      if (!reg) return;
+      swRegistration = reg;
+
+      if (activateWaitingServiceWorker(reg)) return;
+      await reg.update();
+      activateWaitingServiceWorker(reg);
+    } catch (err) {
+      // Offline or CDN unreachable; continue using cached PWA
+    }
+  }
+
   async function forceAppUpdate() {
     showStatus("Checking for updates...");
     try {
@@ -2012,22 +2042,44 @@
     }
   });
 
-  // Register PWA Service Worker with auto-reload on update
+  // Register PWA Service Worker & auto-check on launch or app switch
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then((registration) => {
+        swRegistration = registration;
+        lastAutoUpdateCheck = Date.now();
+
+        // If a newer worker was already downloaded while backgrounded, activate it immediately
+        activateWaitingServiceWorker(registration);
+
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;
           if (newWorker) {
             newWorker.addEventListener('statechange', () => {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                 newWorker.postMessage({ action: 'skipWaiting' });
-                window.location.reload();
               }
             });
           }
         });
       }).catch(() => {});
+    });
+
+    // Automatically check when returning to the PWA on iPhone/iPad or switching windows on Mac
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        checkForServiceWorkerUpdate();
+      }
+    });
+
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) {
+        checkForServiceWorkerUpdate();
+      }
+    });
+
+    window.addEventListener('focus', () => {
+      checkForServiceWorkerUpdate();
     });
 
     let refreshing = false;
