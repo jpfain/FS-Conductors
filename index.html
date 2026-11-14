@@ -66,6 +66,7 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      flex-wrap: wrap;
     }
 
     h1 {
@@ -83,6 +84,32 @@
       padding: 2px 8px;
       border-radius: 999px;
       border: 1px solid #bfdbfe;
+    }
+
+    .sync-pill {
+      background: #f8fafc;
+      color: #475569;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 2px 9px;
+      border-radius: 999px;
+      border: 1px solid #cbd5e1;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .sync-pill.connected {
+      background: #ecfdf5;
+      color: #065f46;
+      border-color: #a7f3d0;
+    }
+
+    .sync-pill.error {
+      background: #fef2f2;
+      color: #991b1b;
+      border-color: #fecaca;
     }
 
     .controls-group {
@@ -116,6 +143,7 @@
     }
 
     button:hover { opacity: 0.92; }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
     button.secondary { background-color: #475569; }
     button.success { background-color: var(--secondary); }
     button.accent { background-color: var(--accent); }
@@ -150,7 +178,7 @@
       background: #f8fafc;
       border-radius: 10px;
       padding: 14px 16px;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
       border: 1px solid #e2e8f0;
     }
 
@@ -268,7 +296,7 @@
       font-weight: 600;
       display: inline-flex;
       align-items: center;
-      gap: 7px;
+      gap: 6px;
       box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
     }
 
@@ -285,9 +313,19 @@
       flex-shrink: 0;
     }
 
+    .tag-tally {
+      background: #f1f5f9;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+      border-radius: 999px;
+      padding: 1px 7px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
     .tag-contact-badges {
       font-size: 0.72rem;
-      opacity: 0.85;
+      opacity: 0.88;
       letter-spacing: 1px;
     }
 
@@ -343,7 +381,7 @@
     .toolbar {
       display: flex;
       gap: 8px;
-      margin-bottom: 18px;
+      margin-bottom: 14px;
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
@@ -368,7 +406,7 @@
       position: absolute;
       right: 0;
       top: calc(100% + 6px);
-      min-width: 215px;
+      min-width: 230px;
       background: #ffffff;
       border: 1px solid #cbd5e1;
       border-radius: 10px;
@@ -405,6 +443,88 @@
       height: 1px;
       background: #e2e8f0;
       margin: 4px 0;
+    }
+
+    /* Up Next Quick-Action Banner */
+    .up-next-card {
+      background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%);
+      border: 1px solid #bfdbfe;
+      border-left: 4px solid var(--accent);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .up-next-info {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .up-next-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #1d4ed8;
+    }
+
+    .up-next-today-pill {
+      background: var(--danger);
+      color: white;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 0.68rem;
+    }
+
+    .up-next-main {
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .up-next-sub {
+      font-size: 0.8rem;
+      color: #475569;
+    }
+
+    .up-next-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .quick-swap-box {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      background: #ffffff;
+      padding: 4px 8px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+    }
+
+    .quick-swap-box.open {
+      display: inline-flex;
+    }
+
+    .quick-swap-box select {
+      min-height: 30px;
+      padding: 2px 8px;
+      font-size: 0.8rem;
     }
 
     .status-banner {
@@ -575,6 +695,7 @@
     .badge-override { background: var(--warning-bg); color: var(--warning-text); }
     .badge-blackout { background: var(--blackout-bg); color: var(--blackout-text); }
     .badge-standard { background: #e2e8f0; color: #475569; }
+    .badge-reassigned { background: #e0e7ff; color: #3730a3; }
 
     /* Modal Styles */
     .modal-backdrop {
@@ -643,6 +764,46 @@
       font-size: 0.85rem;
     }
 
+    /* 1-by-1 Queue Box inside Share Modal */
+    .queue-panel {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 14px;
+    }
+
+    .queue-mode-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      background: #e2e8f0;
+      padding: 3px;
+      border-radius: 7px;
+      gap: 3px;
+      margin-bottom: 10px;
+    }
+
+    .queue-mode-row button {
+      min-height: 30px;
+      font-size: 0.78rem;
+      padding: 3px 8px;
+      border-radius: 5px;
+    }
+
+    .queue-stepper {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .queue-status-text {
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
     .modal-field {
       margin-bottom: 14px;
     }
@@ -676,9 +837,46 @@
     }
 
     .modal-field textarea {
-      min-height: 175px;
+      min-height: 165px;
       line-height: 1.4;
       resize: vertical;
+    }
+
+    /* Unavailability Pills in Contact Modal */
+    .unavail-input-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .unavail-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .unavail-pill {
+      background: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+      border-radius: 999px;
+      padding: 3px 10px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .unavail-pill button {
+      background: none;
+      border: none;
+      color: #991b1b;
+      padding: 0 2px;
+      min-height: auto;
+      font-size: 1rem;
+      line-height: 1;
     }
 
     .template-controls {
@@ -697,6 +895,17 @@
       font-size: 0.75rem;
       color: #475569;
       margin-top: 4px;
+    }
+
+    .helper-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 0.8rem;
+      color: #475569;
+      line-height: 1.45;
+      margin-bottom: 14px;
     }
 
     .modal-actions {
@@ -734,7 +943,8 @@
   <header>
     <div class="title-group">
       <h1>Conductor Schedule</h1>
-      <span id="appVersionBadge" class="version-badge">v25</span>
+      <span id="appVersionBadge" class="version-badge">v26</span>
+      <span id="cloudSyncPill" class="sync-pill" onclick="openCloudSyncModal()" title="Configure or check GitHub Gist Cloud Sync">☁️ Local Only</span>
     </div>
     <div class="controls-group">
       <div class="view-toggle">
@@ -802,6 +1012,8 @@
       <div class="dropdown">
         <button type="button" class="outline" onclick="toggleDropdown('toolsMenu', event)">⚙️ Sync &amp; Tools ▾</button>
         <div id="toolsMenu" class="dropdown-menu">
+          <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); openCloudSyncModal()">☁️ Cloud Sync (GitHub Gist)</button>
+          <div class="dropdown-divider"></div>
           <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); exportJSONBackup()">💾 Backup Data (JSON)</button>
           <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); document.getElementById('importFileInput').click()">📂 Restore Backup (JSON)</button>
           <div class="dropdown-divider"></div>
@@ -809,6 +1021,31 @@
         </div>
       </div>
       <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="importJSONBackup(event)">
+    </div>
+  </div>
+
+  <!-- UP NEXT QUICK-ACTION BANNER -->
+  <div id="upNextBanner" class="up-next-card" style="display: none;">
+    <div class="up-next-info">
+      <div class="up-next-eyebrow">
+        <span>Up Next</span>
+        <span id="upNextTodayBadge" class="up-next-today-pill" style="display: none;">TODAY</span>
+        <span id="upNextDateLabel"></span>
+      </div>
+      <div class="up-next-main">
+        <span id="upNextConductorName"></span>
+        <span id="upNextBadges" style="font-size: 0.8rem;"></span>
+      </div>
+      <div id="upNextSubtext" class="up-next-sub">9:30 AM • Kingdom Hall</div>
+    </div>
+
+    <div class="up-next-actions">
+      <div id="quickSwapBox" class="quick-swap-box">
+        <select id="quickSwapSelect" onchange="applyQuickSwap(this.value)" aria-label="Quick Swap Conductor"></select>
+        <button type="button" class="btn-link" onclick="toggleQuickSwap(false)">Done</button>
+      </div>
+      <button type="button" id="btnOpenQuickSwap" class="outline" style="min-height: 34px; padding: 4px 10px; font-size: 0.82rem;" onclick="toggleQuickSwap()">🔄 Quick Swap</button>
+      <button type="button" class="success" style="min-height: 34px; padding: 4px 12px; font-size: 0.82rem;" onclick="remindUpNextConductor()">📤 Send Reminder</button>
     </div>
   </div>
 
@@ -843,9 +1080,9 @@
   </div>
 </div>
 
-<!-- EDIT CONDUCTOR CONTACT & MANAGEMENT MODAL -->
+<!-- EDIT CONDUCTOR CONTACT, UNAVAILABILITY & MANAGEMENT MODAL -->
 <div id="contactModal" class="modal-backdrop" onclick="if(event.target === this) closeContactModal()">
-  <div class="modal-card" style="max-width: 440px;">
+  <div class="modal-card" style="max-width: 460px;">
     <div class="modal-header">
       <h3>Edit Conductor Details</h3>
       <button class="modal-close" onclick="closeContactModal()" title="Close">&times;</button>
@@ -872,11 +1109,71 @@
       <input type="email" id="editConductorEmail" placeholder="e.g., name@example.com" onkeydown="if(event.key==='Enter') saveConductorContact()">
     </div>
 
+    <div class="modal-field">
+      <div class="modal-field-header">
+        <label for="addUnavailableDateInput">Unavailable Dates (Auto-Skips Without Shifting Rotation)</label>
+      </div>
+      <div class="unavail-input-row">
+        <input type="date" id="addUnavailableDateInput">
+        <button type="button" class="outline" style="white-space: nowrap;" onclick="addUnavailableDate()">+ Add Date</button>
+      </div>
+      <div id="unavailableDatesList" class="unavail-pills"></div>
+    </div>
+
     <div class="modal-actions-split">
       <button type="button" class="danger" style="min-height: 36px; font-size: 0.82rem;" onclick="removeConductorFromModal()">🗑️ Remove</button>
       <div class="controls-group">
         <button type="button" class="outline" style="min-height: 36px;" onclick="closeContactModal()">Cancel</button>
         <button type="button" class="success" style="min-height: 36px;" onclick="saveConductorContact()">💾 Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CLOUD SYNC (GITHUB GIST) MODAL -->
+<div id="cloudSyncModal" class="modal-backdrop" onclick="if(event.target === this) closeCloudSyncModal()">
+  <div class="modal-card" style="max-width: 500px;">
+    <div class="modal-header">
+      <h3>☁️ Cloud Sync (Private GitHub Gist)</h3>
+      <button class="modal-close" onclick="closeCloudSyncModal()" title="Close">&times;</button>
+    </div>
+
+    <div class="helper-box">
+      <strong>How to sync Mac &amp; iPhone automatically:</strong><br>
+      1. On GitHub.com, go to <strong>Settings → Developer settings → Personal access tokens → Tokens (classic)</strong> and generate a token with only the <strong><code>gist</code></strong> checkbox selected.<br>
+      2. Paste the token below and tap <strong>Save &amp; Connect</strong> (leave Gist ID blank on your first device to create one automatically).<br>
+      3. Enter the same Token and Gist ID on your second device once.
+    </div>
+
+    <div class="modal-field">
+      <div class="modal-field-header">
+        <label for="gistTokenInput">GitHub Personal Access Token (<code>gist</code> scope)</label>
+      </div>
+      <input type="password" id="gistTokenInput" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+    </div>
+
+    <div class="modal-field">
+      <div class="modal-field-header">
+        <label for="gistIdInput">Private Gist ID (Auto-created if blank)</label>
+      </div>
+      <input type="text" id="gistIdInput" placeholder="Leave blank on first setup, or paste existing Gist ID">
+    </div>
+
+    <div class="modal-field" style="display: flex; align-items: center; justify-content: space-between; background: #f8fafc; padding: 10px 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+      <label for="gistAutoSyncCheckbox" style="cursor: pointer;">Auto-Sync on Changes &amp; App Open</label>
+      <input type="checkbox" id="gistAutoSyncCheckbox" checked style="width: 20px; height: 20px; min-height: auto; cursor: pointer;">
+    </div>
+
+    <div id="cloudSyncStatusDetail" style="font-size: 0.8rem; color: #475569; margin-bottom: 14px;"></div>
+
+    <div class="modal-actions-split">
+      <div class="controls-group">
+        <button type="button" class="outline" style="min-height: 36px; font-size: 0.82rem;" onclick="manualPullFromGist()">⬇️ Pull Now</button>
+        <button type="button" class="outline" style="min-height: 36px; font-size: 0.82rem;" onclick="manualPushToGist()">⬆️ Push Now</button>
+      </div>
+      <div class="controls-group">
+        <button type="button" class="outline" style="min-height: 36px;" onclick="closeCloudSyncModal()">Close</button>
+        <button type="button" class="success" style="min-height: 36px;" onclick="saveCloudSyncSettings()">💾 Save &amp; Connect</button>
       </div>
     </div>
   </div>
@@ -893,6 +1190,21 @@
     <div class="format-switcher">
       <button type="button" id="btnFormatText" class="active" onclick="setShareFormat('text')">💬 Short Text</button>
       <button type="button" id="btnFormatEmail" class="outline" onclick="setShareFormat('email')">✉️ Longer Email</button>
+    </div>
+
+    <!-- GROUP VS 1-BY-1 QUEUE PANEL (SHOWN FOR ALL-CONDUCTORS SHORT TEXT) -->
+    <div id="allTextQueuePanel" class="queue-panel" style="display: none;">
+      <div class="queue-mode-row">
+        <button type="button" id="btnQueueModeGroup" class="active" onclick="setAllTextDeliveryMode('group')">👥 Single Group Text</button>
+        <button type="button" id="btnQueueModeQueue" class="outline" onclick="setAllTextDeliveryMode('queue')">📲 1-by-1 Individual Queue</button>
+      </div>
+      <div id="queueStepperRow" class="queue-stepper" style="display: none;">
+        <span id="queueProgressLabel" class="queue-status-text">Conductor 1 of 5</span>
+        <div class="controls-group">
+          <button type="button" class="outline" style="min-height: 30px; padding: 2px 10px; font-size: 0.78rem;" onclick="stepQueue(-1)">◀ Prev</button>
+          <button type="button" class="outline" style="min-height: 30px; padding: 2px 10px; font-size: 0.78rem;" onclick="stepQueue(1)">Next ▶</button>
+        </div>
+      </div>
     </div>
 
     <div class="modal-field">
@@ -950,7 +1262,7 @@
 </div>
 
 <script>
-  const APP_VERSION = "v25";
+  const APP_VERSION = "v26";
   let currentDate = new Date();
   let currentViewMode = "calendar";
   const monthNames = [
@@ -959,6 +1271,8 @@
   ];
   const START_YEAR = 2026;
   const DEFAULT_ANCHOR_DATE = "2026-11-14";
+  const GIST_FILENAME = "conductor-schedule-data.json";
+  const GIST_CONFIG_KEY = "conductor_gist_config";
 
   const DEFAULT_TEMPLATES = {
     individualText:
@@ -991,13 +1305,19 @@
     mode: "single",
     conductorName: null,
     format: "text",
+    allTextMode: "group", // "group" or "queue"
+    queueIndex: 0,
+    queueItems: [],
     lastRenderedDates: "",
     lastRenderedSchedules: ""
   };
 
   let editingRosterIndex = null;
+  let tempUnavailableDates = [];
+  let currentUpNextSlot = null;
   let swRegistration = null;
   let lastAutoUpdateCheck = 0;
+  let cloudPushTimer = null;
 
   function escapeHtml(str) {
     return String(str || "")
@@ -1048,6 +1368,244 @@
       closeAllDropdowns();
     }
   });
+
+  /* --- GITHUB GIST CLOUD SYNC --- */
+  function loadGistConfig() {
+    try {
+      const raw = localStorage.getItem(GIST_CONFIG_KEY);
+      if (raw) {
+        return { token: "", gistId: "", autoSync: true, lastSyncedAt: "", ...JSON.parse(raw) };
+      }
+    } catch (e) {}
+    return { token: "", gistId: "", autoSync: true, lastSyncedAt: "" };
+  }
+
+  function saveGistConfig(cfg) {
+    localStorage.setItem(GIST_CONFIG_KEY, JSON.stringify(cfg));
+    updateCloudSyncPill();
+  }
+
+  function updateCloudSyncPill(overrideText, stateClass) {
+    const pill = document.getElementById("cloudSyncPill");
+    if (!pill) return;
+    const cfg = loadGistConfig();
+
+    pill.className = "sync-pill";
+    if (overrideText) {
+      pill.innerText = overrideText;
+      if (stateClass) pill.classList.add(stateClass);
+      return;
+    }
+
+    if (cfg.token && cfg.gistId) {
+      pill.classList.add("connected");
+      pill.innerText = cfg.autoSync ? "☁️ Auto-Sync On" : "☁️ Cloud Ready";
+    } else {
+      pill.innerText = "☁️ Local Only";
+    }
+  }
+
+  function openCloudSyncModal() {
+    const cfg = loadGistConfig();
+    document.getElementById("gistTokenInput").value = cfg.token || "";
+    document.getElementById("gistIdInput").value = cfg.gistId || "";
+    document.getElementById("gistAutoSyncCheckbox").checked = cfg.autoSync !== false;
+
+    const detail = document.getElementById("cloudSyncStatusDetail");
+    if (cfg.lastSyncedAt) {
+      const d = new Date(cfg.lastSyncedAt);
+      detail.innerText = `Last synced: ${d.toLocaleString()}`;
+    } else if (cfg.token && cfg.gistId) {
+      detail.innerText = "Connected. Tap Push Now or Pull Now to sync immediately.";
+    } else {
+      detail.innerText = "Not connected yet. Data is currently stored locally on this device.";
+    }
+
+    document.getElementById("cloudSyncModal").classList.add("open");
+  }
+
+  function closeCloudSyncModal() {
+    document.getElementById("cloudSyncModal").classList.remove("open");
+  }
+
+  async function saveCloudSyncSettings() {
+    const token = document.getElementById("gistTokenInput").value.trim();
+    let gistId = document.getElementById("gistIdInput").value.trim();
+    const autoSync = document.getElementById("gistAutoSyncCheckbox").checked;
+
+    if (!token) {
+      saveGistConfig({ token: "", gistId: "", autoSync: false, lastSyncedAt: "" });
+      closeCloudSyncModal();
+      showStatus("Cloud sync disconnected (Local mode).");
+      return;
+    }
+
+    const detail = document.getElementById("cloudSyncStatusDetail");
+    detail.innerText = "Connecting to GitHub...";
+
+    try {
+      if (!gistId) {
+        // Create a new private Gist with current state
+        const state = loadAppState();
+        const res = await fetch("https://api.github.com/gists", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Accept": "application/vnd.github+json",
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            description: "Conductor Schedule PWA Sync Data",
+            public: false,
+            files: {
+              [GIST_FILENAME]: {
+                content: JSON.stringify(state, null, 2)
+              }
+            }
+          })
+        });
+
+        if (!res.ok) {
+          throw new Error(`GitHub API error (${res.status}). Check that your token has 'gist' permission.`);
+        }
+
+        const data = await res.json();
+        gistId = data.id;
+        document.getElementById("gistIdInput").value = gistId;
+        const nowIso = new Date().toISOString();
+        saveGistConfig({ token, gistId, autoSync, lastSyncedAt: nowIso });
+        detail.innerText = `Created private Gist (${gistId}) and uploaded schedule!`;
+        showStatus("☁️ Connected & created private sync Gist!");
+      } else {
+        // Existing Gist ID provided: save config and perform bidirectional timestamp sync
+        saveGistConfig({ token, gistId, autoSync, lastSyncedAt: loadGistConfig().lastSyncedAt });
+        await syncWithGitHubGist(false);
+        detail.innerText = "Connected and synced with existing Gist!";
+      }
+    } catch (err) {
+      detail.innerText = `Error: ${err.message}`;
+      updateCloudSyncPill("☁️ Sync Error", "error");
+    }
+  }
+
+  function scheduleCloudPush() {
+    const cfg = loadGistConfig();
+    if (!cfg.token || !cfg.gistId || !cfg.autoSync) return;
+
+    clearTimeout(cloudPushTimer);
+    cloudPushTimer = setTimeout(() => {
+      pushToGitHubGist(true);
+    }, 1500);
+  }
+
+  async function pushToGitHubGist(silent = false) {
+    const cfg = loadGistConfig();
+    if (!cfg.token || !cfg.gistId) return;
+
+    updateCloudSyncPill("☁️ Saving...", "connected");
+    const state = loadAppState();
+
+    try {
+      const res = await fetch(`https://api.github.com/gists/${cfg.gistId}`, {
+        method: "PATCH",
+        headers: {
+          "Authorization": `Bearer ${cfg.token}`,
+          "Accept": "application/vnd.github+json",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          files: {
+            [GIST_FILENAME]: {
+              content: JSON.stringify(state, null, 2)
+            }
+          }
+        })
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      cfg.lastSyncedAt = new Date().toISOString();
+      saveGistConfig(cfg);
+      if (!silent) showStatus("☁️ Uploaded schedule to GitHub Gist!");
+    } catch (err) {
+      updateCloudSyncPill("☁️ Sync Error", "error");
+      if (!silent) alert("Cloud push failed: " + err.message);
+    }
+  }
+
+  async function pullFromGitHubGist(forceOverwrite = false, silent = false) {
+    const cfg = loadGistConfig();
+    if (!cfg.token || !cfg.gistId) return;
+
+    updateCloudSyncPill("☁️ Checking...", "connected");
+    try {
+      const res = await fetch(`https://api.github.com/gists/${cfg.gistId}?t=${Date.now()}`, {
+        headers: {
+          "Authorization": `Bearer ${cfg.token}`,
+          "Accept": "application/vnd.github+json"
+        }
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const fileObj = data.files && data.files[GIST_FILENAME];
+      if (!fileObj || !fileObj.content) {
+        throw new Error("Sync file not found inside Gist.");
+      }
+
+      const remoteState = JSON.parse(fileObj.content);
+      if (!remoteState || !Array.isArray(remoteState.roster)) {
+        throw new Error("Invalid schedule data in Gist.");
+      }
+
+      const localState = loadAppState();
+      const remoteTime = Date.parse(remoteState.lastModified || "1970-01-01T00:00:00.000Z") || 0;
+      const localTime = Date.parse(localState.lastModified || "1970-01-01T00:00:00.000Z") || 0;
+
+      if (forceOverwrite || remoteTime > localTime) {
+        localStorage.setItem("conductor_schedule_state", JSON.stringify(remoteState));
+        cfg.lastSyncedAt = new Date().toISOString();
+        saveGistConfig(cfg);
+        renderUI();
+        if (!silent || remoteTime > localTime) {
+          showStatus("☁️ Synced latest schedule from cloud!");
+        }
+      } else if (!forceOverwrite && localTime > remoteTime && cfg.autoSync) {
+        await pushToGitHubGist(true);
+      } else {
+        cfg.lastSyncedAt = new Date().toISOString();
+        saveGistConfig(cfg);
+        if (!silent) showStatus("☁️ Schedule is already up to date!");
+      }
+    } catch (err) {
+      updateCloudSyncPill("☁️ Sync Error", "error");
+      if (!silent) alert("Cloud pull failed: " + err.message);
+    }
+  }
+
+  async function syncWithGitHubGist(silent = true) {
+    const cfg = loadGistConfig();
+    if (!cfg.token || !cfg.gistId || !cfg.autoSync) return;
+    await pullFromGitHubGist(false, silent);
+  }
+
+  function manualPushToGist() {
+    const cfg = loadGistConfig();
+    if (!cfg.token || !cfg.gistId) {
+      alert("Enter your GitHub Token and tap Save & Connect first.");
+      return;
+    }
+    pushToGitHubGist(false);
+  }
+
+  function manualPullFromGist() {
+    const cfg = loadGistConfig();
+    if (!cfg.token || !cfg.gistId) {
+      alert("Enter your GitHub Token and Gist ID, then tap Save & Connect first.");
+      return;
+    }
+    pullFromGitHubGist(true, false);
+  }
 
   /* --- AUTOMATIC & MANUAL PWA UPDATE HANDLERS --- */
   function activateWaitingServiceWorker(registration) {
@@ -1123,6 +1681,12 @@
       if (!parsed.contacts) {
         parsed.contacts = {};
       }
+      if (!parsed.unavailability) {
+        parsed.unavailability = {};
+      }
+      if (!parsed.lastModified) {
+        parsed.lastModified = "1970-01-01T00:00:00.000Z";
+      }
       return parsed;
     }
 
@@ -1152,10 +1716,12 @@
     const newState = {
       roster: migratedRoster,
       contacts: {},
+      unavailability: {},
       overrides: migratedOverrides,
       blackouts: {},
       templates: { ...DEFAULT_TEMPLATES },
-      rotationStartDate: DEFAULT_ANCHOR_DATE
+      rotationStartDate: DEFAULT_ANCHOR_DATE,
+      lastModified: "1970-01-01T00:00:00.000Z"
     };
 
     localStorage.setItem("conductor_schedule_state", JSON.stringify(newState));
@@ -1163,8 +1729,10 @@
   }
 
   function saveAppState(state) {
+    state.lastModified = new Date().toISOString();
     localStorage.setItem("conductor_schedule_state", JSON.stringify(state));
     renderUI();
+    scheduleCloudPush();
   }
 
   function updateRotationStartDate(dateValue) {
@@ -1190,8 +1758,11 @@
     };
   }
 
-  function getRotationalConductor(targetYear, targetMonth, targetDay, state) {
-    if (!state.roster || state.roster.length === 0) return "Unassigned";
+  // Anchored Rotation Engine with Unavailability Auto-Skip (preserves future sequence)
+  function getRotationalAssignmentInfo(targetYear, targetMonth, targetDay, state) {
+    if (!state.roster || state.roster.length === 0) {
+      return { conductor: "Unassigned", baseConductor: "Unassigned", skippedUnavailable: [] };
+    }
 
     const anchorDateKey = state.rotationStartDate || DEFAULT_ANCHOR_DATE;
     const anchorYear = parseInt(anchorDateKey.split("-")[0], 10) || START_YEAR;
@@ -1213,18 +1784,64 @@
 
     const targetKey = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}`;
     const targetIndex = activeMeetings.indexOf(targetKey);
-    if (targetIndex === -1) return state.roster[0];
+    if (targetIndex === -1) {
+      return { conductor: state.roster[0], baseConductor: state.roster[0], skippedUnavailable: [] };
+    }
 
     let anchorIndex = activeMeetings.findIndex(k => k >= anchorDateKey);
     if (anchorIndex === -1) anchorIndex = 0;
 
     const offset = targetIndex - anchorIndex;
     const len = state.roster.length;
-    const rosterIndex = ((offset % len) + len) % len;
-    return state.roster[rosterIndex];
+    const baseIndex = ((offset % len) + len) % len;
+    const baseConductor = state.roster[baseIndex];
+
+    const unavailMap = state.unavailability || {};
+    let skipped = [];
+
+    for (let step = 0; step < len; step++) {
+      const candidateIndex = (baseIndex + step) % len;
+      const candidateName = state.roster[candidateIndex];
+      const unavailableDates = unavailMap[candidateName] || [];
+      if (!unavailableDates.includes(targetKey)) {
+        return {
+          conductor: candidateName,
+          baseConductor,
+          skippedUnavailable: skipped
+        };
+      }
+      skipped.push(candidateName);
+    }
+
+    return { conductor: baseConductor, baseConductor, skippedUnavailable: [] };
   }
 
-  /* --- ROSTER & CONTACT CONTROLLERS --- */
+  function getRotationalConductor(targetYear, targetMonth, targetDay, state) {
+    return getRotationalAssignmentInfo(targetYear, targetMonth, targetDay, state).conductor;
+  }
+
+  /* --- ASSIGNMENT BALANCE COUNTER --- */
+  function getYearlyAssignmentCounts(year, state) {
+    const counts = {};
+    state.roster.forEach(name => { counts[name] = 0; });
+
+    for (let month = 0; month < 12; month++) {
+      const sats = getMeetingSaturdays(year, month);
+      [sats.second, sats.fourth, sats.fifth].forEach(day => {
+        if (!day) return;
+        const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        if (state.blackouts && state.blackouts[dateKey]) return;
+
+        const assigned = (state.overrides && state.overrides[dateKey]) || getRotationalConductor(year, month, day, state);
+        if (counts[assigned] !== undefined) {
+          counts[assigned] += 1;
+        }
+      });
+    }
+    return counts;
+  }
+
+  /* --- ROSTER, CONTACT & UNAVAILABILITY CONTROLLERS --- */
   function addConductor() {
     const nameInput = document.getElementById("newConductorInput");
     const phoneInput = document.getElementById("newConductorPhone");
@@ -1260,6 +1877,7 @@
     if (confirm(`Remove "${name}" from the Approved Conductors roster?`)) {
       state.roster.splice(editingRosterIndex, 1);
       if (state.contacts) delete state.contacts[name];
+      if (state.unavailability) delete state.unavailability[name];
       closeContactModal();
       saveAppState(state);
       showStatus(`Removed ${name} from roster.`);
@@ -1284,22 +1902,66 @@
 
     editingRosterIndex = index;
     const contact = (state.contacts && state.contacts[name]) || { phone: "", email: "" };
+    tempUnavailableDates = [...((state.unavailability && state.unavailability[name]) || [])].sort();
 
     document.getElementById("editConductorName").value = name;
     document.getElementById("editConductorPhone").value = contact.phone || "";
     document.getElementById("editConductorEmail").value = contact.email || "";
+    document.getElementById("addUnavailableDateInput").value = "";
+    renderUnavailableDatesPills();
     document.getElementById("contactModal").classList.add("open");
+  }
+
+  function renderUnavailableDatesPills() {
+    const container = document.getElementById("unavailableDatesList");
+    container.innerHTML = "";
+    if (tempUnavailableDates.length === 0) {
+      container.innerHTML = `<span style="font-size:0.78rem; color:#94a3b8;">No unavailable dates set.</span>`;
+      return;
+    }
+
+    tempUnavailableDates.forEach(dateKey => {
+      const parts = dateKey.split("-");
+      const displayDate = parts.length === 3
+        ? new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10))
+            .toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        : dateKey;
+
+      const pill = document.createElement("span");
+      pill.className = "unavail-pill";
+      pill.innerHTML = `<span>${escapeHtml(displayDate)}</span><button type="button" title="Remove date" onclick="removeUnavailableDate('${escapeHtml(dateKey)}')">&times;</button>`;
+      container.appendChild(pill);
+    });
+  }
+
+  function addUnavailableDate() {
+    const input = document.getElementById("addUnavailableDateInput");
+    const val = input.value;
+    if (!val) return;
+    if (!tempUnavailableDates.includes(val)) {
+      tempUnavailableDates.push(val);
+      tempUnavailableDates.sort();
+      renderUnavailableDatesPills();
+    }
+    input.value = "";
+  }
+
+  function removeUnavailableDate(dateKey) {
+    tempUnavailableDates = tempUnavailableDates.filter(d => d !== dateKey);
+    renderUnavailableDatesPills();
   }
 
   function closeContactModal() {
     document.getElementById("contactModal").classList.remove("open");
     editingRosterIndex = null;
+    tempUnavailableDates = [];
   }
 
   function saveConductorContact() {
     if (editingRosterIndex === null) return;
     const state = loadAppState();
     if (!state.contacts) state.contacts = {};
+    if (!state.unavailability) state.unavailability = {};
 
     const oldName = state.roster[editingRosterIndex];
     const newName = document.getElementById("editConductorName").value.trim();
@@ -1315,6 +1977,7 @@
 
     if (oldName !== newName) {
       delete state.contacts[oldName];
+      delete state.unavailability[oldName];
       if (state.overrides) {
         Object.keys(state.overrides).forEach(dateKey => {
           if (state.overrides[dateKey] === oldName) {
@@ -1328,6 +1991,12 @@
     }
 
     state.contacts[newName] = { phone, email };
+    if (tempUnavailableDates.length > 0) {
+      state.unavailability[newName] = [...tempUnavailableDates];
+    } else {
+      delete state.unavailability[newName];
+    }
+
     saveAppState(state);
     closeContactModal();
     showStatus(`Saved details for ${newName}!`);
@@ -1352,6 +2021,9 @@
       countBadge.innerText = state.roster.length;
     }
 
+    const selectedYear = parseInt(document.getElementById("yearSelect").value, 10);
+    const yearlyCounts = getYearlyAssignmentCounts(selectedYear, state);
+
     const container = document.getElementById("rosterContainer");
     container.innerHTML = "";
     if (state.roster.length === 0) {
@@ -1365,21 +2037,25 @@
       const isFirst = index === 0;
       const isLast = index === state.roster.length - 1;
       const contact = (state.contacts && state.contacts[name]) || {};
+      const unavail = (state.unavailability && state.unavailability[name]) || [];
+      const tally = yearlyCounts[name] || 0;
 
       let badges = "";
       if (contact.phone) badges += `<span title="Mobile: ${escapeHtml(contact.phone)}">📱</span>`;
       if (contact.email) badges += `<span title="Email: ${escapeHtml(contact.email)}">✉️</span>`;
+      if (unavail.length > 0) badges += `<span title="Unavailable dates: ${escapeHtml(unavail.join(', '))}">🚫</span>`;
 
       tag.innerHTML = `
         <span class="tag-num">${index + 1}</span>
         <span>${escapeHtml(name)}</span>
+        <span class="tag-tally" title="${tally} assigned dates in ${selectedYear}">${tally}&times;</span>
         ${badges ? `<span class="tag-contact-badges">${badges}</span>` : ""}
         <div class="tag-actions">
           <button type="button" class="tag-icon-btn" onclick="moveConductor(${index}, -1)" title="Move earlier in rotation" ${isFirst ? 'disabled' : ''}>◀</button>
           <button type="button" class="tag-icon-btn" onclick="moveConductor(${index}, 1)" title="Move later in rotation" ${isLast ? 'disabled' : ''}>▶</button>
           <button type="button" class="tag-icon-btn share-btn" data-name="${encodeURIComponent(name)}" title="Send Text or Email schedule">📤</button>
           <button type="button" class="tag-icon-btn ics-btn" data-name="${encodeURIComponent(name)}" title="Download personal .ics file">📥</button>
-          <button type="button" class="tag-icon-btn" onclick="openContactModal(${index})" title="Edit name, phone, email, or remove">✏️</button>
+          <button type="button" class="tag-icon-btn" onclick="openContactModal(${index})" title="Edit contact, unavailable dates, or remove">✏️</button>
         </div>
       `;
       
@@ -1392,6 +2068,79 @@
 
       container.appendChild(tag);
     });
+  }
+
+  /* --- UP NEXT QUICK-ACTION BANNER --- */
+  function renderUpNextBanner(state) {
+    const banner = document.getElementById("upNextBanner");
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const allSlots = getAllScheduleSlots(state);
+    const nextSlot = allSlots.find(s => s.slotDate >= today);
+
+    if (!nextSlot || !state.roster || state.roster.length === 0) {
+      banner.style.display = "none";
+      currentUpNextSlot = null;
+      return;
+    }
+
+    currentUpNextSlot = nextSlot;
+    banner.style.display = "flex";
+
+    const isToday = nextSlot.slotDate.getTime() === today.getTime();
+    document.getElementById("upNextTodayBadge").style.display = isToday ? "inline-block" : "none";
+    document.getElementById("upNextDateLabel").innerText = nextSlot.formattedDate;
+    document.getElementById("upNextConductorName").innerText = nextSlot.conductor;
+
+    const contact = (state.contacts && state.contacts[nextSlot.conductor]) || {};
+    let badgesHtml = "";
+    if (contact.phone) badgesHtml += `<span title="Mobile saved">📱</span> `;
+    if (contact.email) badgesHtml += `<span title="Email saved">✉️</span> `;
+    if (nextSlot.isOverride) {
+      badgesHtml += `<span class="badge badge-override">Override</span>`;
+    } else if (nextSlot.skippedUnavailable && nextSlot.skippedUnavailable.length > 0) {
+      badgesHtml += `<span class="badge badge-reassigned" title="Auto-reassigned because ${escapeHtml(nextSlot.skippedUnavailable.join(', '))} marked unavailable">Auto-Reassigned</span>`;
+    } else {
+      badgesHtml += `<span class="badge badge-standard">Auto</span>`;
+    }
+    document.getElementById("upNextBadges").innerHTML = badgesHtml;
+
+    // Populate Quick Swap select options
+    const swapSelect = document.getElementById("quickSwapSelect");
+    swapSelect.innerHTML = "";
+    const autoOpt = document.createElement("option");
+    autoOpt.value = "";
+    autoOpt.innerText = `Auto (${nextSlot.autoConductor})`;
+    swapSelect.appendChild(autoOpt);
+
+    state.roster.forEach(name => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.innerText = name;
+      swapSelect.appendChild(opt);
+    });
+    swapSelect.value = (state.overrides && state.overrides[nextSlot.dateKey]) || "";
+  }
+
+  function toggleQuickSwap(forceState) {
+    const box = document.getElementById("quickSwapBox");
+    const btn = document.getElementById("btnOpenQuickSwap");
+    const shouldOpen = typeof forceState === "boolean" ? forceState : !box.classList.contains("open");
+    box.classList.toggle("open", shouldOpen);
+    btn.style.display = shouldOpen ? "none" : "inline-flex";
+  }
+
+  function applyQuickSwap(conductorName) {
+    if (!currentUpNextSlot) return;
+    setOverride(currentUpNextSlot.dateKey, conductorName);
+    toggleQuickSwap(false);
+    showStatus(conductorName ? `Swapped ${currentUpNextSlot.formattedDate} to ${conductorName}` : "Restored automatic rotation");
+  }
+
+  function remindUpNextConductor() {
+    if (!currentUpNextSlot) return;
+    openShareModal("single", currentUpNextSlot.conductor, "text");
   }
 
   /* --- VIEW & CALENDAR CONTROLLERS --- */
@@ -1446,8 +2195,10 @@
     const badgeEl = document.getElementById("appVersionBadge");
     if (badgeEl) badgeEl.innerText = APP_VERSION;
 
+    updateCloudSyncPill();
     const state = loadAppState();
     renderRoster(state);
+    renderUpNextBanner(state);
 
     if (currentViewMode === "calendar") {
       renderCalendarView(state);
@@ -1584,12 +2335,16 @@
 
         const isBlackout = !!state.blackouts[dateKey];
         const override = state.overrides[dateKey];
-        const autoAssigned = getRotationalConductor(selectedYear, month, day, state);
+        const assignInfo = getRotationalAssignmentInfo(selectedYear, month, day, state);
+        const autoAssigned = assignInfo.conductor;
         const conductor = isBlackout ? "CANCELLED / NO MEETING" : (override || autoAssigned);
 
         let statusBadge = `<span class="badge badge-standard">Standard</span>`;
         if (isBlackout) statusBadge = `<span class="badge badge-blackout">Cancelled</span>`;
         else if (override) statusBadge = `<span class="badge badge-override">Override</span>`;
+        else if (assignInfo.skippedUnavailable.length > 0) {
+          statusBadge = `<span class="badge badge-reassigned" title="Skipped unavailable: ${escapeHtml(assignInfo.skippedUnavailable.join(', '))}">Reassigned</span>`;
+        }
 
         const displayDate = new Date(selectedYear, month, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         const satLabel = day === sats.fifth ? ' <span style="font-size:0.75rem; color:#2563eb; font-weight:600;">(5th Sat)</span>' : '';
@@ -1638,7 +2393,11 @@
 
           if (state.blackouts && state.blackouts[dateKey]) return;
 
-          const conductor = (state.overrides && state.overrides[dateKey]) || getRotationalConductor(y, month, day, state);
+          const assignInfo = getRotationalAssignmentInfo(y, month, day, state);
+          const autoConductor = assignInfo.conductor;
+          const isOverride = !!(state.overrides && state.overrides[dateKey]);
+          const conductor = isOverride ? state.overrides[dateKey] : autoConductor;
+
           const formattedDate = slotDate.toLocaleDateString('en-US', {
             weekday: 'short',
             month: 'short',
@@ -1655,6 +2414,9 @@
             month,
             year: y,
             conductor,
+            autoConductor,
+            isOverride,
+            skippedUnavailable: assignInfo.skippedUnavailable,
             formattedDate
           });
         });
@@ -1733,14 +2495,43 @@
     }).filter(entry => entry.dates.length > 0);
   }
 
-  /* --- SHARE & TEMPLATE MODAL CONTROLLERS --- */
+  /* --- SHARE, TEMPLATE & 1-BY-1 QUEUE CONTROLLERS --- */
+  function isQueueActive() {
+    return activeShareContext.mode === "all" &&
+           activeShareContext.format === "text" &&
+           activeShareContext.allTextMode === "queue";
+  }
+
   function getActiveTemplateKey() {
-    const isSingle = activeShareContext.mode === "single";
+    const isSingle = activeShareContext.mode === "single" || isQueueActive();
     const isText = activeShareContext.format === "text";
     if (isSingle && isText) return "individualText";
     if (isSingle && !isText) return "individualEmail";
     if (!isSingle && isText) return "groupText";
     return "groupEmail";
+  }
+
+  function setAllTextDeliveryMode(deliveryMode) {
+    activeShareContext.allTextMode = deliveryMode;
+    activeShareContext.queueIndex = 0;
+
+    document.getElementById("btnQueueModeGroup").className = deliveryMode === "group" ? "active" : "outline";
+    document.getElementById("btnQueueModeQueue").className = deliveryMode === "queue" ? "active" : "outline";
+    document.getElementById("queueStepperRow").style.display = deliveryMode === "queue" ? "flex" : "none";
+
+    const hintEl = document.getElementById("sharePlaceholdersHint");
+    hintEl.innerText = deliveryMode === "queue"
+      ? "Dynamic tags (Individual Text): {firstName}, {fullName}, {dates}"
+      : "Dynamic tags: {schedules}, {timeframe}";
+
+    refreshShareModalPreview();
+  }
+
+  function stepQueue(delta) {
+    const items = activeShareContext.queueItems || [];
+    if (items.length === 0) return;
+    activeShareContext.queueIndex = (activeShareContext.queueIndex + delta + items.length) % items.length;
+    refreshShareModalPreview();
   }
 
   function populateShareRecipients() {
@@ -1760,6 +2551,18 @@
       inputEl.placeholder = isText
         ? "No mobile # saved (click Edit Saved Contact or type here)"
         : "No email saved (click Edit Saved Contact or type here)";
+    } else if (isQueueActive()) {
+      editBtn.style.display = "none";
+      const items = activeShareContext.queueItems || [];
+      const current = items[activeShareContext.queueIndex];
+      if (current) {
+        const contact = (state.contacts && state.contacts[current.name]) || {};
+        inputEl.value = contact.phone || "";
+        inputEl.placeholder = `No mobile # saved for ${current.name}`;
+      } else {
+        inputEl.value = "";
+        inputEl.placeholder = "No conductors scheduled in this timeframe";
+      }
     } else {
       editBtn.style.display = "none";
       const list = state.roster
@@ -1791,6 +2594,9 @@
       mode,
       conductorName,
       format: initialFormat,
+      allTextMode: "group",
+      queueIndex: 0,
+      queueItems: [],
       lastRenderedDates: "",
       lastRenderedSchedules: ""
     };
@@ -1806,6 +2612,10 @@
       hintEl.innerText = "Dynamic tags: {schedules}, {timeframe}";
     }
 
+    document.getElementById("btnQueueModeGroup").className = "active";
+    document.getElementById("btnQueueModeQueue").className = "outline";
+    document.getElementById("queueStepperRow").style.display = "none";
+
     setShareFormat(initialFormat);
     document.getElementById("shareModal").classList.add("open");
   }
@@ -1817,14 +2627,15 @@
     document.getElementById("btnFormatText").className = isText ? "active" : "outline";
     document.getElementById("btnFormatEmail").className = !isText ? "active" : "outline";
 
+    const showQueuePanel = activeShareContext.mode === "all" && isText;
+    document.getElementById("allTextQueuePanel").style.display = showQueuePanel ? "block" : "none";
+
     document.getElementById("emailSubjectField").style.display = isText ? "none" : "block";
     document.getElementById("btnActionSms").style.display = isText ? "inline-flex" : "none";
     document.getElementById("btnActionEmail").style.display = !isText ? "inline-flex" : "none";
 
     document.getElementById("shareMessageLabel").innerText = isText ? "Short Text Message" : "Longer Email Message";
-    document.getElementById("templateScopeLabel").innerText = isText ? "Short Text Template:" : "Longer Email Template:";
 
-    populateShareRecipients();
     refreshShareModalPreview();
   }
 
@@ -1850,6 +2661,8 @@
     const timeframeLabel = rangeSelect.options[rangeSelect.selectedIndex].text;
     const textarea = document.getElementById("shareMessageTextarea");
     const subjectInput = document.getElementById("shareEmailSubject");
+    const smsBtn = document.getElementById("btnActionSms");
+    const scopeLabel = document.getElementById("templateScopeLabel");
     const templateKey = getActiveTemplateKey();
 
     if (activeShareContext.mode === "single") {
@@ -1862,12 +2675,50 @@
 
       activeShareContext.lastRenderedDates = dateList;
       subjectInput.value = `FS Conductor Schedule - ${name}`;
+      smsBtn.innerText = "💬 Open in Messages";
+      scopeLabel.innerText = activeShareContext.format === "text" ? "Short Text Template:" : "Longer Email Template:";
 
       const template = (state.templates && state.templates[templateKey]) || DEFAULT_TEMPLATES[templateKey];
       textarea.value = template
         .replace(/\{firstName\}/g, firstName)
         .replace(/\{fullName\}/g, name)
         .replace(/\{dates\}/g, dateList);
+
+      populateShareRecipients();
+    } else if (isQueueActive()) {
+      const grouped = getAllConductorsGroupedSchedules(rangeOption, state);
+      activeShareContext.queueItems = grouped;
+      if (activeShareContext.queueIndex >= grouped.length) {
+        activeShareContext.queueIndex = 0;
+      }
+
+      const progressEl = document.getElementById("queueProgressLabel");
+      scopeLabel.innerText = "Individual Text Template:";
+
+      if (grouped.length === 0) {
+        progressEl.innerText = "No conductors scheduled in this timeframe";
+        textarea.value = "No scheduled dates found in this timeframe.";
+        smsBtn.innerText = "💬 Open in Messages";
+      } else {
+        const idx = activeShareContext.queueIndex;
+        const item = grouped[idx];
+        const firstName = item.name.trim().split(/\s+/)[0] || item.name;
+        const dateList = item.dates.map(d => `• ${d.formattedDate} (9:30 AM)`).join("\n");
+
+        activeShareContext.lastRenderedDates = dateList;
+        progressEl.innerText = `Brother ${idx + 1} of ${grouped.length}: ${item.name}`;
+        smsBtn.innerText = idx + 1 < grouped.length
+          ? `💬 Text ${firstName} (${idx + 1}/${grouped.length}) & Next`
+          : `💬 Text ${firstName} (${idx + 1}/${grouped.length})`;
+
+        const template = (state.templates && state.templates.individualText) || DEFAULT_TEMPLATES.individualText;
+        textarea.value = template
+          .replace(/\{firstName\}/g, firstName)
+          .replace(/\{fullName\}/g, item.name)
+          .replace(/\{dates\}/g, dateList);
+      }
+
+      populateShareRecipients();
     } else {
       const grouped = getAllConductorsGroupedSchedules(rangeOption, state);
       const scheduleBlocks = grouped.length > 0
@@ -1879,11 +2730,15 @@
 
       activeShareContext.lastRenderedSchedules = scheduleBlocks;
       subjectInput.value = `Updated FS Conductor Schedule (${timeframeLabel})`;
+      smsBtn.innerText = "💬 Open in Messages";
+      scopeLabel.innerText = activeShareContext.format === "text" ? "Group Text Template:" : "Longer Email Template:";
 
       const template = (state.templates && state.templates[templateKey]) || DEFAULT_TEMPLATES[templateKey];
       textarea.value = template
         .replace(/\{schedules\}/g, scheduleBlocks)
         .replace(/\{timeframe\}/g, timeframeLabel);
+
+      populateShareRecipients();
     }
 
     updateCharCounter();
@@ -1896,16 +2751,19 @@
     const templateKey = getActiveTemplateKey();
     let templateToSave = document.getElementById("shareMessageTextarea").value;
 
-    if (activeShareContext.mode === "single") {
-      const fullName = activeShareContext.conductorName;
+    if (activeShareContext.mode === "single" || isQueueActive()) {
+      const fullName = activeShareContext.mode === "single"
+        ? activeShareContext.conductorName
+        : (activeShareContext.queueItems[activeShareContext.queueIndex]?.name || "");
       const firstName = fullName.trim().split(/\s+/)[0] || fullName;
+
       if (activeShareContext.lastRenderedDates && !templateToSave.includes("{dates}")) {
         templateToSave = templateToSave.replace(activeShareContext.lastRenderedDates, "{dates}");
       }
-      if (!templateToSave.includes("{fullName}")) {
+      if (fullName && !templateToSave.includes("{fullName}")) {
         templateToSave = templateToSave.split(fullName).join("{fullName}");
       }
-      if (!templateToSave.includes("{firstName}")) {
+      if (firstName && !templateToSave.includes("{firstName}")) {
         const escapedFirst = firstName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         templateToSave = templateToSave.replace(new RegExp(`\\b${escapedFirst}\\b`), "{firstName}");
       }
@@ -1947,7 +2805,11 @@
       try {
         await navigator.share({ title, text });
         showStatus("Schedule shared!");
-        closeShareModal();
+        if (isQueueActive() && activeShareContext.queueIndex + 1 < activeShareContext.queueItems.length) {
+          stepQueue(1);
+        } else {
+          closeShareModal();
+        }
       } catch (err) {
         if (err.name !== "AbortError") {
           console.error("Web Share error:", err);
@@ -1973,7 +2835,18 @@
     } else {
       window.location.href = `sms:?&body=${encodeURIComponent(text)}`;
     }
-    showStatus("Opened in Messages app!");
+
+    if (isQueueActive() && activeShareContext.queueItems.length > 0) {
+      const currentIdx = activeShareContext.queueIndex;
+      const total = activeShareContext.queueItems.length;
+      const sentName = activeShareContext.queueItems[currentIdx].name;
+      showStatus(`Opened Messages for ${sentName} (${currentIdx + 1}/${total})`);
+      if (currentIdx + 1 < total) {
+        setTimeout(() => stepQueue(1), 400);
+      }
+    } else {
+      showStatus("Opened in Messages app!");
+    }
   }
 
   function emailModalMessage() {
@@ -2008,7 +2881,7 @@
     setTimeout(() => {
       el.classList.remove("visible");
       el.innerText = "";
-    }, 3200);
+    }, 3400);
   }
 
   function downloadConductorICS(conductorName) {
@@ -2283,7 +3156,9 @@
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       closeAllDropdowns();
-      if (document.getElementById("contactModal").classList.contains("open")) {
+      if (document.getElementById("cloudSyncModal").classList.contains("open")) {
+        closeCloudSyncModal();
+      } else if (document.getElementById("contactModal").classList.contains("open")) {
         closeContactModal();
       } else if (document.getElementById("shareModal").classList.contains("open")) {
         closeShareModal();
@@ -2317,12 +3192,14 @@
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
         checkForServiceWorkerUpdate();
+        syncWithGitHubGist(true);
       }
     });
 
     window.addEventListener('pageshow', (event) => {
       if (event.persisted) {
         checkForServiceWorkerUpdate();
+        syncWithGitHubGist(true);
       }
     });
 
@@ -2339,7 +3216,10 @@
     });
   }
 
-  window.addEventListener("DOMContentLoaded", renderUI);
+  window.addEventListener("DOMContentLoaded", () => {
+    renderUI();
+    syncWithGitHubGist(true);
+  });
 </script>
 
 </body>
