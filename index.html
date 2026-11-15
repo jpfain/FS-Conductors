@@ -916,7 +916,7 @@
     }
 
     .modal-field textarea {
-      min-height: 165px;
+      min-height: 185px;
       line-height: 1.4;
       resize: vertical;
     }
@@ -1071,7 +1071,7 @@
   <header>
     <div class="title-group">
       <h1>Conductor Schedule</h1>
-      <span id="appVersionBadge" class="version-badge">v28</span>
+      <span id="appVersionBadge" class="version-badge">v29</span>
       <span id="cloudSyncPill" class="sync-pill" onclick="openCloudSyncModal()" title="Configure or check GitHub Gist Cloud Sync">☁️ Local Only</span>
     </div>
     <div class="controls-group">
@@ -1177,7 +1177,7 @@
         <span id="upNextConductorName"></span>
         <span id="upNextBadges" style="font-size: 0.8rem;"></span>
       </div>
-      <div id="upNextSubtext" class="up-next-sub">9:30 AM • Kingdom Hall</div>
+      <div id="upNextSubtext" class="up-next-sub">9:30 - 9:37 AM • Kingdom Hall</div>
     </div>
 
     <div class="up-next-actions">
@@ -1435,7 +1435,7 @@
 </div>
 
 <script>
-  const APP_VERSION = "v28";
+  const APP_VERSION = "v29";
   let currentDate = new Date();
   let currentViewMode = "calendar";
   const monthNames = [
@@ -1448,6 +1448,43 @@
   const GIST_CONFIG_KEY = "conductor_gist_config";
 
   const DEFAULT_TEMPLATES = {
+    individualText:
+      "Hi {firstName}, here are your upcoming FS Conductor dates (9:30 - 9:37 AM at the Kingdom Hall):\n\n" +
+      "{dates}\n\n" +
+      "Please read ahead:\n" +
+      "1. mwb21 November p. 7 \"Tips for Making Meetings for Field Service Practical\"\n" +
+      "2. km 3/15 pp. 3-6 \"Meetings for Field Service That Accomplish Their Purpose.\"\n\n" +
+      "Please let me know early if you need a replacement or trade. Thank you!",
+    individualEmail:
+      "Hi {firstName},\n\n" +
+      "Here is your upcoming FS Conductor schedule:\n\n" +
+      "{dates}\n\n" +
+      "Time: 9:30 - 9:37 AM\n" +
+      "Location: Kingdom Hall\n\n" +
+      "Please read ahead:\n" +
+      "1. mwb21 November p. 7 \"Tips for Making Meetings for Field Service Practical\"\n" +
+      "2. km 3/15 pp. 3-6 \"Meetings for Field Service That Accomplish Their Purpose.\"\n\n" +
+      "If a conflict comes up, please let me know as early as possible so we can arrange a replacement or trade. Thank you for your willing spirit!",
+    groupText:
+      "Updated FS Conductor Schedule ({timeframe} — 9:30 - 9:37 AM, Kingdom Hall):\n\n" +
+      "{schedules}\n\n" +
+      "Please read ahead:\n" +
+      "1. mwb21 November p. 7 \"Tips for Making Meetings for Field Service Practical\"\n" +
+      "2. km 3/15 pp. 3-6 \"Meetings for Field Service That Accomplish Their Purpose.\"\n\n" +
+      "Please let me know early if you need a replacement or trade. Thanks, Brothers!",
+    groupEmail:
+      "Hello Brothers,\n\n" +
+      "Here is the updated FS Conductor schedule ({timeframe}):\n\n" +
+      "{schedules}\n\n" +
+      "Time: 9:30 - 9:37 AM\n" +
+      "Location: Kingdom Hall\n\n" +
+      "Please read ahead:\n" +
+      "1. mwb21 November p. 7 \"Tips for Making Meetings for Field Service Practical\"\n" +
+      "2. km 3/15 pp. 3-6 \"Meetings for Field Service That Accomplish Their Purpose.\"\n\n" +
+      "If you are unavailable for any of your assigned dates, please let me know early so we can arrange a replacement or trade. Thank you for your willing spirit!"
+  };
+
+  const LEGACY_V28_TEMPLATES = {
     individualText:
       "Hi {firstName}, your upcoming FS Conductor dates (9:30 AM, Kingdom Hall):\n" +
       "{dates}\n" +
@@ -1849,7 +1886,11 @@
         if (parsed.templates.group && !parsed.templates.groupEmail) {
           parsed.templates.groupEmail = parsed.templates.group;
         }
-        parsed.templates = { ...DEFAULT_TEMPLATES, ...parsed.templates };
+        Object.keys(DEFAULT_TEMPLATES).forEach(k => {
+          if (!parsed.templates[k] || parsed.templates[k].trim() === LEGACY_V28_TEMPLATES[k].trim()) {
+            parsed.templates[k] = DEFAULT_TEMPLATES[k];
+          }
+        });
       }
       if (!parsed.rotationStartDate) {
         parsed.rotationStartDate = DEFAULT_ANCHOR_DATE;
@@ -2052,7 +2093,6 @@
       sel2.appendChild(opt2);
     });
 
-    // Default Date 1 to next upcoming meeting, and Date 2 to next meeting with a different conductor
     sel1.selectedIndex = 0;
     const firstConductor = tradeCandidateSlots[0].conductor;
     const diffIdx = tradeCandidateSlots.findIndex((s, idx) => idx > 0 && s.conductor !== firstConductor);
@@ -2121,7 +2161,6 @@
     const newCond1 = slot2.conductor;
     const newCond2 = slot1.conductor;
 
-    // If a traded conductor matches the date's automatic assignment, remove override cleanly
     if (newCond1 === slot1.autoConductor) {
       delete state.overrides[key1];
     } else {
@@ -2971,7 +3010,7 @@
       const firstName = name.trim().split(/\s+/)[0] || name;
       const dates = getConductorAssignedDates(name, rangeOption, state);
       const dateList = dates.length > 0
-        ? dates.map(d => `• ${d.formattedDate} (9:30 AM)`).join("\n")
+        ? dates.map(d => `• ${d.formattedDate} (9:30 - 9:37 AM)`).join("\n")
         : "• No scheduled dates found in this timeframe.";
 
       activeShareContext.lastRenderedDates = dateList;
@@ -3004,7 +3043,7 @@
         const idx = activeShareContext.queueIndex;
         const item = grouped[idx];
         const firstName = item.name.trim().split(/\s+/)[0] || item.name;
-        const dateList = item.dates.map(d => `• ${d.formattedDate} (9:30 AM)`).join("\n");
+        const dateList = item.dates.map(d => `• ${d.formattedDate} (9:30 - 9:37 AM)`).join("\n");
 
         activeShareContext.lastRenderedDates = dateList;
         progressEl.innerText = `Brother ${idx + 1} of ${grouped.length}: ${item.name}`;
@@ -3024,7 +3063,7 @@
       const grouped = getAllConductorsGroupedSchedules(rangeOption, state);
       const scheduleBlocks = grouped.length > 0
         ? grouped.map(g => {
-            const lines = g.dates.map(d => `  • ${d.formattedDate} (9:30 AM)`).join("\n");
+            const lines = g.dates.map(d => `  • ${d.formattedDate} (9:30 - 9:37 AM)`).join("\n");
             return `${g.name}:\n${lines}`;
           }).join("\n\n")
         : "No scheduled dates found in this timeframe.";
@@ -3225,9 +3264,9 @@
         `DTSTAMP:${nowString}`,
         `DTSTART;VALUE=DATE:${dateStr}`,
         `DTEND;VALUE=DATE:${dateStr}`,
-        `SUMMARY:FS Conductor: ${conductorName} (9:30 AM)`,
+        `SUMMARY:FS Conductor: ${conductorName} (9:30 - 9:37 AM)`,
         `LOCATION:Kingdom Hall`,
-        `DESCRIPTION:Carefully examine km 3/15 pp. 3-6 for direction & suggestions.`,
+        `DESCRIPTION:Please read ahead: 1. mwb21 November p. 7 "Tips for Making Meetings for Field Service Practical" and 2. km 3/15 pp. 3-6 "Meetings for Field Service That Accomplish Their Purpose."`,
         "STATUS:CONFIRMED",
         "BEGIN:VALARM",
         "TRIGGER:-PT24H",
@@ -3292,9 +3331,9 @@
           `DTSTAMP:${nowString}`,
           `DTSTART;VALUE=DATE:${dateStr}`,
           `DTEND;VALUE=DATE:${dateStr}`,
-          `SUMMARY:FS Conductor: ${conductor} (9:30 AM)`,
+          `SUMMARY:FS Conductor: ${conductor} (9:30 - 9:37 AM)`,
           `LOCATION:Kingdom Hall`,
-          `DESCRIPTION:Carefully examine km 3/15 pp. 3-6 for direction & suggestions.`,
+          `DESCRIPTION:Please read ahead: 1. mwb21 November p. 7 "Tips for Making Meetings for Field Service Practical" and 2. km 3/15 pp. 3-6 "Meetings for Field Service That Accomplish Their Purpose."`,
           "STATUS:CONFIRMED",
           "BEGIN:VALARM",
           "TRIGGER:-PT24H",
@@ -3350,9 +3389,9 @@
         `DTSTAMP:${nowString}`,
         `DTSTART;VALUE=DATE:${dateStr}`,
         `DTEND;VALUE=DATE:${dateStr}`,
-        `SUMMARY:FS Conductor: ${conductor} (9:30 AM)`,
+        `SUMMARY:FS Conductor: ${conductor} (9:30 - 9:37 AM)`,
         `LOCATION:Kingdom Hall`,
-        `DESCRIPTION:Carefully examine km 3/15 pp. 3-6 for direction & suggestions.`,
+        `DESCRIPTION:Please read ahead: 1. mwb21 November p. 7 "Tips for Making Meetings for Field Service Practical" and 2. km 3/15 pp. 3-6 "Meetings for Field Service That Accomplish Their Purpose."`,
         "STATUS:CONFIRMED",
         "BEGIN:VALARM",
         "TRIGGER:-PT24H",
