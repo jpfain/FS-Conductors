@@ -307,33 +307,33 @@
     .roster-tags {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 9px;
     }
 
     .tag {
       background: #ffffff;
       color: #1e293b;
       border: 1px solid #cbd5e1;
-      padding: 5px 10px;
+      padding: 6px 10px;
       border-radius: 999px;
-      font-size: 0.84rem;
+      font-size: 0.86rem;
       font-weight: 600;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+      gap: 7px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
 
     .tag-num {
       background: var(--primary);
       color: white;
       border-radius: 50%;
-      width: 20px;
-      height: 20px;
+      width: 22px;
+      height: 22px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.72rem;
+      font-size: 0.74rem;
       flex-shrink: 0;
     }
 
@@ -342,40 +342,53 @@
       color: #334155;
       border: 1px solid #cbd5e1;
       border-radius: 999px;
-      padding: 1px 7px;
-      font-size: 0.72rem;
+      padding: 2px 7px;
+      font-size: 0.74rem;
       font-weight: 700;
     }
 
     .tag-contact-badges {
-      font-size: 0.72rem;
-      opacity: 0.88;
+      font-size: 0.76rem;
+      opacity: 0.9;
       letter-spacing: 1px;
     }
 
     .tag-actions {
       display: inline-flex;
       align-items: center;
-      gap: 3px;
-      padding-left: 4px;
-      border-left: 1px solid #e2e8f0;
+      gap: 5px;
+      padding-left: 7px;
+      border-left: 1px solid #cbd5e1;
     }
 
     .tag-icon-btn {
-      color: #475569;
+      color: #334155;
       cursor: pointer;
-      border: none;
-      background: #f1f5f9;
-      border-radius: 6px;
-      padding: 3px 6px;
-      font-size: 0.75rem;
-      line-height: 1.1;
-      min-height: 24px;
+      border: 1px solid #cbd5e1;
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 4px 7px;
+      min-width: 30px;
+      min-height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      transition: background-color 0.15s ease, transform 0.1s ease;
+    }
+
+    .tag-icon-btn svg {
+      display: block;
+      flex-shrink: 0;
     }
 
     .tag-icon-btn:hover:not(:disabled) {
       background: #e2e8f0;
       color: var(--primary);
+    }
+
+    .tag-icon-btn:active:not(:disabled) {
+      transform: scale(0.96);
     }
 
     .tag-icon-btn:disabled {
@@ -384,21 +397,27 @@
     }
 
     .tag-icon-btn.share-btn {
-      background: #ecfdf5;
-      color: #047857;
+      background: #dcfce7;
+      color: #15803d;
+      border-color: #86efac;
+      min-width: 34px;
     }
 
     .tag-icon-btn.share-btn:hover {
-      background: #d1fae5;
+      background: #bbf7d0;
+      color: #166534;
     }
 
     .tag-icon-btn.ics-btn {
-      background: #eff6ff;
+      background: #dbeafe;
       color: #1d4ed8;
+      border-color: #93c5fd;
+      min-width: 34px;
     }
 
     .tag-icon-btn.ics-btn:hover {
-      background: #dbeafe;
+      background: #bfdbfe;
+      color: #1e40af;
     }
 
     /* Organized Action Toolbar & Dropdowns */
@@ -1071,7 +1090,7 @@
   <header>
     <div class="title-group">
       <h1>Conductor Schedule</h1>
-      <span id="appVersionBadge" class="version-badge">v30</span>
+      <span id="appVersionBadge" class="version-badge">v31</span>
       <span id="cloudSyncPill" class="sync-pill" onclick="openCloudSyncModal()" title="Configure or check GitHub Gist Cloud Sync">☁️ Local Only</span>
     </div>
     <div class="controls-group">
@@ -1188,7 +1207,7 @@
         <button type="button" class="btn-link" onclick="toggleQuickReplace(false)">Done</button>
       </div>
       <button type="button" id="btnOpenQuickReplace" class="outline" style="min-height: 34px; padding: 4px 10px; font-size: 0.82rem;" onclick="toggleQuickReplace()">🔄 Quick Replace</button>
-      <button type="button" class="success" style="min-height: 34px; padding: 4px 12px; font-size: 0.82rem;" onclick="remindUpNextConductor()">📤 Send Reminder</button>
+      <button type="button" class="success" style="min-height: 34px; padding: 4px 12px; font-size: 0.82rem;" onclick="remindUpNextConductor()">💬 Send Reminder</button>
     </div>
   </div>
 
@@ -1437,7 +1456,7 @@
 </div>
 
 <script>
-  const APP_VERSION = "v30";
+  const APP_VERSION = "v31";
   let currentDate = new Date();
   let currentViewMode = "calendar";
   const monthNames = [
@@ -1448,6 +1467,14 @@
   const DEFAULT_ANCHOR_DATE = "2026-11-14";
   const GIST_FILENAME = "conductor-schedule-data.json";
   const GIST_CONFIG_KEY = "conductor_gist_config";
+
+  const ROSTER_ICONS = {
+    prev: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>`,
+    next: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>`,
+    message: `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>`,
+    calendarDownload: `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M12 14v5"/><path d="m9.5 16.5 2.5 2.5 2.5-2.5"/></svg>`,
+    edit: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>`
+  };
 
   const DEFAULT_TEMPLATES = {
     individualText:
@@ -2399,11 +2426,11 @@
         <span class="tag-tally" title="${tally} assigned dates in ${selectedYear}">${tally}&times;</span>
         ${badges ? `<span class="tag-contact-badges">${badges}</span>` : ""}
         <div class="tag-actions">
-          <button type="button" class="tag-icon-btn" onclick="moveConductor(${index}, -1)" title="Move earlier in rotation" ${isFirst ? 'disabled' : ''}>◀</button>
-          <button type="button" class="tag-icon-btn" onclick="moveConductor(${index}, 1)" title="Move later in rotation" ${isLast ? 'disabled' : ''}>▶</button>
-          <button type="button" class="tag-icon-btn share-btn" data-name="${encodeURIComponent(name)}" title="Send Text or Email schedule">📤</button>
-          <button type="button" class="tag-icon-btn ics-btn" data-name="${encodeURIComponent(name)}" title="Download personal .ics file">📥</button>
-          <button type="button" class="tag-icon-btn" onclick="openContactModal(${index})" title="Edit contact, unavailable dates, or remove">✏️</button>
+          <button type="button" class="tag-icon-btn" onclick="moveConductor(${index}, -1)" title="Move earlier in rotation" aria-label="Move ${escapeHtml(name)} earlier" ${isFirst ? 'disabled' : ''}>${ROSTER_ICONS.prev}</button>
+          <button type="button" class="tag-icon-btn" onclick="moveConductor(${index}, 1)" title="Move later in rotation" aria-label="Move ${escapeHtml(name)} later" ${isLast ? 'disabled' : ''}>${ROSTER_ICONS.next}</button>
+          <button type="button" class="tag-icon-btn share-btn" data-name="${encodeURIComponent(name)}" title="Send Text or Email schedule" aria-label="Send schedule to ${escapeHtml(name)}">${ROSTER_ICONS.message}</button>
+          <button type="button" class="tag-icon-btn ics-btn" data-name="${encodeURIComponent(name)}" title="Download personal .ics calendar file" aria-label="Download .ics calendar for ${escapeHtml(name)}">${ROSTER_ICONS.calendarDownload}</button>
+          <button type="button" class="tag-icon-btn" onclick="openContactModal(${index})" title="Edit contact, unavailable dates, or remove" aria-label="Edit ${escapeHtml(name)}">${ROSTER_ICONS.edit}</button>
         </div>
       `;
       
