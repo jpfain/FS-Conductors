@@ -1459,4 +1459,2120 @@
       "Please let me know early if you need a replacement or trade. Thank you!",
     individualEmail:
       "Hi {firstName},\n\n" +
-      "Here is your
+      "Here is your upcoming FS Conductor schedule:\n\n" +
+      "{dates}\n\n" +
+      "Time: 9:30 - 9:37 AM\n" +
+      "Location: Kingdom Hall\n\n" +
+      "Please read ahead:\n" +
+      "1. mwb21 November p. 7 \"Tips for Making Meetings for Field Service Practical\"\n" +
+      "2. km 3/15 pp. 3-6 \"Meetings for Field Service That Accomplish Their Purpose.\"\n\n" +
+      "If a conflict comes up, please let me know as early as possible so we can arrange a replacement or trade. Thank you for your willing spirit!",
+    groupText:
+      "Updated FS Conductor Schedule ({timeframe} — 9:30 - 9:37 AM, Kingdom Hall):\n\n" +
+      "{schedules}\n\n" +
+      "Please read ahead:\n" +
+      "1. mwb21 November p. 7 \"Tips for Making Meetings for Field Service Practical\"\n" +
+      "2. km 3/15 pp. 3-6 \"Meetings for Field Service That Accomplish Their Purpose.\"\n\n" +
+      "Please let me know early if you need a replacement or trade. Thanks, Brothers!",
+    groupEmail:
+      "Hello Brothers,\n\n" +
+      "Here is the updated FS Conductor schedule ({timeframe}):\n\n" +
+      "{schedules}\n\n" +
+      "Time: 9:30 - 9:37 AM\n" +
+      "Location: Kingdom Hall\n\n" +
+      "Please read ahead:\n" +
+      "1. mwb21 November p. 7 \"Tips for Making Meetings for Field Service Practical\"\n" +
+      "2. km 3/15 pp. 3-6 \"Meetings for Field Service That Accomplish Their Purpose.\"\n\n" +
+      "If you are unavailable for any of your assigned dates, please let me know early so we can arrange a replacement or trade. Thank you for your willing spirit!"
+  };
+
+  const LEGACY_V28_TEMPLATES = {
+    individualText:
+      "Hi {firstName}, your upcoming FS Conductor dates (9:30 AM, Kingdom Hall):\n" +
+      "{dates}\n" +
+      "Please see km 3/15 pp. 3-6. Thanks!",
+    individualEmail:
+      "Hi {firstName},\n\n" +
+      "Here is your upcoming FS Conductor schedule:\n\n" +
+      "{dates}\n\n" +
+      "Time: 9:30 AM\n" +
+      "Location: Kingdom Hall\n" +
+      "Direction: Please carefully examine km 3/15 pp. 3-6 for suggestions and direction.\n\n" +
+      "Thank you for your willing spirit!",
+    groupText:
+      "Updated FS Conductor Schedule ({timeframe}, 9:30 AM):\n\n" +
+      "{schedules}\n\n" +
+      "Location: Kingdom Hall (km 3/15 pp. 3-6)",
+    groupEmail:
+      "Hello Brothers,\n\n" +
+      "Here is the updated FS Conductor schedule ({timeframe}):\n\n" +
+      "{schedules}\n\n" +
+      "Time: 9:30 AM\n" +
+      "Location: Kingdom Hall\n" +
+      "Direction: Please carefully examine km 3/15 pp. 3-6 for suggestions and direction.\n\n" +
+      "Thank you for your willing spirit!"
+  };
+
+  let activeShareContext = {
+    mode: "single",
+    conductorName: null,
+    format: "text",
+    allTextMode: "group",
+    queueIndex: 0,
+    queueItems: [],
+    lastRenderedDates: "",
+    lastRenderedSchedules: ""
+  };
+
+  let editingRosterIndex = null;
+  let tempUnavailableDates = [];
+  let currentUpNextSlot = null;
+  let tradeCandidateSlots = [];
+  let swRegistration = null;
+  let lastAutoUpdateCheck = 0;
+  let cloudPushTimer = null;
+
+  function escapeHtml(str) {
+    return String(str || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function syncModalBodyLock() {
+    const anyModalOpen = document.querySelectorAll(".modal-backdrop.open").length > 0;
+    document.body.classList.toggle("modal-open", anyModalOpen);
+  }
+
+  /* --- UI DRAWERS & DROPDOWN MENUS --- */
+  function openUserManual() {
+    const manualWin = window.open('./manual.html', '_blank');
+    if (!manualWin) {
+      window.location.href = './manual.html';
+    }
+  }
+
+  function toggleAddConductorDrawer(forceState) {
+    const drawer = document.getElementById("addConductorDrawer");
+    const btn = document.getElementById("btnToggleAddConductor");
+    const shouldOpen = typeof forceState === "boolean" ? forceState : !drawer.classList.contains("open");
+
+    if (shouldOpen) {
+      drawer.classList.add("open");
+      btn.style.display = "none";
+      setTimeout(() => document.getElementById("newConductorInput").focus(), 40);
+    } else {
+      drawer.classList.remove("open");
+      btn.style.display = "inline-flex";
+      document.getElementById("newConductorInput").value = "";
+      document.getElementById("newConductorPhone").value = "";
+      document.getElementById("newConductorEmail").value = "";
+    }
+  }
+
+  function toggleDropdown(menuId, event) {
+    if (event) event.stopPropagation();
+    const target = document.getElementById(menuId);
+    const wasOpen = target.classList.contains("open");
+    closeAllDropdowns();
+    if (!wasOpen) {
+      target.classList.add("open");
+      document.getElementById("menuBackdrop").classList.add("open");
+    }
+  }
+
+  function closeAllDropdowns() {
+    document.querySelectorAll(".dropdown-menu.open").forEach(menu => {
+      menu.classList.remove("open");
+    });
+    const backdrop = document.getElementById("menuBackdrop");
+    if (backdrop) backdrop.classList.remove("open");
+  }
+
+  /* --- GITHUB GIST CLOUD SYNC --- */
+  function loadGistConfig() {
+    try {
+      const raw = localStorage.getItem(GIST_CONFIG_KEY);
+      if (raw) {
+        return { token: "", gistId: "", autoSync: true, lastSyncedAt: "", ...JSON.parse(raw) };
+      }
+    } catch (e) {}
+    return { token: "", gistId: "", autoSync: true, lastSyncedAt: "" };
+  }
+
+  function saveGistConfig(cfg) {
+    localStorage.setItem(GIST_CONFIG_KEY, JSON.stringify(cfg));
+    updateCloudSyncPill();
+  }
+
+  function updateCloudSyncPill(overrideText, stateClass) {
+    const pill = document.getElementById("cloudSyncPill");
+    if (!pill) return;
+    const cfg = loadGistConfig();
+
+    pill.className = "sync-pill";
+    if (overrideText) {
+      pill.innerText = overrideText;
+      if (stateClass) pill.classList.add(stateClass);
+      return;
+    }
+
+    if (cfg.token && cfg.gistId) {
+      pill.classList.add("connected");
+      pill.innerText = cfg.autoSync ? "☁️ Auto-Sync On" : "☁️ Cloud Ready";
+    } else {
+      pill.innerText = "☁️ Local Only";
+    }
+  }
+
+  function openCloudSyncModal() {
+    const cfg = loadGistConfig();
+    document.getElementById("gistTokenInput").value = cfg.token || "";
+    document.getElementById("gistIdInput").value = cfg.gistId || "";
+    document.getElementById("gistAutoSyncCheckbox").checked = cfg.autoSync !== false;
+
+    const detail = document.getElementById("cloudSyncStatusDetail");
+    if (cfg.lastSyncedAt) {
+      const d = new Date(cfg.lastSyncedAt);
+      detail.innerText = `Last synced: ${d.toLocaleString()}`;
+    } else if (cfg.token && cfg.gistId) {
+      detail.innerText = "Connected. Tap Push Now or Pull Now to sync immediately.";
+    } else {
+      detail.innerText = "Not connected yet. Data is currently stored locally on this device.";
+    }
+
+    document.getElementById("cloudSyncModal").classList.add("open");
+    syncModalBodyLock();
+  }
+
+  function closeCloudSyncModal() {
+    document.getElementById("cloudSyncModal").classList.remove("open");
+    syncModalBodyLock();
+  }
+
+  async function saveCloudSyncSettings() {
+    const token = document.getElementById("gistTokenInput").value.trim();
+    let gistId = document.getElementById("gistIdInput").value.trim();
+    const autoSync = document.getElementById("gistAutoSyncCheckbox").checked;
+
+    if (!token) {
+      saveGistConfig({ token: "", gistId: "", autoSync: false, lastSyncedAt: "" });
+      closeCloudSyncModal();
+      showStatus("Cloud sync disconnected (Local mode).");
+      return;
+    }
+
+    const detail = document.getElementById("cloudSyncStatusDetail");
+    detail.innerText = "Connecting to GitHub...";
+
+    try {
+      if (!gistId) {
+        const state = loadAppState();
+        const res = await fetch("https://api.github.com/gists", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Accept": "application/vnd.github+json",
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            description: "Conductor Schedule PWA Sync Data",
+            public: false,
+            files: {
+              [GIST_FILENAME]: {
+                content: JSON.stringify(state, null, 2)
+              }
+            }
+          })
+        });
+
+        if (!res.ok) {
+          throw new Error(`GitHub API error (${res.status}). Check that your token has 'gist' permission.`);
+        }
+
+        const data = await res.json();
+        gistId = data.id;
+        document.getElementById("gistIdInput").value = gistId;
+        const nowIso = new Date().toISOString();
+        saveGistConfig({ token, gistId, autoSync, lastSyncedAt: nowIso });
+        detail.innerText = `Created private Gist (${gistId}) and uploaded schedule!`;
+        showStatus("☁️ Connected & created private sync Gist!");
+      } else {
+        saveGistConfig({ token, gistId, autoSync, lastSyncedAt: loadGistConfig().lastSyncedAt });
+        await syncWithGitHubGist(false);
+        detail.innerText = "Connected and synced with existing Gist!";
+      }
+    } catch (err) {
+      detail.innerText = `Error: ${err.message}`;
+      updateCloudSyncPill("☁️ Sync Error", "error");
+    }
+  }
+
+  function scheduleCloudPush() {
+    const cfg = loadGistConfig();
+    if (!cfg.token || !cfg.gistId || !cfg.autoSync) return;
+
+    clearTimeout(cloudPushTimer);
+    cloudPushTimer = setTimeout(() => {
+      pushToGitHubGist(true);
+    }, 1500);
+  }
+
+  async function pushToGitHubGist(silent = false) {
+    const cfg = loadGistConfig();
+    if (!cfg.token || !cfg.gistId) return;
+
+    updateCloudSyncPill("☁️ Saving...", "connected");
+    const state = loadAppState();
+
+    try {
+      const res = await fetch(`https://api.github.com/gists/${cfg.gistId}`, {
+        method: "PATCH",
+        headers: {
+          "Authorization": `Bearer ${cfg.token}`,
+          "Accept": "application/vnd.github+json",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          files: {
+            [GIST_FILENAME]: {
+              content: JSON.stringify(state, null, 2)
+            }
+          }
+        })
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      cfg.lastSyncedAt = new Date().toISOString();
+      saveGistConfig(cfg);
+      if (!silent) showStatus("☁️ Uploaded schedule to GitHub Gist!");
+    } catch (err) {
+      updateCloudSyncPill("☁️ Sync Error", "error");
+      if (!silent) alert("Cloud push failed: " + err.message);
+    }
+  }
+
+  async function pullFromGitHubGist(forceOverwrite = false, silent = false) {
+    const cfg = loadGistConfig();
+    if (!cfg.token || !cfg.gistId) return;
+
+    updateCloudSyncPill("☁️ Checking...", "connected");
+    try {
+      const res = await fetch(`https://api.github.com/gists/${cfg.gistId}?t=${Date.now()}`, {
+        headers: {
+          "Authorization": `Bearer ${cfg.token}`,
+          "Accept": "application/vnd.github+json"
+        }
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const fileObj = data.files && data.files[GIST_FILENAME];
+      if (!fileObj || !fileObj.content) {
+        throw new Error("Sync file not found inside Gist.");
+      }
+
+      const remoteState = JSON.parse(fileObj.content);
+      if (!remoteState || !Array.isArray(remoteState.roster)) {
+        throw new Error("Invalid schedule data in Gist.");
+      }
+
+      const localState = loadAppState();
+      const remoteTime = Date.parse(remoteState.lastModified || "1970-01-01T00:00:00.000Z") || 0;
+      const localTime = Date.parse(localState.lastModified || "1970-01-01T00:00:00.000Z") || 0;
+
+      if (forceOverwrite || remoteTime > localTime) {
+        localStorage.setItem("conductor_schedule_state", JSON.stringify(remoteState));
+        cfg.lastSyncedAt = new Date().toISOString();
+        saveGistConfig(cfg);
+        renderUI();
+        if (!silent || remoteTime > localTime) {
+          showStatus("☁️ Synced latest schedule from cloud!");
+        }
+      } else if (!forceOverwrite && localTime > remoteTime && cfg.autoSync) {
+        await pushToGitHubGist(true);
+      } else {
+        cfg.lastSyncedAt = new Date().toISOString();
+        saveGistConfig(cfg);
+        if (!silent) showStatus("☁️ Schedule is already up to date!");
+      }
+    } catch (err) {
+      updateCloudSyncPill("☁️ Sync Error", "error");
+      if (!silent) alert("Cloud pull failed: " + err.message);
+    }
+  }
+
+  async function syncWithGitHubGist(silent = true) {
+    const cfg = loadGistConfig();
+    if (!cfg.token || !cfg.gistId || !cfg.autoSync) return;
+    await pullFromGitHubGist(false, silent);
+  }
+
+  function manualPushToGist() {
+    const cfg = loadGistConfig();
+    if (!cfg.token || !cfg.gistId) {
+      alert("Enter your GitHub Token and tap Save & Connect first.");
+      return;
+    }
+    pushToGitHubGist(false);
+  }
+
+  function manualPullFromGist() {
+    const cfg = loadGistConfig();
+    if (!cfg.token || !cfg.gistId) {
+      alert("Enter your GitHub Token and Gist ID, then tap Save & Connect first.");
+      return;
+    }
+    pullFromGitHubGist(true, false);
+  }
+
+  /* --- AUTOMATIC & MANUAL PWA UPDATE HANDLERS --- */
+  function activateWaitingServiceWorker(registration) {
+    if (registration && registration.waiting) {
+      registration.waiting.postMessage({ action: 'skipWaiting' });
+      return true;
+    }
+    return false;
+  }
+
+  async function checkForServiceWorkerUpdate() {
+    if (!('serviceWorker' in navigator)) return;
+
+    const now = Date.now();
+    if (now - lastAutoUpdateCheck < 15000) return;
+    lastAutoUpdateCheck = now;
+
+    try {
+      const reg = swRegistration || await navigator.serviceWorker.getRegistration();
+      if (!reg) return;
+      swRegistration = reg;
+
+      if (activateWaitingServiceWorker(reg)) return;
+      await reg.update();
+      activateWaitingServiceWorker(reg);
+    } catch (err) {}
+  }
+
+  async function forceAppUpdate() {
+    showStatus("Checking for updates...");
+    try {
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+      }
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const reg of registrations) {
+          try {
+            await reg.update();
+          } catch (e) {}
+          await reg.unregister();
+        }
+      }
+      showStatus("Reloading latest version...");
+      setTimeout(() => {
+        window.location.reload();
+      }, 450);
+    } catch (err) {
+      window.location.reload();
+    }
+  }
+
+  // Unified State Architecture
+  function loadAppState() {
+    const saved = localStorage.getItem("conductor_schedule_state");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (!parsed.templates) {
+        parsed.templates = { ...DEFAULT_TEMPLATES };
+      } else {
+        if (parsed.templates.individual && !parsed.templates.individualEmail) {
+          parsed.templates.individualEmail = parsed.templates.individual;
+        }
+        if (parsed.templates.group && !parsed.templates.groupEmail) {
+          parsed.templates.groupEmail = parsed.templates.group;
+        }
+        Object.keys(DEFAULT_TEMPLATES).forEach(k => {
+          if (!parsed.templates[k] || parsed.templates[k].trim() === LEGACY_V28_TEMPLATES[k].trim()) {
+            parsed.templates[k] = DEFAULT_TEMPLATES[k];
+          }
+        });
+      }
+      if (!parsed.rotationStartDate) {
+        parsed.rotationStartDate = DEFAULT_ANCHOR_DATE;
+      }
+      if (!parsed.contacts) {
+        parsed.contacts = {};
+      }
+      if (!parsed.unavailability) {
+        parsed.unavailability = {};
+      }
+      if (!parsed.lastModified) {
+        parsed.lastModified = "1970-01-01T00:00:00.000Z";
+      }
+      return parsed;
+    }
+
+    const legacyRoster = localStorage.getItem("conductor_roster");
+    let migratedRoster = ["Julian Ramirez", "Judy Fain", "Dow Stephens", "Martin Tavarez", "Stacy Jaffnson"];
+
+    if (legacyRoster) {
+      try {
+        migratedRoster = JSON.parse(legacyRoster);
+      } catch(e) {}
+    }
+
+    const migratedOverrides = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith("conductor_override_")) {
+        const parts = key.split("_");
+        if (parts.length === 5) {
+          const y = parts[2];
+          const m = String(parts[3]).padStart(2, '0');
+          const d = String(parts[4]).padStart(2, '0');
+          migratedOverrides[`${y}-${m}-${d}`] = localStorage.getItem(key);
+        }
+      }
+    }
+
+    const newState = {
+      roster: migratedRoster,
+      contacts: {},
+      unavailability: {},
+      overrides: migratedOverrides,
+      blackouts: {},
+      templates: { ...DEFAULT_TEMPLATES },
+      rotationStartDate: DEFAULT_ANCHOR_DATE,
+      lastModified: "1970-01-01T00:00:00.000Z"
+    };
+
+    localStorage.setItem("conductor_schedule_state", JSON.stringify(newState));
+    return newState;
+  }
+
+  function saveAppState(state) {
+    state.lastModified = new Date().toISOString();
+    localStorage.setItem("conductor_schedule_state", JSON.stringify(state));
+    renderUI();
+    scheduleCloudPush();
+  }
+
+  function updateRotationStartDate(dateValue) {
+    const state = loadAppState();
+    state.rotationStartDate = dateValue || DEFAULT_ANCHOR_DATE;
+    saveAppState(state);
+    showStatus("Rotation start date updated!");
+  }
+
+  function getMeetingSaturdays(year, month) {
+    let saturdays = [];
+    let date = new Date(year, month, 1);
+    while (date.getMonth() === month) {
+      if (date.getDay() === 6) {
+        saturdays.push(date.getDate());
+      }
+      date.setDate(date.getDate() + 1);
+    }
+    return {
+      second: saturdays[1],
+      fourth: saturdays[3],
+      fifth: saturdays[4]
+    };
+  }
+
+  // Anchored Rotation Engine with Unavailability Auto-Skip
+  function getRotationalAssignmentInfo(targetYear, targetMonth, targetDay, state) {
+    if (!state.roster || state.roster.length === 0) {
+      return { conductor: "Unassigned", baseConductor: "Unassigned", skippedUnavailable: [] };
+    }
+
+    const anchorDateKey = state.rotationStartDate || DEFAULT_ANCHOR_DATE;
+    const anchorYear = parseInt(anchorDateKey.split("-")[0], 10) || START_YEAR;
+    const endYear = Math.max(targetYear, anchorYear, 2028);
+
+    let activeMeetings = [];
+    for (let y = START_YEAR; y <= endYear; y++) {
+      for (let m = 0; m < 12; m++) {
+        const sats = getMeetingSaturdays(y, m);
+        [sats.second, sats.fourth, sats.fifth].forEach(day => {
+          if (!day) return;
+          const dateKey = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          if (!state.blackouts || !state.blackouts[dateKey]) {
+            activeMeetings.push(dateKey);
+          }
+        });
+      }
+    }
+
+    const targetKey = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}`;
+    const targetIndex = activeMeetings.indexOf(targetKey);
+    if (targetIndex === -1) {
+      return { conductor: state.roster[0], baseConductor: state.roster[0], skippedUnavailable: [] };
+    }
+
+    let anchorIndex = activeMeetings.findIndex(k => k >= anchorDateKey);
+    if (anchorIndex === -1) anchorIndex = 0;
+
+    const offset = targetIndex - anchorIndex;
+    const len = state.roster.length;
+    const baseIndex = ((offset % len) + len) % len;
+    const baseConductor = state.roster[baseIndex];
+
+    const unavailMap = state.unavailability || {};
+    let skipped = [];
+
+    for (let step = 0; step < len; step++) {
+      const candidateIndex = (baseIndex + step) % len;
+      const candidateName = state.roster[candidateIndex];
+      const unavailableDates = unavailMap[candidateName] || [];
+      if (!unavailableDates.includes(targetKey)) {
+        return {
+          conductor: candidateName,
+          baseConductor,
+          skippedUnavailable: skipped
+        };
+      }
+      skipped.push(candidateName);
+    }
+
+    return { conductor: baseConductor, baseConductor, skippedUnavailable: [] };
+  }
+
+  function getRotationalConductor(targetYear, targetMonth, targetDay, state) {
+    return getRotationalAssignmentInfo(targetYear, targetMonth, targetDay, state).conductor;
+  }
+
+  /* --- ASSIGNMENT BALANCE COUNTER --- */
+  function getYearlyAssignmentCounts(year, state) {
+    const counts = {};
+    state.roster.forEach(name => { counts[name] = 0; });
+
+    for (let month = 0; month < 12; month++) {
+      const sats = getMeetingSaturdays(year, month);
+      [sats.second, sats.fourth, sats.fifth].forEach(day => {
+        if (!day) return;
+        const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        if (state.blackouts && state.blackouts[dateKey]) return;
+
+        const assigned = (state.overrides && state.overrides[dateKey]) || getRotationalConductor(year, month, day, state);
+        if (counts[assigned] !== undefined) {
+          counts[assigned] += 1;
+        }
+      });
+    }
+    return counts;
+  }
+
+  /* --- TWO-WAY TRADE DATES MODAL CONTROLLERS --- */
+  function openTradeModal() {
+    const state = loadAppState();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const allSlots = getAllScheduleSlots(state);
+    const upcomingSlots = allSlots.filter(s => s.slotDate >= today);
+    tradeCandidateSlots = upcomingSlots.length >= 2 ? upcomingSlots : allSlots;
+
+    if (tradeCandidateSlots.length < 2) {
+      alert("At least two active meeting dates are needed to trade dates.");
+      return;
+    }
+
+    const sel1 = document.getElementById("tradeDate1Select");
+    const sel2 = document.getElementById("tradeDate2Select");
+    sel1.innerHTML = "";
+    sel2.innerHTML = "";
+
+    tradeCandidateSlots.forEach(slot => {
+      const overrideLabel = slot.isOverride ? " [Override]" : "";
+      const text = `${slot.formattedDate} — ${slot.conductor}${overrideLabel}`;
+
+      const opt1 = document.createElement("option");
+      opt1.value = slot.dateKey;
+      opt1.innerText = text;
+      sel1.appendChild(opt1);
+
+      const opt2 = document.createElement("option");
+      opt2.value = slot.dateKey;
+      opt2.innerText = text;
+      sel2.appendChild(opt2);
+    });
+
+    sel1.selectedIndex = 0;
+    const firstConductor = tradeCandidateSlots[0].conductor;
+    const diffIdx = tradeCandidateSlots.findIndex((s, idx) => idx > 0 && s.conductor !== firstConductor);
+    sel2.selectedIndex = diffIdx !== -1 ? diffIdx : 1;
+
+    refreshTradePreview();
+    document.getElementById("tradeModal").classList.add("open");
+    syncModalBodyLock();
+  }
+
+  function closeTradeModal() {
+    document.getElementById("tradeModal").classList.remove("open");
+    syncModalBodyLock();
+  }
+
+  function refreshTradePreview() {
+    const key1 = document.getElementById("tradeDate1Select").value;
+    const key2 = document.getElementById("tradeDate2Select").value;
+    const previewBox = document.getElementById("tradePreviewBox");
+    const confirmBtn = document.getElementById("btnConfirmTrade");
+
+    const slot1 = tradeCandidateSlots.find(s => s.dateKey === key1);
+    const slot2 = tradeCandidateSlots.find(s => s.dateKey === key2);
+
+    if (!slot1 || !slot2) return;
+
+    if (key1 === key2) {
+      confirmBtn.disabled = true;
+      previewBox.innerHTML = `<span style="color: var(--danger); font-weight: 600;">Select two different meeting dates to trade.</span>`;
+      return;
+    }
+
+    if (slot1.conductor === slot2.conductor) {
+      confirmBtn.disabled = true;
+      previewBox.innerHTML = `<span style="color: var(--warning-text); font-weight: 600;">Both selected dates are already assigned to ${escapeHtml(slot1.conductor)}. Choose a date with a different conductor.</span>`;
+      return;
+    }
+
+    confirmBtn.disabled = false;
+    previewBox.innerHTML = `
+      <div class="trade-row">
+        <span class="trade-date-label">${escapeHtml(slot1.formattedDate)}</span>
+        <span class="trade-shift">${escapeHtml(slot1.conductor)} &rarr; <span class="new-name">${escapeHtml(slot2.conductor)}</span></span>
+      </div>
+      <div class="trade-row">
+        <span class="trade-date-label">${escapeHtml(slot2.formattedDate)}</span>
+        <span class="trade-shift">${escapeHtml(slot2.conductor)} &rarr; <span class="new-name">${escapeHtml(slot1.conductor)}</span></span>
+      </div>
+      <div class="trade-note">
+        Yearly assignment counts stay balanced, and all other future rotation dates remain unchanged.
+      </div>
+    `;
+  }
+
+  function applyDateTrade() {
+    const key1 = document.getElementById("tradeDate1Select").value;
+    const key2 = document.getElementById("tradeDate2Select").value;
+
+    const slot1 = tradeCandidateSlots.find(s => s.dateKey === key1);
+    const slot2 = tradeCandidateSlots.find(s => s.dateKey === key2);
+    if (!slot1 || !slot2 || key1 === key2 || slot1.conductor === slot2.conductor) return;
+
+    const state = loadAppState();
+    if (!state.overrides) state.overrides = {};
+
+    const newCond1 = slot2.conductor;
+    const newCond2 = slot1.conductor;
+
+    if (newCond1 === slot1.autoConductor) {
+      delete state.overrides[key1];
+    } else {
+      state.overrides[key1] = newCond1;
+    }
+
+    if (newCond2 === slot2.autoConductor) {
+      delete state.overrides[key2];
+    } else {
+      state.overrides[key2] = newCond2;
+    }
+
+    saveAppState(state);
+    closeTradeModal();
+    showStatus(`Traded ${slot1.conductor} (${slot1.formattedDate}) with ${slot2.conductor} (${slot2.formattedDate})!`);
+  }
+
+  /* --- ROSTER, CONTACT & UNAVAILABILITY CONTROLLERS --- */
+  function addConductor() {
+    const nameInput = document.getElementById("newConductorInput");
+    const phoneInput = document.getElementById("newConductorPhone");
+    const emailInput = document.getElementById("newConductorEmail");
+
+    const name = nameInput.value.trim();
+    const phone = phoneInput.value.trim();
+    const email = emailInput.value.trim();
+
+    if (!name) {
+      nameInput.focus();
+      return;
+    }
+
+    const state = loadAppState();
+    if (!state.contacts) state.contacts = {};
+    state.roster.push(name);
+    if (phone || email) {
+      state.contacts[name] = { phone, email };
+    }
+
+    toggleAddConductorDrawer(false);
+    saveAppState(state);
+    showStatus(`Added ${name} to roster!`);
+  }
+
+  function removeConductorFromModal() {
+    if (editingRosterIndex === null) return;
+    const state = loadAppState();
+    const name = state.roster[editingRosterIndex];
+    if (!name) return;
+
+    if (confirm(`Remove "${name}" from the Approved Conductors roster?`)) {
+      state.roster.splice(editingRosterIndex, 1);
+      if (state.contacts) delete state.contacts[name];
+      if (state.unavailability) delete state.unavailability[name];
+      closeContactModal();
+      saveAppState(state);
+      showStatus(`Removed ${name} from roster.`);
+    }
+  }
+
+  function moveConductor(index, direction) {
+    const state = loadAppState();
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= state.roster.length) return;
+
+    const temp = state.roster[index];
+    state.roster[index] = state.roster[newIndex];
+    state.roster[newIndex] = temp;
+    saveAppState(state);
+  }
+
+  function openContactModal(index) {
+    const state = loadAppState();
+    const name = state.roster[index];
+    if (!name) return;
+
+    editingRosterIndex = index;
+    const contact = (state.contacts && state.contacts[name]) || { phone: "", email: "" };
+    tempUnavailableDates = [...((state.unavailability && state.unavailability[name]) || [])].sort();
+
+    document.getElementById("editConductorName").value = name;
+    document.getElementById("editConductorPhone").value = contact.phone || "";
+    document.getElementById("editConductorEmail").value = contact.email || "";
+    document.getElementById("addUnavailableDateInput").value = "";
+    renderUnavailableDatesPills();
+    document.getElementById("contactModal").classList.add("open");
+    syncModalBodyLock();
+  }
+
+  function renderUnavailableDatesPills() {
+    const container = document.getElementById("unavailableDatesList");
+    container.innerHTML = "";
+    if (tempUnavailableDates.length === 0) {
+      container.innerHTML = `<span style="font-size:0.78rem; color:#94a3b8;">No unavailable dates set.</span>`;
+      return;
+    }
+
+    tempUnavailableDates.forEach(dateKey => {
+      const parts = dateKey.split("-");
+      const displayDate = parts.length === 3
+        ? new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10))
+            .toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        : dateKey;
+
+      const pill = document.createElement("span");
+      pill.className = "unavail-pill";
+      pill.innerHTML = `<span>${escapeHtml(displayDate)}</span><button type="button" title="Remove date" onclick="removeUnavailableDate('${escapeHtml(dateKey)}')">&times;</button>`;
+      container.appendChild(pill);
+    });
+  }
+
+  function addUnavailableDate() {
+    const input = document.getElementById("addUnavailableDateInput");
+    const val = input.value;
+    if (!val) return;
+    if (!tempUnavailableDates.includes(val)) {
+      tempUnavailableDates.push(val);
+      tempUnavailableDates.sort();
+      renderUnavailableDatesPills();
+    }
+    input.value = "";
+  }
+
+  function removeUnavailableDate(dateKey) {
+    tempUnavailableDates = tempUnavailableDates.filter(d => d !== dateKey);
+    renderUnavailableDatesPills();
+  }
+
+  function closeContactModal() {
+    document.getElementById("contactModal").classList.remove("open");
+    editingRosterIndex = null;
+    tempUnavailableDates = [];
+    syncModalBodyLock();
+  }
+
+  function saveConductorContact() {
+    if (editingRosterIndex === null) return;
+    const state = loadAppState();
+    if (!state.contacts) state.contacts = {};
+    if (!state.unavailability) state.unavailability = {};
+
+    const oldName = state.roster[editingRosterIndex];
+    const newName = document.getElementById("editConductorName").value.trim();
+    const phone = document.getElementById("editConductorPhone").value.trim();
+    const email = document.getElementById("editConductorEmail").value.trim();
+
+    if (!newName) {
+      alert("Conductor name cannot be empty.");
+      return;
+    }
+
+    state.roster[editingRosterIndex] = newName;
+
+    if (oldName !== newName) {
+      delete state.contacts[oldName];
+      delete state.unavailability[oldName];
+      if (state.overrides) {
+        Object.keys(state.overrides).forEach(dateKey => {
+          if (state.overrides[dateKey] === oldName) {
+            state.overrides[dateKey] = newName;
+          }
+        });
+      }
+      if (activeShareContext.conductorName === oldName) {
+        activeShareContext.conductorName = newName;
+      }
+    }
+
+    state.contacts[newName] = { phone, email };
+    if (tempUnavailableDates.length > 0) {
+      state.unavailability[newName] = [...tempUnavailableDates];
+    } else {
+      delete state.unavailability[newName];
+    }
+
+    saveAppState(state);
+    closeContactModal();
+    showStatus(`Saved details for ${newName}!`);
+
+    if (document.getElementById("shareModal").classList.contains("open")) {
+      if (activeShareContext.mode === "single") {
+        document.getElementById("shareModalTitle").innerText = `Share Schedule: ${activeShareContext.conductorName}`;
+      }
+      populateShareRecipients();
+      refreshShareModalPreview();
+    }
+  }
+
+  function renderRoster(state) {
+    const dateInput = document.getElementById("rotationStartDateInput");
+    if (dateInput) {
+      dateInput.value = state.rotationStartDate || DEFAULT_ANCHOR_DATE;
+    }
+
+    const countBadge = document.getElementById("rosterCountBadge");
+    if (countBadge) {
+      countBadge.innerText = state.roster.length;
+    }
+
+    const selectedYear = parseInt(document.getElementById("yearSelect").value, 10);
+    const yearlyCounts = getYearlyAssignmentCounts(selectedYear, state);
+
+    const container = document.getElementById("rosterContainer");
+    container.innerHTML = "";
+    if (state.roster.length === 0) {
+      container.innerHTML = `<span style="font-size:0.85rem; color:#94a3b8;">No conductors added yet. Click "+ Add Conductor" above.</span>`;
+      return;
+    }
+
+    state.roster.forEach((name, index) => {
+      const tag = document.createElement("div");
+      tag.className = "tag";
+      const isFirst = index === 0;
+      const isLast = index === state.roster.length - 1;
+      const contact = (state.contacts && state.contacts[name]) || {};
+      const unavail = (state.unavailability && state.unavailability[name]) || [];
+      const tally = yearlyCounts[name] || 0;
+
+      let badges = "";
+      if (contact.phone) badges += `<span title="Mobile: ${escapeHtml(contact.phone)}">📱</span>`;
+      if (contact.email) badges += `<span title="Email: ${escapeHtml(contact.email)}">✉️</span>`;
+      if (unavail.length > 0) badges += `<span title="Unavailable dates: ${escapeHtml(unavail.join(', '))}">🚫</span>`;
+
+      tag.innerHTML = `
+        <span class="tag-num">${index + 1}</span>
+        <span>${escapeHtml(name)}</span>
+        <span class="tag-tally" title="${tally} assigned dates in ${selectedYear}">${tally}&times;</span>
+        ${badges ? `<span class="tag-contact-badges">${badges}</span>` : ""}
+        <div class="tag-actions">
+          <button type="button" class="tag-icon-btn" onclick="moveConductor(${index}, -1)" title="Move earlier in rotation" ${isFirst ? 'disabled' : ''}>◀</button>
+          <button type="button" class="tag-icon-btn" onclick="moveConductor(${index}, 1)" title="Move later in rotation" ${isLast ? 'disabled' : ''}>▶</button>
+          <button type="button" class="tag-icon-btn share-btn" data-name="${encodeURIComponent(name)}" title="Send Text or Email schedule">📤</button>
+          <button type="button" class="tag-icon-btn ics-btn" data-name="${encodeURIComponent(name)}" title="Download personal .ics file">📥</button>
+          <button type="button" class="tag-icon-btn" onclick="openContactModal(${index})" title="Edit contact, unavailable dates, or remove">✏️</button>
+        </div>
+      `;
+      
+      tag.querySelector('.ics-btn').addEventListener('click', (e) => {
+        downloadConductorICS(decodeURIComponent(e.currentTarget.dataset.name));
+      });
+      tag.querySelector('.share-btn').addEventListener('click', (e) => {
+        openShareModal('single', decodeURIComponent(e.currentTarget.dataset.name), 'text');
+      });
+
+      container.appendChild(tag);
+    });
+  }
+
+  /* --- UP NEXT QUICK-ACTION BANNER --- */
+  function renderUpNextBanner(state) {
+    const banner = document.getElementById("upNextBanner");
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const allSlots = getAllScheduleSlots(state);
+    const nextSlot = allSlots.find(s => s.slotDate >= today);
+
+    if (!nextSlot || !state.roster || state.roster.length === 0) {
+      banner.style.display = "none";
+      currentUpNextSlot = null;
+      return;
+    }
+
+    currentUpNextSlot = nextSlot;
+    banner.style.display = "flex";
+
+    const isToday = nextSlot.slotDate.getTime() === today.getTime();
+    document.getElementById("upNextTodayBadge").style.display = isToday ? "inline-block" : "none";
+    document.getElementById("upNextDateLabel").innerText = nextSlot.formattedDate;
+    document.getElementById("upNextConductorName").innerText = nextSlot.conductor;
+
+    const contact = (state.contacts && state.contacts[nextSlot.conductor]) || {};
+    let badgesHtml = "";
+    if (contact.phone) badgesHtml += `<span title="Mobile saved">📱</span> `;
+    if (contact.email) badgesHtml += `<span title="Email saved">✉️</span> `;
+    if (nextSlot.isOverride) {
+      badgesHtml += `<span class="badge badge-override">Override</span>`;
+    } else if (nextSlot.skippedUnavailable && nextSlot.skippedUnavailable.length > 0) {
+      badgesHtml += `<span class="badge badge-reassigned" title="Auto-reassigned because ${escapeHtml(nextSlot.skippedUnavailable.join(', '))} marked unavailable">Auto-Reassigned</span>`;
+    } else {
+      badgesHtml += `<span class="badge badge-standard">Auto</span>`;
+    }
+    document.getElementById("upNextBadges").innerHTML = badgesHtml;
+
+    const replaceSelect = document.getElementById("quickReplaceSelect");
+    replaceSelect.innerHTML = "";
+    const autoOpt = document.createElement("option");
+    autoOpt.value = "";
+    autoOpt.innerText = `Auto (${nextSlot.autoConductor})`;
+    replaceSelect.appendChild(autoOpt);
+
+    state.roster.forEach(name => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.innerText = name;
+      replaceSelect.appendChild(opt);
+    });
+    replaceSelect.value = (state.overrides && state.overrides[nextSlot.dateKey]) || "";
+  }
+
+  function toggleQuickReplace(forceState) {
+    const box = document.getElementById("quickReplaceBox");
+    const btn = document.getElementById("btnOpenQuickReplace");
+    const shouldOpen = typeof forceState === "boolean" ? forceState : !box.classList.contains("open");
+    box.classList.toggle("open", shouldOpen);
+    btn.style.display = shouldOpen ? "none" : "inline-flex";
+  }
+
+  function applyQuickReplace(conductorName) {
+    if (!currentUpNextSlot) return;
+    setOverride(currentUpNextSlot.dateKey, conductorName);
+    toggleQuickReplace(false);
+    showStatus(conductorName ? `Replaced ${currentUpNextSlot.formattedDate} with ${conductorName}` : "Restored automatic rotation");
+  }
+
+  function remindUpNextConductor() {
+    if (!currentUpNextSlot) return;
+    openShareModal("single", currentUpNextSlot.conductor, "text");
+  }
+
+  /* --- VIEW & CALENDAR CONTROLLERS --- */
+  function setViewMode(mode) {
+    currentViewMode = mode;
+    document.getElementById("btnViewCalendar").className = mode === 'calendar' ? 'active' : 'outline';
+    document.getElementById("btnViewTable").className = mode === 'table' ? 'active' : 'outline';
+    document.getElementById("calendarViewSection").style.display = mode === 'calendar' ? 'block' : 'none';
+    document.getElementById("tableViewSection").style.display = mode === 'table' ? 'block' : 'none';
+    renderUI();
+  }
+
+  function changeMonth(delta) {
+    currentDate.setMonth(currentDate.getMonth() + delta);
+    document.getElementById("yearSelect").value = currentDate.getFullYear();
+    renderUI();
+  }
+
+  function goToToday() {
+    currentDate = new Date();
+    document.getElementById("yearSelect").value = currentDate.getFullYear();
+    renderUI();
+  }
+
+  function handleYearChange() {
+    const year = parseInt(document.getElementById("yearSelect").value, 10);
+    currentDate.setFullYear(year);
+    renderUI();
+  }
+
+  function toggleBlackout(dateKey) {
+    const state = loadAppState();
+    if (state.blackouts[dateKey]) {
+      delete state.blackouts[dateKey];
+    } else {
+      state.blackouts[dateKey] = true;
+    }
+    saveAppState(state);
+  }
+
+  function setOverride(dateKey, conductorName) {
+    const state = loadAppState();
+    if (!conductorName) {
+      delete state.overrides[dateKey];
+    } else {
+      state.overrides[dateKey] = conductorName;
+    }
+    saveAppState(state);
+  }
+
+  function renderUI() {
+    const badgeEl = document.getElementById("appVersionBadge");
+    if (badgeEl) badgeEl.innerText = APP_VERSION;
+
+    updateCloudSyncPill();
+    const state = loadAppState();
+    renderRoster(state);
+    renderUpNextBanner(state);
+
+    if (currentViewMode === "calendar") {
+      renderCalendarView(state);
+    } else {
+      renderTableView(state);
+    }
+  }
+
+  function renderCalendarView(state) {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+
+    document.getElementById("monthYearTitle").innerText = `${monthNames[month]} ${year}`;
+    const grid = document.getElementById("calendarGrid");
+    grid.innerHTML = "";
+
+    const dayHeaders = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    dayHeaders.forEach(day => {
+      const header = document.createElement("div");
+      header.className = "day-header";
+      header.innerText = day;
+      grid.appendChild(header);
+    });
+
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const totalDays = new Date(year, month + 1, 0).getDate();
+    const meetingSaturdays = getMeetingSaturdays(year, month);
+    const today = new Date();
+
+    for (let i = 0; i < firstDayIndex; i++) {
+      const emptyCell = document.createElement("div");
+      emptyCell.className = "day-cell empty";
+      grid.appendChild(emptyCell);
+    }
+
+    for (let day = 1; day <= totalDays; day++) {
+      const cell = document.createElement("div");
+      cell.className = "day-cell";
+
+      const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day;
+      if (isToday) cell.style.border = "2px solid var(--danger)";
+
+      const dayNum = document.createElement("div");
+      dayNum.className = "day-number";
+      dayNum.innerText = day;
+      cell.appendChild(dayNum);
+
+      const is2ndSaturday = day === meetingSaturdays.second;
+      const is4thSaturday = day === meetingSaturdays.fourth;
+      const is5thSaturday = day === meetingSaturdays.fifth;
+
+      if (is2ndSaturday || is4thSaturday || is5thSaturday) {
+        const monthStr = String(month + 1).padStart(2, '0');
+        const dayStr = String(day).padStart(2, '0');
+        const dateKey = `${year}-${monthStr}-${dayStr}`;
+
+        const isBlackout = !!state.blackouts[dateKey];
+        const savedOverride = state.overrides[dateKey];
+        const autoAssigned = getRotationalConductor(year, month, day, state);
+
+        if (isBlackout) {
+          cell.classList.add("blackout");
+          const tag = document.createElement("div");
+          tag.className = "blackout-tag";
+          tag.innerText = "Cancelled";
+          cell.appendChild(tag);
+        } else {
+          cell.classList.add("meeting");
+          const tag = document.createElement("div");
+          tag.className = "meeting-tag";
+          if (is2ndSaturday) tag.innerText = "2nd Sat Meeting";
+          else if (is4thSaturday) tag.innerText = "4th Sat Meeting";
+          else tag.innerText = "5th Sat Meeting";
+          cell.appendChild(tag);
+
+          const activeConductor = savedOverride || autoAssigned;
+          const nameParts = (activeConductor || "").trim().split(/\s+/);
+          const firstName = nameParts[0] || "";
+          const lastName = nameParts.slice(1).join(" ") || "";
+
+          const nameDisplay = document.createElement("div");
+          nameDisplay.className = "conductor-name-display";
+          if (lastName) {
+            nameDisplay.innerHTML = `<div class="first-name">${escapeHtml(firstName)}</div><div class="last-name">${escapeHtml(lastName)}</div>`;
+          } else {
+            nameDisplay.innerHTML = `<div class="first-name">${escapeHtml(firstName)}</div>`;
+          }
+          cell.appendChild(nameDisplay);
+
+          const select = document.createElement("select");
+          select.className = "conductor-select";
+
+          const autoOpt = document.createElement("option");
+          autoOpt.value = "";
+          autoOpt.innerText = `Auto (${autoAssigned})`;
+          select.appendChild(autoOpt);
+
+          state.roster.forEach(name => {
+            const opt = document.createElement("option");
+            opt.value = name;
+            opt.innerText = name;
+            select.appendChild(opt);
+          });
+
+          select.value = savedOverride || "";
+          select.addEventListener("change", (e) => setOverride(dateKey, e.target.value));
+          cell.appendChild(select);
+        }
+
+        const actionsDiv = document.createElement("div");
+        actionsDiv.className = "cell-actions";
+        actionsDiv.innerHTML = `<button class="btn-link" onclick="toggleBlackout('${dateKey}')">${isBlackout ? 'Restore' : 'Cancel'}</button>`;
+        cell.appendChild(actionsDiv);
+      }
+
+      grid.appendChild(cell);
+    }
+  }
+
+  function renderTableView(state) {
+    const selectedYear = parseInt(document.getElementById("yearSelect").value, 10);
+    const tbody = document.getElementById("scheduleTableBody");
+    tbody.innerHTML = "";
+
+    for (let month = 0; month < 12; month++) {
+      const sats = getMeetingSaturdays(selectedYear, month);
+      const meetingDays = [sats.second, sats.fourth, sats.fifth];
+
+      meetingDays.forEach(day => {
+        if (!day) return;
+        const monthStr = String(month + 1).padStart(2, '0');
+        const dayStr = String(day).padStart(2, '0');
+        const dateKey = `${selectedYear}-${monthStr}-${dayStr}`;
+
+        const isBlackout = !!state.blackouts[dateKey];
+        const override = state.overrides[dateKey];
+        const assignInfo = getRotationalAssignmentInfo(selectedYear, month, day, state);
+        const autoAssigned = assignInfo.conductor;
+        const conductor = isBlackout ? "CANCELLED / NO MEETING" : (override || autoAssigned);
+
+        let statusBadge = `<span class="badge badge-standard">Standard</span>`;
+        if (isBlackout) statusBadge = `<span class="badge badge-blackout">Cancelled</span>`;
+        else if (override) statusBadge = `<span class="badge badge-override">Override</span>`;
+        else if (assignInfo.skippedUnavailable.length > 0) {
+          statusBadge = `<span class="badge badge-reassigned" title="Skipped unavailable: ${escapeHtml(assignInfo.skippedUnavailable.join(', '))}">Reassigned</span>`;
+        }
+
+        const displayDate = new Date(selectedYear, month, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const satLabel = day === sats.fifth ? ' <span style="font-size:0.75rem; color:#2563eb; font-weight:600;">(5th Sat)</span>' : '';
+
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td><strong>${displayDate}</strong>${satLabel}</td>
+          <td>${escapeHtml(conductor)}</td>
+          <td>${statusBadge}</td>
+          <td>
+            <button class="outline" style="padding:2px 6px; min-height:auto;" onclick="promptTableOverride('${dateKey}', '${escapeHtml(override || '')}')">Override</button>
+            <button class="outline" style="padding:2px 6px; min-height:auto;" onclick="toggleBlackout('${dateKey}')">${isBlackout ? 'Restore' : 'Cancel'}</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+  }
+
+  function promptTableOverride(dateKey, currentOverride) {
+    const state = loadAppState();
+    const conductorList = state.roster.join(", ");
+    const choice = prompt(`Select conductor for ${dateKey}:\nAvailable: ${conductorList}`, currentOverride);
+    if (choice !== null) {
+      setOverride(dateKey, choice.trim());
+    }
+  }
+
+  /* --- SCHEDULE FILTERING & TEMPLATE HELPERS --- */
+  function getAllScheduleSlots(state) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selectedYear = parseInt(document.getElementById("yearSelect").value, 10);
+    const maxYear = Math.max(today.getFullYear(), selectedYear) + 1;
+
+    let allSlots = [];
+    for (let y = START_YEAR; y <= maxYear; y++) {
+      for (let month = 0; month < 12; month++) {
+        const sats = getMeetingSaturdays(y, month);
+        [sats.second, sats.fourth, sats.fifth].forEach(day => {
+          if (!day) return;
+          const monthStr = String(month + 1).padStart(2, '0');
+          const dayStr = String(day).padStart(2, '0');
+          const dateKey = `${y}-${monthStr}-${dayStr}`;
+          const slotDate = new Date(y, month, day);
+
+          if (state.blackouts && state.blackouts[dateKey]) return;
+
+          const assignInfo = getRotationalAssignmentInfo(y, month, day, state);
+          const autoConductor = assignInfo.conductor;
+          const isOverride = !!(state.overrides && state.overrides[dateKey]);
+          const conductor = isOverride ? state.overrides[dateKey] : autoConductor;
+
+          const formattedDate = slotDate.toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+          });
+
+          allSlots.push({
+            dateKey,
+            slotDate,
+            monthStr,
+            dayStr,
+            day,
+            month,
+            year: y,
+            conductor,
+            autoConductor,
+            isOverride,
+            skippedUnavailable: assignInfo.skippedUnavailable,
+            formattedDate
+          });
+        });
+      }
+    }
+    return allSlots;
+  }
+
+  function getConductorAssignedDates(conductorName, rangeOption, state) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selectedYear = parseInt(document.getElementById("yearSelect").value, 10);
+
+    const conductorSlots = getAllScheduleSlots(state).filter(s => s.conductor === conductorName);
+    const upcoming = conductorSlots.filter(s => s.slotDate >= today);
+
+    if (rangeOption === "1") {
+      if (upcoming.length === 0) return [];
+      const first = upcoming[0].slotDate;
+      const cutoff = new Date(first.getFullYear(), first.getMonth() + 1, first.getDate() + 6);
+      return upcoming.filter(d => d.slotDate <= cutoff);
+    } else if (rangeOption === "2") {
+      if (upcoming.length === 0) return [];
+      const first = upcoming[0].slotDate;
+      const cutoff = new Date(first.getFullYear(), first.getMonth() + 3, first.getDate() + 6);
+      return upcoming.filter(d => d.slotDate <= cutoff);
+    } else if (rangeOption === "3") {
+      if (upcoming.length === 0) return [];
+      const first = upcoming[0].slotDate;
+      const cutoff = new Date(first.getFullYear(), first.getMonth() + 6, first.getDate() + 6);
+      return upcoming.filter(d => d.slotDate <= cutoff);
+    } else if (rangeOption === "4") {
+      return upcoming.filter(d => d.year === selectedYear);
+    } else if (rangeOption === "5") {
+      return conductorSlots.filter(d => d.year === selectedYear);
+    }
+    return upcoming;
+  }
+
+  function getAllConductorsGroupedSchedules(rangeOption, state) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selectedYear = parseInt(document.getElementById("yearSelect").value, 10);
+
+    const allSlots = getAllScheduleSlots(state);
+    const globalUpcoming = allSlots.filter(s => s.slotDate >= today);
+
+    let filteredSlots = [];
+    if (rangeOption === "1") {
+      if (globalUpcoming.length > 0) {
+        const first = globalUpcoming[0].slotDate;
+        const cutoff = new Date(first.getFullYear(), first.getMonth() + 1, first.getDate() + 6);
+        filteredSlots = globalUpcoming.filter(d => d.slotDate <= cutoff);
+      }
+    } else if (rangeOption === "2") {
+      if (globalUpcoming.length > 0) {
+        const first = globalUpcoming[0].slotDate;
+        const cutoff = new Date(first.getFullYear(), first.getMonth() + 3, first.getDate() + 6);
+        filteredSlots = globalUpcoming.filter(d => d.slotDate <= cutoff);
+      }
+    } else if (rangeOption === "3") {
+      if (globalUpcoming.length > 0) {
+        const first = globalUpcoming[0].slotDate;
+        const cutoff = new Date(first.getFullYear(), first.getMonth() + 6, first.getDate() + 6);
+        filteredSlots = globalUpcoming.filter(d => d.slotDate <= cutoff);
+      }
+    } else if (rangeOption === "4") {
+      filteredSlots = globalUpcoming.filter(d => d.year === selectedYear);
+    } else if (rangeOption === "5") {
+      filteredSlots = allSlots.filter(d => d.year === selectedYear);
+    }
+
+    return state.roster.map(name => {
+      const dates = filteredSlots.filter(s => s.conductor === name);
+      return { name, dates };
+    }).filter(entry => entry.dates.length > 0);
+  }
+
+  /* --- SHARE, TEMPLATE & 1-BY-1 QUEUE CONTROLLERS --- */
+  function isQueueActive() {
+    return activeShareContext.mode === "all" &&
+           activeShareContext.format === "text" &&
+           activeShareContext.allTextMode === "queue";
+  }
+
+  function getActiveTemplateKey() {
+    const isSingle = activeShareContext.mode === "single" || isQueueActive();
+    const isText = activeShareContext.format === "text";
+    if (isSingle && isText) return "individualText";
+    if (isSingle && !isText) return "individualEmail";
+    if (!isSingle && isText) return "groupText";
+    return "groupEmail";
+  }
+
+  function setAllTextDeliveryMode(deliveryMode) {
+    activeShareContext.allTextMode = deliveryMode;
+    activeShareContext.queueIndex = 0;
+
+    document.getElementById("btnQueueModeGroup").className = deliveryMode === "group" ? "active" : "outline";
+    document.getElementById("btnQueueModeQueue").className = deliveryMode === "queue" ? "active" : "outline";
+    document.getElementById("queueStepperRow").style.display = deliveryMode === "queue" ? "flex" : "none";
+
+    const hintEl = document.getElementById("sharePlaceholdersHint");
+    hintEl.innerText = deliveryMode === "queue"
+      ? "Dynamic tags (Individual Text): {firstName}, {fullName}, {dates}"
+      : "Dynamic tags: {schedules}, {timeframe}";
+
+    refreshShareModalPreview();
+  }
+
+  function stepQueue(delta) {
+    const items = activeShareContext.queueItems || [];
+    if (items.length === 0) return;
+    activeShareContext.queueIndex = (activeShareContext.queueIndex + delta + items.length) % items.length;
+    refreshShareModalPreview();
+  }
+
+  function populateShareRecipients() {
+    const state = loadAppState();
+    const isText = activeShareContext.format === "text";
+    const labelEl = document.getElementById("shareRecipientLabel");
+    const inputEl = document.getElementById("shareRecipientInput");
+    const editBtn = document.getElementById("btnQuickEditContact");
+
+    labelEl.innerText = isText ? "To (Mobile Number):" : "To (Email Address):";
+
+    if (activeShareContext.mode === "single") {
+      editBtn.style.display = "inline-block";
+      const contact = (state.contacts && state.contacts[activeShareContext.conductorName]) || {};
+      const val = isText ? (contact.phone || "") : (contact.email || "");
+      inputEl.value = val;
+      inputEl.placeholder = isText
+        ? "No mobile # saved (click Edit Saved Contact or type here)"
+        : "No email saved (click Edit Saved Contact or type here)";
+    } else if (isQueueActive()) {
+      editBtn.style.display = "none";
+      const items = activeShareContext.queueItems || [];
+      const current = items[activeShareContext.queueIndex];
+      if (current) {
+        const contact = (state.contacts && state.contacts[current.name]) || {};
+        inputEl.value = contact.phone || "";
+        inputEl.placeholder = `No mobile # saved for ${current.name}`;
+      } else {
+        inputEl.value = "";
+        inputEl.placeholder = "No conductors scheduled in this timeframe";
+      }
+    } else {
+      editBtn.style.display = "none";
+      const list = state.roster
+        .map(name => {
+          const contact = (state.contacts && state.contacts[name]) || {};
+          return isText ? (contact.phone || "") : (contact.email || "");
+        })
+        .map(v => v.trim())
+        .filter(Boolean);
+
+      inputEl.value = list.join(", ");
+      inputEl.placeholder = isText
+        ? "Add mobile numbers to conductors in roster to auto-fill..."
+        : "Add emails to conductors in roster to auto-fill...";
+    }
+  }
+
+  function editContactFromShareModal() {
+    if (activeShareContext.mode !== "single") return;
+    const state = loadAppState();
+    const idx = state.roster.indexOf(activeShareContext.conductorName);
+    if (idx !== -1) {
+      openContactModal(idx);
+    }
+  }
+
+  function openShareModal(mode, conductorName, initialFormat = "text") {
+    activeShareContext = {
+      mode,
+      conductorName,
+      format: initialFormat,
+      allTextMode: "group",
+      queueIndex: 0,
+      queueItems: [],
+      lastRenderedDates: "",
+      lastRenderedSchedules: ""
+    };
+
+    const titleEl = document.getElementById("shareModalTitle");
+    const hintEl = document.getElementById("sharePlaceholdersHint");
+
+    if (mode === "single") {
+      titleEl.innerText = `Share Schedule: ${conductorName}`;
+      hintEl.innerText = "Dynamic tags: {firstName}, {fullName}, {dates}";
+    } else {
+      titleEl.innerText = "Share Schedule: All Conductors";
+      hintEl.innerText = "Dynamic tags: {schedules}, {timeframe}";
+    }
+
+    document.getElementById("btnQueueModeGroup").className = "active";
+    document.getElementById("btnQueueModeQueue").className = "outline";
+    document.getElementById("queueStepperRow").style.display = "none";
+
+    setShareFormat(initialFormat);
+    document.getElementById("shareModal").classList.add("open");
+    syncModalBodyLock();
+  }
+
+  function setShareFormat(format) {
+    activeShareContext.format = format;
+    const isText = format === "text";
+
+    document.getElementById("btnFormatText").className = isText ? "active" : "outline";
+    document.getElementById("btnFormatEmail").className = !isText ? "active" : "outline";
+
+    const showQueuePanel = activeShareContext.mode === "all" && isText;
+    document.getElementById("allTextQueuePanel").style.display = showQueuePanel ? "block" : "none";
+
+    document.getElementById("emailSubjectField").style.display = isText ? "none" : "block";
+    document.getElementById("btnActionSms").style.display = isText ? "inline-flex" : "none";
+    document.getElementById("btnActionEmail").style.display = !isText ? "inline-flex" : "none";
+
+    document.getElementById("shareMessageLabel").innerText = isText ? "Short Text Message" : "Longer Email Message";
+
+    refreshShareModalPreview();
+  }
+
+  function closeShareModal() {
+    document.getElementById("shareModal").classList.remove("open");
+    syncModalBodyLock();
+  }
+
+  function updateCharCounter() {
+    const countEl = document.getElementById("shareCharCount");
+    const textarea = document.getElementById("shareMessageTextarea");
+    if (activeShareContext.format === "text") {
+      const len = textarea.value.length;
+      countEl.innerText = `${len} chars`;
+    } else {
+      countEl.innerText = "Email format";
+    }
+  }
+
+  function refreshShareModalPreview() {
+    const state = loadAppState();
+    const rangeSelect = document.getElementById("shareTimeframeSelect");
+    const rangeOption = rangeSelect.value;
+    const timeframeLabel = rangeSelect.options[rangeSelect.selectedIndex].text;
+    const textarea = document.getElementById("shareMessageTextarea");
+    const subjectInput = document.getElementById("shareEmailSubject");
+    const smsBtn = document.getElementById("btnActionSms");
+    const scopeLabel = document.getElementById("templateScopeLabel");
+    const templateKey = getActiveTemplateKey();
+
+    if (activeShareContext.mode === "single") {
+      const name = activeShareContext.conductorName;
+      const firstName = name.trim().split(/\s+/)[0] || name;
+      const dates = getConductorAssignedDates(name, rangeOption, state);
+      const dateList = dates.length > 0
+        ? dates.map(d => `• ${d.formattedDate} (9:30 - 9:37 AM)`).join("\n")
+        : "• No scheduled dates found in this timeframe.";
+
+      activeShareContext.lastRenderedDates = dateList;
+      subjectInput.value = `FS Conductor Schedule - ${name}`;
+      smsBtn.innerText = "💬 Open in Messages";
+      scopeLabel.innerText = activeShareContext.format === "text" ? "Short Text Template:" : "Longer Email Template:";
+
+      const template = (state.templates && state.templates[templateKey]) || DEFAULT_TEMPLATES[templateKey];
+      textarea.value = template
+        .replace(/\{firstName\}/g, firstName)
+        .replace(/\{fullName\}/g, name)
+        .replace(/\{dates\}/g, dateList);
+
+      populateShareRecipients();
+    } else if (isQueueActive()) {
+      const grouped = getAllConductorsGroupedSchedules(rangeOption, state);
+      activeShareContext.queueItems = grouped;
+      if (activeShareContext.queueIndex >= grouped.length) {
+        activeShareContext.queueIndex = 0;
+      }
+
+      const progressEl = document.getElementById("queueProgressLabel");
+      scopeLabel.innerText = "Individual Text Template:";
+
+      if (grouped.length === 0) {
+        progressEl.innerText = "No conductors scheduled in this timeframe";
+        textarea.value = "No scheduled dates found in this timeframe.";
+        smsBtn.innerText = "💬 Open in Messages";
+      } else {
+        const idx = activeShareContext.queueIndex;
+        const item = grouped[idx];
+        const firstName = item.name.trim().split(/\s+/)[0] || item.name;
+        const dateList = item.dates.map(d => `• ${d.formattedDate} (9:30 - 9:37 AM)`).join("\n");
+
+        activeShareContext.lastRenderedDates = dateList;
+        progressEl.innerText = `Brother ${idx + 1} of ${grouped.length}: ${item.name}`;
+        smsBtn.innerText = idx + 1 < grouped.length
+          ? `💬 Text ${firstName} (${idx + 1}/${grouped.length}) & Next`
+          : `💬 Text ${firstName} (${idx + 1}/${grouped.length})`;
+
+        const template = (state.templates && state.templates.individualText) || DEFAULT_TEMPLATES.individualText;
+        textarea.value = template
+          .replace(/\{firstName\}/g, firstName)
+          .replace(/\{fullName\}/g, item.name)
+          .replace(/\{dates\}/g, dateList);
+      }
+
+      populateShareRecipients();
+    } else {
+      const grouped = getAllConductorsGroupedSchedules(rangeOption, state);
+      const scheduleBlocks = grouped.length > 0
+        ? grouped.map(g => {
+            const lines = g.dates.map(d => `  • ${d.formattedDate} (9:30 - 9:37 AM)`).join("\n");
+            return `${g.name}:\n${lines}`;
+          }).join("\n\n")
+        : "No scheduled dates found in this timeframe.";
+
+      activeShareContext.lastRenderedSchedules = scheduleBlocks;
+      subjectInput.value = `Updated FS Conductor Schedule (${timeframeLabel})`;
+      smsBtn.innerText = "💬 Open in Messages";
+      scopeLabel.innerText = activeShareContext.format === "text" ? "Group Text Template:" : "Longer Email Template:";
+
+      const template = (state.templates && state.templates[templateKey]) || DEFAULT_TEMPLATES[templateKey];
+      textarea.value = template
+        .replace(/\{schedules\}/g, scheduleBlocks)
+        .replace(/\{timeframe\}/g, timeframeLabel);
+
+      populateShareRecipients();
+    }
+
+    updateCharCounter();
+  }
+
+  function saveModalAsDefaultTemplate() {
+    const state = loadAppState();
+    if (!state.templates) state.templates = { ...DEFAULT_TEMPLATES };
+
+    const templateKey = getActiveTemplateKey();
+    let templateToSave = document.getElementById("shareMessageTextarea").value;
+
+    if (activeShareContext.mode === "single" || isQueueActive()) {
+      const fullName = activeShareContext.mode === "single"
+        ? activeShareContext.conductorName
+        : (activeShareContext.queueItems[activeShareContext.queueIndex]?.name || "");
+      const firstName = fullName.trim().split(/\s+/)[0] || fullName;
+
+      if (activeShareContext.lastRenderedDates && !templateToSave.includes("{dates}")) {
+        templateToSave = templateToSave.replace(activeShareContext.lastRenderedDates, "{dates}");
+      }
+      if (fullName && !templateToSave.includes("{fullName}")) {
+        templateToSave = templateToSave.split(fullName).join("{fullName}");
+      }
+      if (firstName && !templateToSave.includes("{firstName}")) {
+        const escapedFirst = firstName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        templateToSave = templateToSave.replace(new RegExp(`\\b${escapedFirst}\\b`), "{firstName}");
+      }
+    } else {
+      if (activeShareContext.lastRenderedSchedules && !templateToSave.includes("{schedules}")) {
+        templateToSave = templateToSave.replace(activeShareContext.lastRenderedSchedules, "{schedules}");
+      }
+    }
+
+    state.templates[templateKey] = templateToSave;
+    saveAppState(state);
+
+    const label = activeShareContext.format === "text" ? "Short Text" : "Longer Email";
+    showStatus(`Default ${label} template saved!`);
+    alert(`Saved! Your updated wording is now the default ${label} template.`);
+  }
+
+  function resetModalDefaultTemplate() {
+    const state = loadAppState();
+    if (!state.templates) state.templates = { ...DEFAULT_TEMPLATES };
+
+    const templateKey = getActiveTemplateKey();
+    state.templates[templateKey] = DEFAULT_TEMPLATES[templateKey];
+
+    saveAppState(state);
+    refreshShareModalPreview();
+    showStatus("Template reset to original default.");
+  }
+
+  async function shareModalMessage() {
+    const text = document.getElementById("shareMessageTextarea").value;
+    const title = activeShareContext.format === "email"
+      ? (document.getElementById("shareEmailSubject").value || "FS Conductor Schedule")
+      : (activeShareContext.mode === "single"
+          ? `FS Conductor Schedule - ${activeShareContext.conductorName}`
+          : "FS Conductor Schedule - All Conductors");
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, text });
+        showStatus("Schedule shared!");
+        if (isQueueActive() && activeShareContext.queueIndex + 1 < activeShareContext.queueItems.length) {
+          stepQueue(1);
+        } else {
+          closeShareModal();
+        }
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          console.error("Web Share error:", err);
+        }
+      }
+    } else {
+      copyModalMessage();
+    }
+  }
+
+  function smsModalMessage() {
+    const text = document.getElementById("shareMessageTextarea").value;
+    const rawRecipients = document.getElementById("shareRecipientInput").value;
+    const phones = rawRecipients
+      .split(",")
+      .map(p => p.replace(/[^\d+]/g, ""))
+      .filter(Boolean);
+
+    if (phones.length === 1) {
+      window.location.href = `sms:${phones[0]}?&body=${encodeURIComponent(text)}`;
+    } else if (phones.length > 1) {
+      window.location.href = `sms://open?addresses=${phones.join(",")}&body=${encodeURIComponent(text)}`;
+    } else {
+      window.location.href = `sms:?&body=${encodeURIComponent(text)}`;
+    }
+
+    if (isQueueActive() && activeShareContext.queueItems.length > 0) {
+      const currentIdx = activeShareContext.queueIndex;
+      const total = activeShareContext.queueItems.length;
+      const sentName = activeShareContext.queueItems[currentIdx].name;
+      showStatus(`Opened Messages for ${sentName} (${currentIdx + 1}/${total})`);
+      if (currentIdx + 1 < total) {
+        setTimeout(() => stepQueue(1), 400);
+      }
+    } else {
+      showStatus("Opened in Messages app!");
+    }
+  }
+
+  function emailModalMessage() {
+    const text = document.getElementById("shareMessageTextarea").value;
+    const subject = document.getElementById("shareEmailSubject").value || "FS Conductor Schedule";
+    const rawRecipients = document.getElementById("shareRecipientInput").value;
+    const emails = rawRecipients
+      .split(",")
+      .map(e => e.trim())
+      .filter(Boolean);
+
+    const toParam = emails.map(e => encodeURIComponent(e)).join(",");
+    window.location.href = `mailto:${toParam}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
+    showStatus("Opened in Email app!");
+  }
+
+  function copyModalMessage() {
+    const text = document.getElementById("shareMessageTextarea").value;
+    navigator.clipboard.writeText(text).then(() => {
+      showStatus("Copied to clipboard!");
+      alert("Copied to clipboard! You can now paste (Cmd + V / Tap Paste) into Messages or Email.");
+    }).catch(() => {
+      alert(text);
+    });
+  }
+
+  /* --- .ICS & BACKUP HANDLERS --- */
+  function showStatus(msg) {
+    const el = document.getElementById("statusMsg");
+    el.innerText = msg;
+    el.classList.add("visible");
+    setTimeout(() => {
+      el.classList.remove("visible");
+      el.innerText = "";
+    }, 3400);
+  }
+
+  function downloadConductorICS(conductorName) {
+    const state = loadAppState();
+    const choice = prompt(
+      `Select .ics calendar timeframe for ${conductorName}:\n\n` +
+      `1 = Next 1 Month\n` +
+      `2 = Next 3 Months\n` +
+      `3 = Next 6 Months\n` +
+      `4 = Rest of Year (Upcoming Only)\n` +
+      `5 = Entire Year (All Dates)\n\n` +
+      `Enter option number (1-5):`,
+      "2"
+    );
+
+    if (choice === null) return;
+
+    const nowString = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const dates = getConductorAssignedDates(conductorName, choice.trim(), state);
+
+    if (dates.length === 0) {
+      alert(`No scheduled dates found for ${conductorName}.`);
+      return;
+    }
+
+    let icsLines = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Conductor Schedule Generator//EN",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+      `X-WR-CALNAME:${conductorName} - FS Conductor Schedule`
+    ];
+
+    dates.forEach(d => {
+      const dateStr = `${d.year}${d.monthStr}${d.dayStr}`;
+      icsLines.push(
+        "BEGIN:VEVENT",
+        `UID:conductor-${d.dateKey}@conductorschedule.local`,
+        `DTSTAMP:${nowString}`,
+        `DTSTART;VALUE=DATE:${dateStr}`,
+        `DTEND;VALUE=DATE:${dateStr}`,
+        `SUMMARY:FS Conductor: ${conductorName} (9:30 - 9:37 AM)`,
+        `LOCATION:Kingdom Hall`,
+        `DESCRIPTION:Please read ahead: 1. mwb21 November p. 7 "Tips for Making Meetings for Field Service Practical" and 2. km 3/15 pp. 3-6 "Meetings for Field Service That Accomplish Their Purpose."`,
+        "STATUS:CONFIRMED",
+        "BEGIN:VALARM",
+        "TRIGGER:-PT24H",
+        "ACTION:DISPLAY",
+        `DESCRIPTION:Reminder: FS Conductor Duty Tomorrow - ${conductorName}`,
+        "END:VALARM",
+        "BEGIN:VALARM",
+        "TRIGGER:-PT12H",
+        "ACTION:DISPLAY",
+        `DESCRIPTION:Reminder: FS Conductor Duty in 12 Hours - ${conductorName}`,
+        "END:VALARM",
+        "END:VEVENT"
+      );
+    });
+
+    icsLines.push("END:VCALENDAR");
+
+    const icsData = icsLines.join("\r\n");
+    const fileName = `FS_Conductor_${conductorName.replace(/\s+/g, '_')}.ics`;
+    const blob = new Blob([icsData], { type: "text/calendar;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showStatus(`Downloaded .ics for ${conductorName}!`);
+  }
+
+  function exportMasterICS() {
+    const state = loadAppState();
+    const selectedYear = parseInt(document.getElementById("yearSelect").value, 10);
+    const nowString = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    
+    let icsLines = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Conductor Schedule Generator//EN",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+      `X-WR-CALNAME:Conductor Schedule ${selectedYear}`
+    ];
+
+    for (let month = 0; month < 12; month++) {
+      const sats = getMeetingSaturdays(selectedYear, month);
+      const meetingDays = [sats.second, sats.fourth, sats.fifth];
+
+      meetingDays.forEach(day => {
+        if (!day) return;
+        const monthStr = String(month + 1).padStart(2, '0');
+        const dayStr = String(day).padStart(2, '0');
+        const dateKey = `${selectedYear}-${monthStr}-${dayStr}`;
+
+        if (state.blackouts && state.blackouts[dateKey]) return;
+
+        const conductor = (state.overrides && state.overrides[dateKey]) || getRotationalConductor(selectedYear, month, day, state);
+        const dateStr = `${selectedYear}${monthStr}${dayStr}`;
+
+        icsLines.push(
+          "BEGIN:VEVENT",
+          `UID:conductor-${dateKey}@conductorschedule.local`,
+          `DTSTAMP:${nowString}`,
+          `DTSTART;VALUE=DATE:${dateStr}`,
+          `DTEND;VALUE=DATE:${dateStr}`,
+          `SUMMARY:FS Conductor: ${conductor} (9:30 - 9:37 AM)`,
+          `LOCATION:Kingdom Hall`,
+          `DESCRIPTION:Please read ahead: 1. mwb21 November p. 7 "Tips for Making Meetings for Field Service Practical" and 2. km 3/15 pp. 3-6 "Meetings for Field Service That Accomplish Their Purpose."`,
+          "STATUS:CONFIRMED",
+          "BEGIN:VALARM",
+          "TRIGGER:-PT24H",
+          "ACTION:DISPLAY",
+          `DESCRIPTION:Reminder: FS Conductor Duty Tomorrow - ${conductor}`,
+          "END:VALARM",
+          "BEGIN:VALARM",
+          "TRIGGER:-PT12H",
+          "ACTION:DISPLAY",
+          `DESCRIPTION:Reminder: FS Conductor Duty in 12 Hours - ${conductor}`,
+          "END:VALARM",
+          "END:VEVENT"
+        );
+      });
+    }
+
+    icsLines.push("END:VCALENDAR");
+
+    const blob = new Blob([icsLines.join("\r\n")], { type: "text/calendar;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `Conductor_Schedule_${selectedYear}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showStatus(`Exported ${selectedYear} Master .ics!`);
+  }
+
+  function exportMonthICS() {
+    const state = loadAppState();
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const sats = getMeetingSaturdays(year, month);
+    const meetingDays = [sats.second, sats.fourth, sats.fifth];
+    const nowString = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+
+    let icsLines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Conductor Schedule//EN"];
+
+    meetingDays.forEach(day => {
+      if (!day) return;
+      const monthStr = String(month + 1).padStart(2, '0');
+      const dayStr = String(day).padStart(2, '0');
+      const dateKey = `${year}-${monthStr}-${dayStr}`;
+
+      if (state.blackouts && state.blackouts[dateKey]) return;
+
+      const conductor = (state.overrides && state.overrides[dateKey]) || getRotationalConductor(year, month, day, state);
+      const dateStr = `${year}${monthStr}${dayStr}`;
+
+      icsLines.push(
+        "BEGIN:VEVENT",
+        `UID:conductor-${dateKey}@conductorschedule.local`,
+        `DTSTAMP:${nowString}`,
+        `DTSTART;VALUE=DATE:${dateStr}`,
+        `DTEND;VALUE=DATE:${dateStr}`,
+        `SUMMARY:FS Conductor: ${conductor} (9:30 - 9:37 AM)`,
+        `LOCATION:Kingdom Hall`,
+        `DESCRIPTION:Please read ahead: 1. mwb21 November p. 7 "Tips for Making Meetings for Field Service Practical" and 2. km 3/15 pp. 3-6 "Meetings for Field Service That Accomplish Their Purpose."`,
+        "STATUS:CONFIRMED",
+        "BEGIN:VALARM",
+        "TRIGGER:-PT24H",
+        "ACTION:DISPLAY",
+        `DESCRIPTION:Reminder: FS Conductor Duty Tomorrow - ${conductor}`,
+        "END:VALARM",
+        "BEGIN:VALARM",
+        "TRIGGER:-PT12H",
+        "ACTION:DISPLAY",
+        `DESCRIPTION:Reminder: FS Conductor Duty in 12 Hours - ${conductor}`,
+        "END:VALARM",
+        "END:VEVENT"
+      );
+    });
+
+    icsLines.push("END:VCALENDAR");
+
+    const blob = new Blob([icsLines.join("\r\n")], { type: "text/calendar;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `Conductor_Schedule_${monthNames[month]}_${year}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showStatus(`Exported ${monthNames[month]} .ics!`);
+  }
+
+  function copyTextSummary() {
+    const state = loadAppState();
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const sats = getMeetingSaturdays(year, month);
+
+    const getFormattedSlot = (day) => {
+      if (!day) return "";
+      const monthStr = String(month + 1).padStart(2, '0');
+      const dayStr = String(day).padStart(2, '0');
+      const dateKey = `${year}-${monthStr}-${dayStr}`;
+
+      if (state.blackouts[dateKey]) return "CANCELLED";
+      return state.overrides[dateKey] || getRotationalConductor(year, month, day, state);
+    };
+
+    const c2 = getFormattedSlot(sats.second);
+    const c4 = getFormattedSlot(sats.fourth);
+
+    const lines = [
+      `Conductor Schedule - ${monthNames[month]} ${year}`,
+      `----------------------------------------`,
+      `• ${monthNames[month]} ${sats.second}, ${year} (2nd Sat): ${c2}`,
+      `• ${monthNames[month]} ${sats.fourth}, ${year} (4th Sat): ${c4}`
+    ];
+
+    if (sats.fifth) {
+      const c5 = getFormattedSlot(sats.fifth);
+      lines.push(`• ${monthNames[month]} ${sats.fifth}, ${year} (5th Sat): ${c5}`);
+    }
+
+    navigator.clipboard.writeText(lines.join("\n")).then(() => {
+      showStatus(`Copied ${monthNames[month]} ${year} summary to clipboard!`);
+    });
+  }
+
+  /* --- JSON BACKUP & RESTORE HANDLERS --- */
+  function exportJSONBackup() {
+    const state = loadAppState();
+    const jsonStr = JSON.stringify(state, null, 2);
+    const blob = new Blob([jsonStr], { type: "application/json" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    const dateStamp = new Date().toISOString().split('T')[0];
+    link.download = `conductor-schedule-backup-${dateStamp}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showStatus("Backup JSON downloaded!");
+  }
+
+  function importJSONBackup(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const importedData = JSON.parse(e.target.result);
+        if (importedData && Array.isArray(importedData.roster)) {
+          saveAppState(importedData);
+          showStatus("Schedule restored successfully!");
+        } else {
+          alert("Invalid backup file format. Expected a conductor schedule backup object.");
+        }
+      } catch (err) {
+        alert("Error reading JSON backup file: " + err.message);
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = "";
+  }
+
+  // Close modals, drawers, and dropdowns on Escape key
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      closeAllDropdowns();
+      if (document.getElementById("tradeModal").classList.contains("open")) {
+        closeTradeModal();
+      } else if (document.getElementById("cloudSyncModal").classList.contains("open")) {
+        closeCloudSyncModal();
+      } else if (document.getElementById("contactModal").classList.contains("open")) {
+        closeContactModal();
+      } else if (document.getElementById("shareModal").classList.contains("open")) {
+        closeShareModal();
+      } else if (document.getElementById("addConductorDrawer").classList.contains("open")) {
+        toggleAddConductorDrawer(false);
+      }
+    }
+  });
+
+  // Register PWA Service Worker & auto-check on launch or app switch
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then((registration) => {
+        swRegistration = registration;
+        lastAutoUpdateCheck = Date.now();
+        activateWaitingServiceWorker(registration);
+
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                newWorker.postMessage({ action: 'skipWaiting' });
+              }
+            });
+          }
+        });
+      }).catch(() => {});
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        checkForServiceWorkerUpdate();
+        syncWithGitHubGist(true);
+      }
+    });
+
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) {
+        checkForServiceWorkerUpdate();
+        syncWithGitHubGist(true);
+      }
+    });
+
+    window.addEventListener('focus', () => {
+      checkForServiceWorkerUpdate();
+    });
+
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) {
+        refreshing = true;
+        window.location.reload();
+      }
+    });
+  }
+
+  window.addEventListener("DOMContentLoaded", () => {
+    window.scrollTo(0, 0);
+    renderUI();
+    syncWithGitHubGist(true);
+  });
+</script>
+
+</body>
+</html>
