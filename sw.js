@@ -1,4 +1,4 @@
-const CACHE_NAME = 'conductor-schedule-v29';
+const CACHE_NAME = 'conductor-schedule-v30';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
