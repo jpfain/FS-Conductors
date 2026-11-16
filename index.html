@@ -333,7 +333,7 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      gap: 8px;
+      gap: 7px;
       box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
       min-width: 0;
     }
@@ -399,6 +399,38 @@
       opacity: 0.9;
       letter-spacing: 1px;
       flex-shrink: 0;
+    }
+
+    /* Reminder Sent Pill Tag */
+    .reminder-sent-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      background: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #6ee7b7;
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      line-height: 1.25;
+    }
+
+    .reminder-sent-pill button {
+      background: none;
+      border: none;
+      color: #047857;
+      padding: 0 2px;
+      min-height: auto;
+      font-size: 0.92rem;
+      font-weight: 800;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .reminder-sent-pill button:hover {
+      color: var(--danger);
     }
 
     .tag-actions {
@@ -596,7 +628,7 @@
     .up-next-info {
       display: flex;
       flex-direction: column;
-      gap: 3px;
+      gap: 4px;
     }
 
     .up-next-eyebrow {
@@ -764,6 +796,19 @@
       color: #000000;
     }
 
+    .cell-reminded-badge {
+      display: inline-block;
+      background: #dcfce7;
+      color: #065f46;
+      border: 1px solid #86efac;
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 0.66rem;
+      font-weight: 700;
+      margin-top: 2px;
+      margin-bottom: 2px;
+    }
+
     .conductor-select {
       width: 100%;
       padding: 2px 4px;
@@ -829,6 +874,7 @@
     .badge-blackout { background: var(--blackout-bg); color: var(--blackout-text); }
     .badge-standard { background: #e2e8f0; color: #475569; }
     .badge-reassigned { background: #e0e7ff; color: #3730a3; }
+    .badge-reminded { background: #dcfce7; color: #065f46; border: 1px solid #86efac; }
 
     /* Modal Styles with Sticky Exit Bar */
     .modal-backdrop {
@@ -908,6 +954,25 @@
       min-height: 36px;
       border-radius: 6px;
       font-size: 0.85rem;
+    }
+
+    .share-reminder-banner {
+      display: none;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      background: #ecfdf5;
+      border: 1px solid #86efac;
+      color: #065f46;
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 12px;
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .share-reminder-banner.open {
+      display: flex;
     }
 
     /* 1-by-1 Queue Box inside Share Modal */
@@ -1138,7 +1203,7 @@
   <header>
     <div class="title-group">
       <h1>Conductor Schedule</h1>
-      <span id="appVersionBadge" class="version-badge">v32</span>
+      <span id="appVersionBadge" class="version-badge">v33</span>
       <span id="cloudSyncPill" class="sync-pill" onclick="openCloudSyncModal()" title="Configure or check GitHub Gist Cloud Sync">☁️ Local Only</span>
     </div>
     <div class="controls-group">
@@ -1246,6 +1311,7 @@
         <span id="upNextConductorName"></span>
         <span id="upNextBadges" style="font-size: 0.8rem;"></span>
       </div>
+      <div id="upNextReminderTagWrap"></div>
       <div id="upNextSubtext" class="up-next-sub">9:30 - 9:37 AM • Kingdom Hall</div>
     </div>
 
@@ -1428,6 +1494,11 @@
       <button type="button" class="modal-close-pill" onclick="closeShareModal()">✕ Close</button>
     </div>
 
+    <div id="shareReminderStatusBanner" class="share-reminder-banner">
+      <span id="shareReminderStatusText"></span>
+      <button type="button" class="btn-link" style="color: #991b1b; font-weight: 700;" onclick="clearActiveShareReminder()">Clear</button>
+    </div>
+
     <div class="format-switcher">
       <button type="button" id="btnFormatText" class="active" onclick="setShareFormat('text')">💬 Short Text</button>
       <button type="button" id="btnFormatEmail" class="outline" onclick="setShareFormat('email')">✉️ Longer Email</button>
@@ -1495,6 +1566,7 @@
 
     <div class="modal-actions">
       <button type="button" class="outline" onclick="closeShareModal()">← Back</button>
+      <button type="button" id="btnMarkReminderSent" class="outline" style="display: none;" onclick="manualMarkReminderSent()">✓ Tag Sent Today</button>
       <button type="button" class="outline" onclick="copyModalMessage()">📋 Copy</button>
       <button type="button" id="btnActionSms" class="secondary" onclick="smsModalMessage()">💬 Open in Messages</button>
       <button type="button" id="btnActionEmail" class="secondary" style="display: none;" onclick="emailModalMessage()">✉️ Open in Email</button>
@@ -1504,7 +1576,7 @@
 </div>
 
 <script>
-  const APP_VERSION = "v32";
+  const APP_VERSION = "v33";
   let currentDate = new Date();
   let currentViewMode = "calendar";
   const monthNames = [
@@ -1591,6 +1663,7 @@
   let activeShareContext = {
     mode: "single",
     conductorName: null,
+    targetDateKey: null,
     format: "text",
     allTextMode: "group",
     queueIndex: 0,
@@ -1616,9 +1689,139 @@
       .replace(/'/g, "&#39;");
   }
 
+  function getTodayLocalKey() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  function formatShortDate(dateKey) {
+    if (!dateKey) return "";
+    const parts = dateKey.split("-");
+    if (parts.length !== 3) return dateKey;
+    const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
   function syncModalBodyLock() {
     const anyModalOpen = document.querySelectorAll(".modal-backdrop.open").length > 0;
     document.body.classList.toggle("modal-open", anyModalOpen);
+  }
+
+  /* --- REMINDER TRACKING HELPERS --- */
+  function getReminderForSlot(dateKey, conductorName, state) {
+    if (!state.reminders || !dateKey || !conductorName) return null;
+    const entry = state.reminders[dateKey];
+    if (entry && entry.conductor === conductorName && entry.sentDate) {
+      return entry;
+    }
+    return null;
+  }
+
+  function getActiveConductorReminder(conductorName, state) {
+    if (!state.reminders || !conductorName) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const upcomingSlots = getAllScheduleSlots(state).filter(
+      s => s.slotDate >= today && s.conductor === conductorName
+    );
+    for (const slot of upcomingSlots) {
+      const rem = getReminderForSlot(slot.dateKey, conductorName, state);
+      if (rem) {
+        return { dateKey: slot.dateKey, formattedDate: slot.formattedDate, sentDate: rem.sentDate };
+      }
+    }
+    return null;
+  }
+
+  function recordReminderSent(dateKey, conductorName, silent = false) {
+    if (!dateKey || !conductorName) return;
+    const state = loadAppState();
+    if (!state.reminders) state.reminders = {};
+    const sentDate = getTodayLocalKey();
+    state.reminders[dateKey] = {
+      conductor: conductorName,
+      sentDate
+    };
+    saveAppState(state);
+    refreshShareReminderBanner();
+    if (!silent) {
+      showStatus(`Tagged ${conductorName}: Reminder was sent on ${formatShortDate(sentDate)}`);
+    }
+  }
+
+  function clearReminderTag(dateKey, event) {
+    if (event) event.stopPropagation();
+    if (!dateKey) return;
+    const state = loadAppState();
+    if (state.reminders && state.reminders[dateKey]) {
+      delete state.reminders[dateKey];
+      saveAppState(state);
+      refreshShareReminderBanner();
+      showStatus("Cleared reminder tag.");
+    }
+  }
+
+  function getShareTargetSlotInfo(state) {
+    if (activeShareContext.mode === "single" && activeShareContext.conductorName) {
+      return {
+        conductorName: activeShareContext.conductorName,
+        dateKey: activeShareContext.targetDateKey
+      };
+    }
+    if (isQueueActive()) {
+      const item = activeShareContext.queueItems[activeShareContext.queueIndex];
+      if (item && item.dates && item.dates.length > 0) {
+        return {
+          conductorName: item.name,
+          dateKey: item.dates[0].dateKey
+        };
+      }
+    }
+    return { conductorName: null, dateKey: null };
+  }
+
+  function refreshShareReminderBanner() {
+    const banner = document.getElementById("shareReminderStatusBanner");
+    const textEl = document.getElementById("shareReminderStatusText");
+    const markBtn = document.getElementById("btnMarkReminderSent");
+    if (!banner || !textEl || !markBtn) return;
+
+    const state = loadAppState();
+    const { conductorName, dateKey } = getShareTargetSlotInfo(state);
+
+    if (!conductorName || !dateKey) {
+      banner.classList.remove("open");
+      markBtn.style.display = "none";
+      return;
+    }
+
+    markBtn.style.display = "inline-flex";
+    const rem = getReminderForSlot(dateKey, conductorName, state);
+    if (rem) {
+      textEl.innerText = `✓ Reminder was sent on ${formatShortDate(rem.sentDate)}`;
+      banner.classList.add("open");
+    } else {
+      banner.classList.remove("open");
+    }
+  }
+
+  function manualMarkReminderSent() {
+    const state = loadAppState();
+    const { conductorName, dateKey } = getShareTargetSlotInfo(state);
+    if (conductorName && dateKey) {
+      recordReminderSent(dateKey, conductorName, false);
+    }
+  }
+
+  function clearActiveShareReminder() {
+    const state = loadAppState();
+    const { dateKey } = getShareTargetSlotInfo(state);
+    if (dateKey) {
+      clearReminderTag(dateKey);
+    }
   }
 
   /* --- UI DRAWERS & DROPDOWN MENUS --- */
@@ -1985,6 +2188,9 @@
       if (!parsed.unavailability) {
         parsed.unavailability = {};
       }
+      if (!parsed.reminders) {
+        parsed.reminders = {};
+      }
       if (!parsed.lastModified) {
         parsed.lastModified = "1970-01-01T00:00:00.000Z";
       }
@@ -2018,6 +2224,7 @@
       roster: migratedRoster,
       contacts: {},
       unavailability: {},
+      reminders: {},
       overrides: migratedOverrides,
       blackouts: {},
       templates: { ...DEFAULT_TEMPLATES },
@@ -2343,12 +2550,7 @@
     }
 
     tempUnavailableDates.forEach(dateKey => {
-      const parts = dateKey.split("-");
-      const displayDate = parts.length === 3
-        ? new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10))
-            .toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-        : dateKey;
-
+      const displayDate = formatShortDate(dateKey);
       const pill = document.createElement("span");
       pill.className = "unavail-pill";
       pill.innerHTML = `<span>${escapeHtml(displayDate)}</span><button type="button" title="Remove date" onclick="removeUnavailableDate('${escapeHtml(dateKey)}')">&times;</button>`;
@@ -2385,6 +2587,7 @@
     const state = loadAppState();
     if (!state.contacts) state.contacts = {};
     if (!state.unavailability) state.unavailability = {};
+    if (!state.reminders) state.reminders = {};
 
     const oldName = state.roster[editingRosterIndex];
     const newName = document.getElementById("editConductorName").value.trim();
@@ -2408,6 +2611,11 @@
           }
         });
       }
+      Object.keys(state.reminders).forEach(dateKey => {
+        if (state.reminders[dateKey] && state.reminders[dateKey].conductor === oldName) {
+          state.reminders[dateKey].conductor = newName;
+        }
+      });
       if (activeShareContext.conductorName === oldName) {
         activeShareContext.conductorName = newName;
       }
@@ -2462,11 +2670,19 @@
       const contact = (state.contacts && state.contacts[name]) || {};
       const unavail = (state.unavailability && state.unavailability[name]) || [];
       const tally = yearlyCounts[name] || 0;
+      const activeReminder = getActiveConductorReminder(name, state);
 
       let badges = "";
       if (contact.phone) badges += `<span title="Mobile: ${escapeHtml(contact.phone)}">📱</span>`;
       if (contact.email) badges += `<span title="Email: ${escapeHtml(contact.email)}">✉️</span>`;
       if (unavail.length > 0) badges += `<span title="Unavailable dates: ${escapeHtml(unavail.join(', '))}">🚫</span>`;
+
+      const reminderNoteHtml = activeReminder
+        ? `<div class="reminder-sent-pill" title="For upcoming duty on ${escapeHtml(activeReminder.formattedDate)}">
+             <span>✓ Reminder was sent on ${escapeHtml(formatShortDate(activeReminder.sentDate))}</span>
+             <button type="button" title="Clear reminder tag" aria-label="Clear reminder tag" onclick="clearReminderTag('${escapeHtml(activeReminder.dateKey)}', event)">&times;</button>
+           </div>`
+        : "";
 
       tag.innerHTML = `
         <div class="tag-top-row">
@@ -2479,6 +2695,7 @@
             <span class="tag-tally" title="${tally} assigned dates in ${selectedYear}">${tally}&times;</span>
           </div>
         </div>
+        ${reminderNoteHtml}
         <div class="tag-actions">
           <button type="button" class="tag-icon-btn" onclick="moveConductor(${index}, -1)" title="Move earlier in rotation" aria-label="Move ${escapeHtml(name)} earlier" ${isFirst ? 'disabled' : ''}>${ROSTER_ICONS.prev}</button>
           <button type="button" class="tag-icon-btn" onclick="moveConductor(${index}, 1)" title="Move later in rotation" aria-label="Move ${escapeHtml(name)} later" ${isLast ? 'disabled' : ''}>${ROSTER_ICONS.next}</button>
@@ -2492,7 +2709,14 @@
         downloadConductorICS(decodeURIComponent(e.currentTarget.dataset.name));
       });
       tag.querySelector('.share-btn').addEventListener('click', (e) => {
-        openShareModal('single', decodeURIComponent(e.currentTarget.dataset.name), 'text');
+        const conductor = decodeURIComponent(e.currentTarget.dataset.name);
+        const currentState = loadAppState();
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const nextForConductor = getAllScheduleSlots(currentState).find(
+          s => s.slotDate >= today && s.conductor === conductor
+        );
+        openShareModal('single', conductor, 'text', nextForConductor ? nextForConductor.dateKey : null);
       });
 
       container.appendChild(tag);
@@ -2535,6 +2759,19 @@
     }
     document.getElementById("upNextBadges").innerHTML = badgesHtml;
 
+    const remWrap = document.getElementById("upNextReminderTagWrap");
+    const activeRem = getReminderForSlot(nextSlot.dateKey, nextSlot.conductor, state);
+    if (activeRem) {
+      remWrap.innerHTML = `
+        <div class="reminder-sent-pill" style="margin-top: 2px;">
+          <span>✓ Reminder was sent on ${escapeHtml(formatShortDate(activeRem.sentDate))}</span>
+          <button type="button" title="Clear reminder tag" aria-label="Clear reminder tag" onclick="clearReminderTag('${escapeHtml(nextSlot.dateKey)}', event)">&times;</button>
+        </div>
+      `;
+    } else {
+      remWrap.innerHTML = "";
+    }
+
     const replaceSelect = document.getElementById("quickReplaceSelect");
     replaceSelect.innerHTML = "";
     const autoOpt = document.createElement("option");
@@ -2568,7 +2805,7 @@
 
   function remindUpNextConductor() {
     if (!currentUpNextSlot) return;
-    openShareModal("single", currentUpNextSlot.conductor, "text");
+    openShareModal("single", currentUpNextSlot.conductor, "text", currentUpNextSlot.dateKey);
   }
 
   /* --- VIEW & CALENDAR CONTROLLERS --- */
@@ -2716,6 +2953,15 @@
           }
           cell.appendChild(nameDisplay);
 
+          const remInfo = getReminderForSlot(dateKey, activeConductor, state);
+          if (remInfo) {
+            const remBadge = document.createElement("div");
+            remBadge.className = "cell-reminded-badge";
+            remBadge.title = `Reminder was sent on ${formatShortDate(remInfo.sentDate)}`;
+            remBadge.innerText = `✓ Sent ${formatShortDate(remInfo.sentDate).replace(/,\s*\d{4}$/, '')}`;
+            cell.appendChild(remBadge);
+          }
+
           const select = document.createElement("select");
           select.className = "conductor-select";
 
@@ -2772,6 +3018,11 @@
         else if (override) statusBadge = `<span class="badge badge-override">Override</span>`;
         else if (assignInfo.skippedUnavailable.length > 0) {
           statusBadge = `<span class="badge badge-reassigned" title="Skipped unavailable: ${escapeHtml(assignInfo.skippedUnavailable.join(', '))}">Reassigned</span>`;
+        }
+
+        const remInfo = !isBlackout ? getReminderForSlot(dateKey, conductor, state) : null;
+        if (remInfo) {
+          statusBadge += ` <span class="badge badge-reminded">✓ Sent ${escapeHtml(formatShortDate(remInfo.sentDate))}</span>`;
         }
 
         const displayDate = new Date(selectedYear, month, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -3017,10 +3268,11 @@
     }
   }
 
-  function openShareModal(mode, conductorName, initialFormat = "text") {
+  function openShareModal(mode, conductorName, initialFormat = "text", targetDateKey = null) {
     activeShareContext = {
       mode,
       conductorName,
+      targetDateKey,
       format: initialFormat,
       allTextMode: "group",
       queueIndex: 0,
@@ -3099,6 +3351,10 @@
       const name = activeShareContext.conductorName;
       const firstName = name.trim().split(/\s+/)[0] || name;
       const dates = getConductorAssignedDates(name, rangeOption, state);
+      if (!activeShareContext.targetDateKey && dates.length > 0) {
+        activeShareContext.targetDateKey = dates[0].dateKey;
+      }
+
       const dateList = dates.length > 0
         ? dates.map(d => `• ${d.formattedDate} (9:30 - 9:37 AM)`).join("\n")
         : "• No scheduled dates found in this timeframe.";
@@ -3171,6 +3427,7 @@
       populateShareRecipients();
     }
 
+    refreshShareReminderBanner();
     updateCharCounter();
   }
 
@@ -3231,10 +3488,16 @@
           ? `FS Conductor Schedule - ${activeShareContext.conductorName}`
           : "FS Conductor Schedule - All Conductors");
 
+    const state = loadAppState();
+    const targetInfo = getShareTargetSlotInfo(state);
+
     if (navigator.share) {
       try {
         await navigator.share({ title, text });
-        showStatus("Schedule shared!");
+        if (targetInfo.conductorName && targetInfo.dateKey) {
+          recordReminderSent(targetInfo.dateKey, targetInfo.conductorName, true);
+        }
+        showStatus("Schedule shared & reminder tagged!");
         if (isQueueActive() && activeShareContext.queueIndex + 1 < activeShareContext.queueItems.length) {
           stepQueue(1);
         } else {
@@ -3258,6 +3521,12 @@
       .map(p => p.replace(/[^\d+]/g, ""))
       .filter(Boolean);
 
+    const state = loadAppState();
+    const targetInfo = getShareTargetSlotInfo(state);
+    if (targetInfo.conductorName && targetInfo.dateKey) {
+      recordReminderSent(targetInfo.dateKey, targetInfo.conductorName, true);
+    }
+
     if (phones.length === 1) {
       window.location.href = `sms:${phones[0]}?&body=${encodeURIComponent(text)}`;
     } else if (phones.length > 1) {
@@ -3270,10 +3539,12 @@
       const currentIdx = activeShareContext.queueIndex;
       const total = activeShareContext.queueItems.length;
       const sentName = activeShareContext.queueItems[currentIdx].name;
-      showStatus(`Opened Messages for ${sentName} (${currentIdx + 1}/${total})`);
+      showStatus(`Opened Messages & tagged ${sentName} (${currentIdx + 1}/${total})`);
       if (currentIdx + 1 < total) {
         setTimeout(() => stepQueue(1), 400);
       }
+    } else if (targetInfo.conductorName) {
+      showStatus(`Opened Messages & tagged ${targetInfo.conductorName} (${formatShortDate(getTodayLocalKey())})`);
     } else {
       showStatus("Opened in Messages app!");
     }
@@ -3288,15 +3559,27 @@
       .map(e => e.trim())
       .filter(Boolean);
 
+    const state = loadAppState();
+    const targetInfo = getShareTargetSlotInfo(state);
+    if (targetInfo.conductorName && targetInfo.dateKey) {
+      recordReminderSent(targetInfo.dateKey, targetInfo.conductorName, true);
+    }
+
     const toParam = emails.map(e => encodeURIComponent(e)).join(",");
     window.location.href = `mailto:${toParam}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
-    showStatus("Opened in Email app!");
+    showStatus(targetInfo.conductorName ? `Opened Email & tagged ${targetInfo.conductorName}!` : "Opened in Email app!");
   }
 
   function copyModalMessage() {
     const text = document.getElementById("shareMessageTextarea").value;
+    const state = loadAppState();
+    const targetInfo = getShareTargetSlotInfo(state);
+    if (targetInfo.conductorName && targetInfo.dateKey) {
+      recordReminderSent(targetInfo.dateKey, targetInfo.conductorName, true);
+    }
+
     navigator.clipboard.writeText(text).then(() => {
-      showStatus("Copied to clipboard!");
+      showStatus(targetInfo.conductorName ? `Copied & tagged ${targetInfo.conductorName}!` : "Copied to clipboard!");
       alert("Copied to clipboard! You can now paste (Cmd + V / Tap Paste) into Messages or Email.");
     }).catch(() => {
       alert(text);
@@ -3311,7 +3594,7 @@
     setTimeout(() => {
       el.classList.remove("visible");
       el.innerText = "";
-    }, 3400);
+    }, 3600);
   }
 
   function downloadConductorICS(conductorName) {
@@ -3552,7 +3835,7 @@
     const blob = new Blob([jsonStr], { type: "application/json" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    const dateStamp = new Date().toISOString().split('T')[0];
+    const dateStamp = getTodayLocalKey();
     link.download = `conductor-schedule-backup-${dateStamp}.json`;
     document.body.appendChild(link);
     link.click();
