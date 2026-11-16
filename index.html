@@ -1203,7 +1203,7 @@
   <header>
     <div class="title-group">
       <h1>Conductor Schedule</h1>
-      <span id="appVersionBadge" class="version-badge">v33</span>
+      <span id="appVersionBadge" class="version-badge">v34</span>
       <span id="cloudSyncPill" class="sync-pill" onclick="openCloudSyncModal()" title="Configure or check GitHub Gist Cloud Sync">☁️ Local Only</span>
     </div>
     <div class="controls-group">
@@ -1446,10 +1446,10 @@
     </div>
 
     <div class="helper-box">
-      <strong>How to sync Mac &amp; iPhone automatically:</strong><br>
+      <strong>How to sync Mac, iPhone &amp; iPad automatically:</strong><br>
       1. On GitHub.com, go to <strong>Settings → Developer settings → Personal access tokens → Tokens (classic)</strong> and generate a token with only the <strong><code>gist</code></strong> checkbox selected.<br>
       2. Paste the token below and tap <strong>Save &amp; Connect</strong> (leave Gist ID blank on your first device to create one automatically).<br>
-      3. Enter the same Token and Gist ID on your second device once.
+      3. Enter the same Token and Gist ID on your other devices once.
     </div>
 
     <div class="modal-field">
@@ -1576,7 +1576,7 @@
 </div>
 
 <script>
-  const APP_VERSION = "v33";
+  const APP_VERSION = "v34";
   let currentDate = new Date();
   let currentViewMode = "calendar";
   const monthNames = [
@@ -1678,7 +1678,8 @@
   let tradeCandidateSlots = [];
   let swRegistration = null;
   let lastAutoUpdateCheck = 0;
-  let cloudPushTimer = null;
+  let lastAutoCloudPull = 0;
+  let isSyncingNow = false;
 
   function escapeHtml(str) {
     return String(str || "")
@@ -1869,7 +1870,7 @@
     if (backdrop) backdrop.classList.remove("open");
   }
 
-  /* --- GITHUB GIST CLOUD SYNC --- */
+  /* --- GITHUB GIST CLOUD SYNC (IMMEDIATE PUSH & WAKE/TAP PULL) --- */
   function loadGistConfig() {
     try {
       const raw = localStorage.getItem(GIST_CONFIG_KEY);
@@ -1979,7 +1980,7 @@
         showStatus("☁️ Connected & created private sync Gist!");
       } else {
         saveGistConfig({ token, gistId, autoSync, lastSyncedAt: loadGistConfig().lastSyncedAt });
-        await syncWithGitHubGist(false);
+        await pullFromGitHubGist(false, false);
         detail.innerText = "Connected and synced with existing Gist!";
       }
     } catch (err) {
@@ -1991,23 +1992,22 @@
   function scheduleCloudPush() {
     const cfg = loadGistConfig();
     if (!cfg.token || !cfg.gistId || !cfg.autoSync) return;
-
-    clearTimeout(cloudPushTimer);
-    cloudPushTimer = setTimeout(() => {
-      pushToGitHubGist(true);
-    }, 1500);
+    pushToGitHubGist(true);
   }
 
   async function pushToGitHubGist(silent = false) {
     const cfg = loadGistConfig();
     if (!cfg.token || !cfg.gistId) return;
 
+    isSyncingNow = true;
     updateCloudSyncPill("☁️ Saving...", "connected");
     const state = loadAppState();
 
     try {
       const res = await fetch(`https://api.github.com/gists/${cfg.gistId}`, {
         method: "PATCH",
+        keepalive: true,
+        cache: "no-store",
         headers: {
           "Authorization": `Bearer ${cfg.token}`,
           "Accept": "application/vnd.github+json",
@@ -2025,21 +2025,27 @@
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       cfg.lastSyncedAt = new Date().toISOString();
+      lastAutoCloudPull = Date.now();
       saveGistConfig(cfg);
       if (!silent) showStatus("☁️ Uploaded schedule to GitHub Gist!");
     } catch (err) {
       updateCloudSyncPill("☁️ Sync Error", "error");
       if (!silent) alert("Cloud push failed: " + err.message);
+    } finally {
+      isSyncingNow = false;
     }
   }
 
   async function pullFromGitHubGist(forceOverwrite = false, silent = false) {
     const cfg = loadGistConfig();
-    if (!cfg.token || !cfg.gistId) return;
+    if (!cfg.token || !cfg.gistId || isSyncingNow) return;
 
+    isSyncingNow = true;
+    lastAutoCloudPull = Date.now();
     updateCloudSyncPill("☁️ Checking...", "connected");
     try {
       const res = await fetch(`https://api.github.com/gists/${cfg.gistId}?t=${Date.now()}`, {
+        cache: "no-store",
         headers: {
           "Authorization": `Bearer ${cfg.token}`,
           "Accept": "application/vnd.github+json"
@@ -2071,7 +2077,9 @@
           showStatus("☁️ Synced latest schedule from cloud!");
         }
       } else if (!forceOverwrite && localTime > remoteTime && cfg.autoSync) {
+        isSyncingNow = false;
         await pushToGitHubGist(true);
+        return;
       } else {
         cfg.lastSyncedAt = new Date().toISOString();
         saveGistConfig(cfg);
@@ -2080,12 +2088,15 @@
     } catch (err) {
       updateCloudSyncPill("☁️ Sync Error", "error");
       if (!silent) alert("Cloud pull failed: " + err.message);
+    } finally {
+      isSyncingNow = false;
     }
   }
 
-  async function syncWithGitHubGist(silent = true) {
+  async function syncWithGitHubGist(silent = true, throttleMs = 0) {
     const cfg = loadGistConfig();
     if (!cfg.token || !cfg.gistId || !cfg.autoSync) return;
+    if (throttleMs > 0 && Date.now() - lastAutoCloudPull < throttleMs) return;
     await pullFromGitHubGist(false, silent);
   }
 
@@ -3883,7 +3894,7 @@
     }
   });
 
-  // Register PWA Service Worker & auto-check on launch or app switch
+  // Register PWA Service Worker & auto-check on launch, wake, or tap
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then((registration) => {
@@ -3911,16 +3922,20 @@
       }
     });
 
-    window.addEventListener('pageshow', (event) => {
-      if (event.persisted) {
-        checkForServiceWorkerUpdate();
-        syncWithGitHubGist(true);
-      }
+    window.addEventListener('pageshow', () => {
+      checkForServiceWorkerUpdate();
+      syncWithGitHubGist(true);
     });
 
     window.addEventListener('focus', () => {
       checkForServiceWorkerUpdate();
+      syncWithGitHubGist(true);
     });
+
+    // Trigger sync check on iPhone/iPad wake or tap (throttled to every 8s)
+    document.addEventListener('pointerdown', () => {
+      syncWithGitHubGist(true, 8000);
+    }, { passive: true });
 
     let refreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
