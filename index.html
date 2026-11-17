@@ -1203,7 +1203,7 @@
   <header>
     <div class="title-group">
       <h1>Conductor Schedule</h1>
-      <span id="appVersionBadge" class="version-badge">v34</span>
+      <span id="appVersionBadge" class="version-badge">v36</span>
       <span id="cloudSyncPill" class="sync-pill" onclick="openCloudSyncModal()" title="Configure or check GitHub Gist Cloud Sync">☁️ Local Only</span>
     </div>
     <div class="controls-group">
@@ -1471,7 +1471,7 @@
       <input type="checkbox" id="gistAutoSyncCheckbox" checked style="width: 20px; height: 20px; min-height: auto; cursor: pointer;">
     </div>
 
-    <div id="cloudSyncStatusDetail" style="font-size: 0.8rem; color: #475569; margin-bottom: 14px;"></div>
+    <div id="cloudSyncStatusDetail" style="font-size: 0.82rem; font-weight: 600; color: #475569; margin-bottom: 14px;"></div>
 
     <div class="modal-actions-split">
       <div class="controls-group">
@@ -1576,7 +1576,7 @@
 </div>
 
 <script>
-  const APP_VERSION = "35";
+  const APP_VERSION = "v36";
   let currentDate = new Date();
   let currentViewMode = "calendar";
   const monthNames = [
@@ -1870,7 +1870,7 @@
     if (backdrop) backdrop.classList.remove("open");
   }
 
-  /* --- GITHUB GIST CLOUD SYNC (IMMEDIATE PUSH & WAKE/TAP PULL) --- */
+  /* --- GITHUB GIST CLOUD SYNC (iOS SAFARI COMPATIBLE + VISIBLE STATUS) --- */
   function loadGistConfig() {
     try {
       const raw = localStorage.getItem(GIST_CONFIG_KEY);
@@ -1913,6 +1913,7 @@
     document.getElementById("gistAutoSyncCheckbox").checked = cfg.autoSync !== false;
 
     const detail = document.getElementById("cloudSyncStatusDetail");
+    detail.style.color = "#475569";
     if (cfg.lastSyncedAt) {
       const d = new Date(cfg.lastSyncedAt);
       detail.innerText = `Last synced: ${d.toLocaleString()}`;
@@ -1944,6 +1945,7 @@
     }
 
     const detail = document.getElementById("cloudSyncStatusDetail");
+    detail.style.color = "#475569";
     detail.innerText = "Connecting to GitHub...";
 
     try {
@@ -1976,15 +1978,16 @@
         document.getElementById("gistIdInput").value = gistId;
         const nowIso = new Date().toISOString();
         saveGistConfig({ token, gistId, autoSync, lastSyncedAt: nowIso });
-        detail.innerText = `Created private Gist (${gistId}) and uploaded schedule!`;
+        detail.style.color = "#065f46";
+        detail.innerText = `✅ Created private Gist (${gistId}) and uploaded schedule!`;
         showStatus("☁️ Connected & created private sync Gist!");
       } else {
         saveGistConfig({ token, gistId, autoSync, lastSyncedAt: loadGistConfig().lastSyncedAt });
         await pullFromGitHubGist(false, false);
-        detail.innerText = "Connected and synced with existing Gist!";
       }
     } catch (err) {
-      detail.innerText = `Error: ${err.message}`;
+      detail.style.color = "#991b1b";
+      detail.innerText = `❌ Error: ${err.message}`;
       updateCloudSyncPill("☁️ Sync Error", "error");
     }
   }
@@ -2001,12 +2004,17 @@
 
     isSyncingNow = true;
     updateCloudSyncPill("☁️ Saving...", "connected");
+    const detail = document.getElementById("cloudSyncStatusDetail");
+    if (!silent && detail) {
+      detail.style.color = "#475569";
+      detail.innerText = "Uploading schedule to GitHub Gist...";
+    }
+
     const state = loadAppState();
 
     try {
       const res = await fetch(`https://api.github.com/gists/${cfg.gistId}`, {
         method: "PATCH",
-        keepalive: true,
         cache: "no-store",
         headers: {
           "Authorization": `Bearer ${cfg.token}`,
@@ -2024,12 +2032,22 @@
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-      cfg.lastSyncedAt = new Date().toISOString();
+      const now = new Date();
+      cfg.lastSyncedAt = now.toISOString();
       lastAutoCloudPull = Date.now();
       saveGistConfig(cfg);
+
+      if (detail) {
+        detail.style.color = "#065f46";
+        detail.innerText = `✅ Uploaded schedule to GitHub Gist! (${now.toLocaleTimeString()})`;
+      }
       if (!silent) showStatus("☁️ Uploaded schedule to GitHub Gist!");
     } catch (err) {
       updateCloudSyncPill("☁️ Sync Error", "error");
+      if (detail) {
+        detail.style.color = "#991b1b";
+        detail.innerText = `❌ Cloud push failed: ${err.message}`;
+      }
       if (!silent) alert("Cloud push failed: " + err.message);
     } finally {
       isSyncingNow = false;
@@ -2043,6 +2061,12 @@
     isSyncingNow = true;
     lastAutoCloudPull = Date.now();
     updateCloudSyncPill("☁️ Checking...", "connected");
+    const detail = document.getElementById("cloudSyncStatusDetail");
+    if (!silent && detail) {
+      detail.style.color = "#475569";
+      detail.innerText = "Checking GitHub Gist for updates...";
+    }
+
     try {
       const res = await fetch(`https://api.github.com/gists/${cfg.gistId}?t=${Date.now()}`, {
         cache: "no-store",
@@ -2067,12 +2091,17 @@
       const localState = loadAppState();
       const remoteTime = Date.parse(remoteState.lastModified || "1970-01-01T00:00:00.000Z") || 0;
       const localTime = Date.parse(localState.lastModified || "1970-01-01T00:00:00.000Z") || 0;
+      const now = new Date();
 
       if (forceOverwrite || remoteTime > localTime) {
         localStorage.setItem("conductor_schedule_state", JSON.stringify(remoteState));
-        cfg.lastSyncedAt = new Date().toISOString();
+        cfg.lastSyncedAt = now.toISOString();
         saveGistConfig(cfg);
         renderUI();
+        if (detail) {
+          detail.style.color = "#065f46";
+          detail.innerText = `✅ Synced latest schedule from cloud! (${now.toLocaleTimeString()})`;
+        }
         if (!silent || remoteTime > localTime) {
           showStatus("☁️ Synced latest schedule from cloud!");
         }
@@ -2081,12 +2110,20 @@
         await pushToGitHubGist(true);
         return;
       } else {
-        cfg.lastSyncedAt = new Date().toISOString();
+        cfg.lastSyncedAt = now.toISOString();
         saveGistConfig(cfg);
+        if (detail) {
+          detail.style.color = "#065f46";
+          detail.innerText = `✅ Schedule is already up to date! (${now.toLocaleTimeString()})`;
+        }
         if (!silent) showStatus("☁️ Schedule is already up to date!");
       }
     } catch (err) {
       updateCloudSyncPill("☁️ Sync Error", "error");
+      if (detail) {
+        detail.style.color = "#991b1b";
+        detail.innerText = `❌ Cloud pull failed: ${err.message}`;
+      }
       if (!silent) alert("Cloud pull failed: " + err.message);
     } finally {
       isSyncingNow = false;
@@ -3894,7 +3931,33 @@
     }
   });
 
-  // Register PWA Service Worker & auto-check on launch, wake, or tap
+  // Trigger sync check on iPhone/iPad wake, touch, or tap (throttled to every 6s)
+  function handleUserInteractionSync() {
+    syncWithGitHubGist(true, 6000);
+  }
+
+  window.addEventListener('touchstart', handleUserInteractionSync, { passive: true, capture: true });
+  window.addEventListener('pointerdown', handleUserInteractionSync, { passive: true, capture: true });
+  document.addEventListener('click', handleUserInteractionSync, { passive: true, capture: true });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      checkForServiceWorkerUpdate();
+      syncWithGitHubGist(true);
+    }
+  });
+
+  window.addEventListener('pageshow', () => {
+    checkForServiceWorkerUpdate();
+    syncWithGitHubGist(true);
+  });
+
+  window.addEventListener('focus', () => {
+    checkForServiceWorkerUpdate();
+    syncWithGitHubGist(true);
+  });
+
+  // Register PWA Service Worker
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then((registration) => {
@@ -3914,28 +3977,6 @@
         });
       }).catch(() => {});
     });
-
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') {
-        checkForServiceWorkerUpdate();
-        syncWithGitHubGist(true);
-      }
-    });
-
-    window.addEventListener('pageshow', () => {
-      checkForServiceWorkerUpdate();
-      syncWithGitHubGist(true);
-    });
-
-    window.addEventListener('focus', () => {
-      checkForServiceWorkerUpdate();
-      syncWithGitHubGist(true);
-    });
-
-    // Trigger sync check on iPhone/iPad wake or tap (throttled to every 8s)
-    document.addEventListener('pointerdown', () => {
-      syncWithGitHubGist(true, 8000);
-    }, { passive: true });
 
     let refreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
