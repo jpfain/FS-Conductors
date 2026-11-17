@@ -920,6 +920,11 @@
 
     .modal-backdrop.open { display: flex; }
 
+    #contactModal,
+    #cancelModal {
+      z-index: 1010;
+    }
+
     .modal-card {
       background: white;
       border-radius: 14px;
@@ -1373,7 +1378,7 @@
   <header>
     <div class="title-group">
       <h1>Conductor Schedule</h1>
-      <span id="appVersionBadge" class="version-badge">v39</span>
+      <span id="appVersionBadge" class="version-badge">v40</span>
       <span id="cloudSyncPill" class="sync-pill" onclick="openCloudSyncModal()" title="Configure or check GitHub Gist Cloud Sync">☁️ Local Only</span>
     </div>
     <div class="controls-group">
@@ -1809,7 +1814,7 @@
 </div>
 
 <script>
-  const APP_VERSION = "v39";
+  const APP_VERSION = "v40";
   let currentDate = new Date();
   let currentViewMode = "calendar";
   const monthNames = [
