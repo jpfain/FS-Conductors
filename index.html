@@ -401,7 +401,7 @@
       flex-shrink: 0;
     }
 
-    /* Reminder Sent Pill Tag */
+    /* Reminder Sent Pill Tag & Due Pill Tag */
     .reminder-sent-pill {
       display: inline-flex;
       align-items: center;
@@ -431,6 +431,20 @@
 
     .reminder-sent-pill button:hover {
       color: var(--danger);
+    }
+
+    .reminder-due-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fcd34d;
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      line-height: 1.25;
     }
 
     .tag-actions {
@@ -782,6 +796,15 @@
       text-transform: uppercase;
     }
 
+    .blackout-reason-text {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #7f1d1d;
+      margin-top: 3px;
+      line-height: 1.2;
+      word-break: break-word;
+    }
+
     .conductor-name-display {
       margin: 3px 0;
       line-height: 1.15;
@@ -1053,6 +1076,35 @@
       resize: vertical;
     }
 
+    /* Preset Chips for Cancellation & Print Options */
+    .preset-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .preset-chip {
+      background: #f1f5f9;
+      color: #1e293b;
+      border: 1px solid #cbd5e1;
+      border-radius: 999px;
+      padding: 5px 12px;
+      min-height: 32px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .preset-chip:hover {
+      background: #e2e8f0;
+    }
+
+    .preset-chip.selected {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+    }
+
     /* Trade Dates Preview Box */
     .trade-preview-box {
       background: #f8fafc;
@@ -1184,6 +1236,117 @@
       border-top: 1px solid #f1f5f9;
     }
 
+    /* Board-Ready Print Sheet Container (Hidden on screen, formatted on print) */
+    #printSheetContainer {
+      display: none;
+    }
+
+    @media print {
+      @page {
+        margin: 0.45in;
+      }
+
+      html, body {
+        background: #ffffff !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        max-width: 100% !important;
+        color: #000000 !important;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
+
+      body > *:not(#printSheetContainer) {
+        display: none !important;
+      }
+
+      #printSheetContainer {
+        display: block !important;
+        width: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+
+      .print-doc-header {
+        border-bottom: 2px solid #1e3a8a;
+        padding-bottom: 8px;
+        margin-bottom: 14px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+      }
+
+      .print-doc-title {
+        font-size: 18pt;
+        font-weight: 800;
+        color: #1e3a8a;
+        margin: 0;
+      }
+
+      .print-doc-subtitle {
+        font-size: 10.5pt;
+        font-weight: 600;
+        color: #334155;
+        margin: 2px 0 0 0;
+      }
+
+      .print-doc-meta {
+        font-size: 9pt;
+        color: #475569;
+        text-align: right;
+      }
+
+      .print-month-block {
+        margin-bottom: 16px;
+        page-break-inside: avoid;
+      }
+
+      .print-month-heading {
+        font-size: 12.5pt;
+        font-weight: 700;
+        color: #0f172a;
+        background: #f1f5f9;
+        padding: 5px 10px;
+        border: 1px solid #cbd5e1;
+        border-bottom: none;
+        border-radius: 6px 6px 0 0;
+        margin: 0;
+      }
+
+      .print-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 6px;
+      }
+
+      .print-table th,
+      .print-table td {
+        border: 1px solid #cbd5e1;
+        padding: 7px 10px;
+        font-size: 10pt;
+        text-align: left;
+      }
+
+      .print-table th {
+        background: #f8fafc;
+        font-weight: 700;
+        color: #1e293b;
+      }
+
+      .print-row-cancelled td {
+        background: #fef2f2;
+        color: #991b1b;
+      }
+
+      .print-footer-note {
+        margin-top: 12px;
+        padding-top: 8px;
+        border-top: 1px solid #cbd5e1;
+        font-size: 8.5pt;
+        color: #475569;
+        line-height: 1.4;
+      }
+    }
+
     @media (max-width: 640px) {
       .calendar-grid { gap: 3px; }
       .day-cell { min-height: 85px; padding: 4px; }
@@ -1197,13 +1360,14 @@
 <body>
 
 <div id="menuBackdrop" class="menu-backdrop" onclick="closeAllDropdowns()"></div>
+<div id="printSheetContainer"></div>
 
 <div class="container">
   <!-- STREAMLINED HEADER -->
   <header>
     <div class="title-group">
       <h1>Conductor Schedule</h1>
-      <span id="appVersionBadge" class="version-badge">v37</span>
+      <span id="appVersionBadge" class="version-badge">v38</span>
       <span id="cloudSyncPill" class="sync-pill" onclick="openCloudSyncModal()" title="Configure or check GitHub Gist Cloud Sync">☁️ Local Only</span>
     </div>
     <div class="controls-group">
@@ -1211,11 +1375,7 @@
         <button id="btnViewCalendar" class="active" onclick="setViewMode('calendar')">📅 Calendar</button>
         <button id="btnViewTable" class="outline" onclick="setViewMode('table')">📋 Year List</button>
       </div>
-      <select id="yearSelect" onchange="handleYearChange()" aria-label="Select Year">
-        <option value="2026" selected>2026</option>
-        <option value="2027">2027</option>
-        <option value="2028">2028</option>
-      </select>
+      <select id="yearSelect" onchange="handleYearChange()" aria-label="Select Year"></select>
     </div>
   </header>
 
@@ -1285,6 +1445,7 @@
             <span>Sync &amp; Tools</span>
             <button type="button" class="dropdown-close-btn" onclick="closeAllDropdowns()">✕ Close</button>
           </div>
+          <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); openPrintModal()">🖨️ Print / Save PDF</button>
           <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); openUserManual()">📖 User Manual</button>
           <div class="dropdown-divider"></div>
           <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); openCloudSyncModal()">☁️ Cloud Sync (GitHub Gist)</button>
@@ -1353,6 +1514,71 @@
       </thead>
       <tbody id="scheduleTableBody"></tbody>
     </table>
+  </div>
+</div>
+
+<!-- CANCEL MEETING WITH REASON MODAL -->
+<div id="cancelModal" class="modal-backdrop" onclick="if(event.target === this) closeCancelModal()">
+  <div class="modal-card" style="max-width: 440px;">
+    <div class="modal-header">
+      <h3>Cancel Meeting Date</h3>
+      <button type="button" class="modal-close-pill" onclick="closeCancelModal()">✕ Close</button>
+    </div>
+
+    <p id="cancelModalDateText" style="font-size: 0.92rem; font-weight: 700; color: #1e293b; margin: 0 0 10px 0;"></p>
+    <p style="font-size: 0.82rem; color: #475569; margin: 0 0 12px 0;">
+      Choose a reason or enter your own. The conductor rotation will pause on this date and resume on the next meeting Saturday.
+    </p>
+
+    <div class="preset-chips" id="cancelPresetChips">
+      <button type="button" class="preset-chip" onclick="selectCancelPreset('Circuit Assembly', this)">Circuit Assembly</button>
+      <button type="button" class="preset-chip" onclick="selectCancelPreset('Regional Convention', this)">Regional Convention</button>
+      <button type="button" class="preset-chip" onclick="selectCancelPreset('CO Visit', this)">CO Visit</button>
+      <button type="button" class="preset-chip" onclick="selectCancelPreset('Memorial / Special Event', this)">Memorial / Special Event</button>
+      <button type="button" class="preset-chip" onclick="selectCancelPreset('No Meeting', this)">No Meeting</button>
+    </div>
+
+    <div class="modal-field">
+      <div class="modal-field-header">
+        <label for="cancelReasonInput">Cancellation Reason</label>
+      </div>
+      <input type="text" id="cancelReasonInput" placeholder="e.g., Circuit Assembly" onkeydown="if(event.key==='Enter') confirmCancelMeeting()">
+    </div>
+
+    <div class="modal-actions-split">
+      <button type="button" class="outline" style="min-height: 36px;" onclick="closeCancelModal()">Back</button>
+      <button type="button" class="danger" style="min-height: 36px;" onclick="confirmCancelMeeting()">Confirm Cancellation</button>
+    </div>
+  </div>
+</div>
+
+<!-- BOARD-READY PRINT / SAVE PDF MODAL -->
+<div id="printModal" class="modal-backdrop" onclick="if(event.target === this) closePrintModal()">
+  <div class="modal-card" style="max-width: 440px;">
+    <div class="modal-header">
+      <h3>🖨️ Print / Save Board-Ready PDF</h3>
+      <button type="button" class="modal-close-pill" onclick="closePrintModal()">✕ Close</button>
+    </div>
+
+    <p style="font-size: 0.84rem; color: #475569; margin: 0 0 12px 0;">
+      Formats a clean, button-free schedule sheet suitable for posting on the Kingdom Hall information board or saving as a PDF.
+    </p>
+
+    <div class="modal-field">
+      <div class="modal-field-header">
+        <label for="printScopeSelect">Schedule Scope</label>
+      </div>
+      <select id="printScopeSelect">
+        <option value="month">Current Displayed Month</option>
+        <option value="quarter" selected>Quarterly Board Sheet (3 Months)</option>
+        <option value="year">Full Selected Year</option>
+      </select>
+    </div>
+
+    <div class="modal-actions-split">
+      <button type="button" class="outline" style="min-height: 36px;" onclick="closePrintModal()">Cancel</button>
+      <button type="button" class="primary" style="min-height: 36px;" onclick="executeBoardPrint()">🖨️ Print / Save PDF</button>
+    </div>
   </div>
 </div>
 
@@ -1449,21 +1675,21 @@
       <strong>How to sync Mac, iPhone &amp; iPad automatically:</strong><br>
       1. On GitHub.com, go to <strong>Settings → Developer settings → Personal access tokens → Tokens (classic)</strong> and generate a token with only the <strong><code>gist</code></strong> checkbox selected.<br>
       2. Paste the token below and tap <strong>Save &amp; Connect</strong> (leave Gist ID blank on your first device to create one automatically).<br>
-      3. Enter the same Token and Gist ID on your other devices once.
+      3. Tap <strong>📋 Copy Sync Info</strong> and paste it into either box on your other devices once.
     </div>
 
     <div class="modal-field">
       <div class="modal-field-header">
         <label for="gistTokenInput">GitHub Personal Access Token (<code>gist</code> scope)</label>
       </div>
-      <input type="password" id="gistTokenInput" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+      <input type="password" id="gistTokenInput" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" oninput="handleSmartSyncPaste(this.value)">
     </div>
 
     <div class="modal-field">
       <div class="modal-field-header">
         <label for="gistIdInput">Private Gist ID (Auto-created if blank)</label>
       </div>
-      <input type="text" id="gistIdInput" placeholder="Leave blank on first setup, or paste existing Gist ID">
+      <input type="text" id="gistIdInput" placeholder="Leave blank on first setup, or paste existing Gist ID" oninput="handleSmartSyncPaste(this.value)">
     </div>
 
     <div class="modal-field" style="display: flex; align-items: center; justify-content: space-between; background: #f8fafc; padding: 10px 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
@@ -1475,8 +1701,9 @@
 
     <div class="modal-actions-split">
       <div class="controls-group">
-        <button type="button" class="outline" style="min-height: 36px; font-size: 0.82rem;" onclick="manualPullFromGist()">⬇️ Pull Now</button>
-        <button type="button" class="outline" style="min-height: 36px; font-size: 0.82rem;" onclick="manualPushToGist()">⬆️ Push Now</button>
+        <button type="button" class="outline" style="min-height: 36px; font-size: 0.8rem;" onclick="copySyncCredentials()">📋 Copy Sync Info</button>
+        <button type="button" class="outline" style="min-height: 36px; font-size: 0.8rem;" onclick="manualPullFromGist()">⬇️ Pull</button>
+        <button type="button" class="outline" style="min-height: 36px; font-size: 0.8rem;" onclick="manualPushToGist()">⬆️ Push</button>
       </div>
       <div class="controls-group">
         <button type="button" class="outline" style="min-height: 36px;" onclick="closeCloudSyncModal()">Close</button>
@@ -1576,7 +1803,7 @@
 </div>
 
 <script>
-  const APP_VERSION = "v37";
+  const APP_VERSION = "v38";
   let currentDate = new Date();
   let currentViewMode = "calendar";
   const monthNames = [
@@ -1676,6 +1903,7 @@
   let tempUnavailableDates = [];
   let currentUpNextSlot = null;
   let tradeCandidateSlots = [];
+  let pendingCancelDateKey = null;
   let swRegistration = null;
   let lastAutoUpdateCheck = 0;
   let lastAutoCloudPull = 0;
@@ -1706,9 +1934,166 @@
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
+  function formatFullDateWithDay(dateKey) {
+    if (!dateKey) return "";
+    const parts = dateKey.split("-");
+    if (parts.length !== 3) return dateKey;
+    const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function getBlackoutReason(blackouts, dateKey) {
+    if (!blackouts || !blackouts[dateKey]) return null;
+    if (typeof blackouts[dateKey] === "string" && blackouts[dateKey].trim()) {
+      return blackouts[dateKey].trim();
+    }
+    return "Cancelled";
+  }
+
   function syncModalBodyLock() {
     const anyModalOpen = document.querySelectorAll(".modal-backdrop.open").length > 0;
     document.body.classList.toggle("modal-open", anyModalOpen);
+  }
+
+  /* --- AUTO-ADVANCING YEAR SELECTOR --- */
+  function populateYearSelect() {
+    const select = document.getElementById("yearSelect");
+    if (!select) return;
+    const nowYear = new Date().getFullYear();
+    const maxYear = Math.max(nowYear + 3, 2030);
+    const activeYear = currentDate.getFullYear();
+
+    select.innerHTML = "";
+    for (let y = START_YEAR; y <= maxYear; y++) {
+      const opt = document.createElement("option");
+      opt.value = String(y);
+      opt.innerText = String(y);
+      if (y === activeYear) opt.selected = true;
+      select.appendChild(opt);
+    }
+  }
+
+  /* --- DATE-LEVEL FIELD TIMESTAMP HELPERS --- */
+  function ensureFieldTimestamps(state) {
+    const fallback = Date.parse(state.lastModified || "1970-01-01T00:00:00.000Z") || 0;
+    if (!state.fieldTimestamps || typeof state.fieldTimestamps !== "object") {
+      state.fieldTimestamps = {
+        reminders: {},
+        overrides: {},
+        blackouts: {},
+        core: fallback
+      };
+    }
+    if (!state.fieldTimestamps.reminders) state.fieldTimestamps.reminders = {};
+    if (!state.fieldTimestamps.overrides) state.fieldTimestamps.overrides = {};
+    if (!state.fieldTimestamps.blackouts) state.fieldTimestamps.blackouts = {};
+    if (typeof state.fieldTimestamps.core !== "number") state.fieldTimestamps.core = fallback;
+    return state;
+  }
+
+  function touchDateField(state, category, dateKey) {
+    ensureFieldTimestamps(state);
+    state.fieldTimestamps[category][dateKey] = Date.now();
+  }
+
+  function touchCoreState(state) {
+    ensureFieldTimestamps(state);
+    state.fieldTimestamps.core = Date.now();
+  }
+
+  function mergeDateMap(localObj, remoteObj, localTsMap, remoteTsMap, localCoreTs, remoteCoreTs) {
+    const mergedObj = {};
+    const mergedTs = {};
+    const allKeys = new Set([
+      ...Object.keys(localObj || {}),
+      ...Object.keys(remoteObj || {}),
+      ...Object.keys(localTsMap || {}),
+      ...Object.keys(remoteTsMap || {})
+    ]);
+
+    allKeys.forEach(dateKey => {
+      const hasLocalTs = localTsMap && typeof localTsMap[dateKey] === "number";
+      const hasRemoteTs = remoteTsMap && typeof remoteTsMap[dateKey] === "number";
+      const lTime = hasLocalTs ? localTsMap[dateKey] : localCoreTs;
+      const rTime = hasRemoteTs ? remoteTsMap[dateKey] : remoteCoreTs;
+
+      if (rTime > lTime) {
+        if (remoteObj && remoteObj[dateKey] !== undefined) {
+          mergedObj[dateKey] = remoteObj[dateKey];
+        }
+        mergedTs[dateKey] = rTime;
+      } else {
+        if (localObj && localObj[dateKey] !== undefined) {
+          mergedObj[dateKey] = localObj[dateKey];
+        }
+        mergedTs[dateKey] = lTime;
+      }
+    });
+
+    return { mergedObj, mergedTs };
+  }
+
+  function mergeScheduleStates(localRaw, remoteRaw) {
+    const local = ensureFieldTimestamps(JSON.parse(JSON.stringify(localRaw)));
+    const remote = ensureFieldTimestamps(JSON.parse(JSON.stringify(remoteRaw)));
+
+    const lCore = local.fieldTimestamps.core;
+    const rCore = remote.fieldTimestamps.core;
+    const useRemoteCore = rCore > lCore;
+    const base = useRemoteCore ? remote : local;
+
+    const remMerge = mergeDateMap(
+      local.reminders, remote.reminders,
+      local.fieldTimestamps.reminders, remote.fieldTimestamps.reminders,
+      lCore, rCore
+    );
+    const ovrMerge = mergeDateMap(
+      local.overrides, remote.overrides,
+      local.fieldTimestamps.overrides, remote.fieldTimestamps.overrides,
+      lCore, rCore
+    );
+    const blkMerge = mergeDateMap(
+      local.blackouts, remote.blackouts,
+      local.fieldTimestamps.blackouts, remote.fieldTimestamps.blackouts,
+      lCore, rCore
+    );
+
+    const maxMod = Math.max(
+      Date.parse(local.lastModified || "1970-01-01T00:00:00.000Z") || 0,
+      Date.parse(remote.lastModified || "1970-01-01T00:00:00.000Z") || 0
+    );
+
+    return {
+      roster: base.roster || [],
+      contacts: base.contacts || {},
+      unavailability: base.unavailability || {},
+      templates: base.templates || { ...DEFAULT_TEMPLATES },
+      rotationStartDate: base.rotationStartDate || DEFAULT_ANCHOR_DATE,
+      reminders: remMerge.mergedObj,
+      overrides: ovrMerge.mergedObj,
+      blackouts: blkMerge.mergedObj,
+      fieldTimestamps: {
+        core: Math.max(lCore, rCore),
+        reminders: remMerge.mergedTs,
+        overrides: ovrMerge.mergedTs,
+        blackouts: blkMerge.mergedTs
+      },
+      lastModified: new Date(maxMod || Date.now()).toISOString()
+    };
+  }
+
+  function statesDiffer(a, b) {
+    const stripMeta = (s) => JSON.stringify({
+      roster: s.roster || [],
+      contacts: s.contacts || {},
+      unavailability: s.unavailability || {},
+      templates: s.templates || {},
+      rotationStartDate: s.rotationStartDate || DEFAULT_ANCHOR_DATE,
+      reminders: s.reminders || {},
+      overrides: s.overrides || {},
+      blackouts: s.blackouts || {}
+    });
+    return stripMeta(a) !== stripMeta(b);
   }
 
   /* --- REMINDER TRACKING HELPERS --- */
@@ -1746,6 +2131,7 @@
       conductor: conductorName,
       sentDate
     };
+    touchDateField(state, "reminders", dateKey);
     saveAppState(state);
     refreshShareReminderBanner();
     if (!silent) {
@@ -1759,6 +2145,7 @@
     const state = loadAppState();
     if (state.reminders && state.reminders[dateKey]) {
       delete state.reminders[dateKey];
+      touchDateField(state, "reminders", dateKey);
       saveAppState(state);
       refreshShareReminderBanner();
       showStatus("Cleared reminder tag.");
@@ -1870,7 +2257,206 @@
     if (backdrop) backdrop.classList.remove("open");
   }
 
-  /* --- GITHUB GIST CLOUD SYNC (iOS SAFARI COMPATIBLE + SAFE CONNECT) --- */
+  /* --- NAMED CANCELLATION MODAL CONTROLLERS --- */
+  function handleBlackoutAction(dateKey) {
+    const state = loadAppState();
+    if (state.blackouts && state.blackouts[dateKey]) {
+      delete state.blackouts[dateKey];
+      touchDateField(state, "blackouts", dateKey);
+      saveAppState(state);
+      showStatus(`Restored meeting on ${formatShortDate(dateKey)}.`);
+    } else {
+      openCancelModal(dateKey);
+    }
+  }
+
+  function openCancelModal(dateKey) {
+    pendingCancelDateKey = dateKey;
+    document.getElementById("cancelModalDateText").innerText = `Meeting Date: ${formatFullDateWithDay(dateKey)}`;
+    const input = document.getElementById("cancelReasonInput");
+    input.value = "Circuit Assembly";
+
+    document.querySelectorAll("#cancelPresetChips .preset-chip").forEach((chip, idx) => {
+      chip.classList.toggle("selected", idx === 0);
+    });
+
+    document.getElementById("cancelModal").classList.add("open");
+    syncModalBodyLock();
+  }
+
+  function closeCancelModal() {
+    document.getElementById("cancelModal").classList.remove("open");
+    pendingCancelDateKey = null;
+    syncModalBodyLock();
+  }
+
+  function selectCancelPreset(reason, btnEl) {
+    document.getElementById("cancelReasonInput").value = reason;
+    document.querySelectorAll("#cancelPresetChips .preset-chip").forEach(chip => {
+      chip.classList.remove("selected");
+    });
+    if (btnEl) btnEl.classList.add("selected");
+  }
+
+  function confirmCancelMeeting() {
+    if (!pendingCancelDateKey) return;
+    const rawReason = document.getElementById("cancelReasonInput").value.trim();
+    const reason = rawReason || "Cancelled";
+
+    const state = loadAppState();
+    if (!state.blackouts) state.blackouts = {};
+    state.blackouts[pendingCancelDateKey] = reason;
+    touchDateField(state, "blackouts", pendingCancelDateKey);
+
+    const savedKey = pendingCancelDateKey;
+    closeCancelModal();
+    saveAppState(state);
+    showStatus(`Cancelled ${formatShortDate(savedKey)} (${reason}).`);
+  }
+
+  /* --- BOARD-READY PRINT / SAVE PDF CONTROLLERS --- */
+  function openPrintModal() {
+    document.getElementById("printModal").classList.add("open");
+    syncModalBodyLock();
+  }
+
+  function closePrintModal() {
+    document.getElementById("printModal").classList.remove("open");
+    syncModalBodyLock();
+  }
+
+  function buildPrintSheetHTML(scope) {
+    const state = loadAppState();
+    const baseYear = currentDate.getFullYear();
+    const baseMonth = currentDate.getMonth();
+    const selectedYear = parseInt(document.getElementById("yearSelect").value, 10) || baseYear;
+
+    let monthsToRender = [];
+    let scopeSubtitle = "";
+
+    if (scope === "month") {
+      monthsToRender.push({ year: baseYear, month: baseMonth });
+      scopeSubtitle = `${monthNames[baseMonth]} ${baseYear}`;
+    } else if (scope === "quarter") {
+      for (let offset = 0; offset < 3; offset++) {
+        const d = new Date(baseYear, baseMonth + offset, 1);
+        monthsToRender.push({ year: d.getFullYear(), month: d.getMonth() });
+      }
+      const first = monthsToRender[0];
+      const last = monthsToRender[2];
+      scopeSubtitle = first.year === last.year
+        ? `${monthNames[first.month]} – ${monthNames[last.month]} ${first.year}`
+        : `${monthNames[first.month]} ${first.year} – ${monthNames[last.month]} ${last.year}`;
+    } else {
+      for (let m = 0; m < 12; m++) {
+        monthsToRender.push({ year: selectedYear, month: m });
+      }
+      scopeSubtitle = `Full Year ${selectedYear}`;
+    }
+
+    let blocksHtml = "";
+    monthsToRender.forEach(({ year, month }) => {
+      const sats = getMeetingSaturdays(year, month);
+      const slots = [
+        { day: sats.second, label: "2nd Saturday" },
+        { day: sats.fourth, label: "4th Saturday" },
+        { day: sats.fifth, label: "5th Saturday" }
+      ].filter(s => !!s.day);
+
+      let rowsHtml = "";
+      slots.forEach(({ day, label }) => {
+        const monthStr = String(month + 1).padStart(2, '0');
+        const dayStr = String(day).padStart(2, '0');
+        const dateKey = `${year}-${monthStr}-${dayStr}`;
+        const displayDate = new Date(year, month, day).toLocaleDateString('en-US', {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric'
+        });
+
+        const blackoutReason = getBlackoutReason(state.blackouts, dateKey);
+        if (blackoutReason) {
+          rowsHtml += `
+            <tr class="print-row-cancelled">
+              <td><strong>${escapeHtml(displayDate)}</strong> (${label})</td>
+              <td><strong>CANCELLED — ${escapeHtml(blackoutReason)}</strong></td>
+              <td>No Meeting</td>
+            </tr>
+          `;
+        } else {
+          const override = state.overrides && state.overrides[dateKey];
+          const autoAssigned = getRotationalConductor(year, month, day, state);
+          const conductor = override || autoAssigned;
+          const noteText = override ? "Substitute / Trade" : "Scheduled";
+          rowsHtml += `
+            <tr>
+              <td><strong>${escapeHtml(displayDate)}</strong> (${label})</td>
+              <td><strong>${escapeHtml(conductor)}</strong></td>
+              <td>${escapeHtml(noteText)}</td>
+            </tr>
+          `;
+        }
+      });
+
+      blocksHtml += `
+        <div class="print-month-block">
+          <h3 class="print-month-heading">${monthNames[month]} ${year}</h3>
+          <table class="print-table">
+            <thead>
+              <tr>
+                <th style="width: 38%;">Date</th>
+                <th style="width: 42%;">Assigned Conductor</th>
+                <th style="width: 20%;">Notes</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </div>
+      `;
+    });
+
+    const printedOn = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return `
+      <div class="print-doc-header">
+        <div>
+          <h1 class="print-doc-title">Field Service Conductor Schedule</h1>
+          <p class="print-doc-subtitle">${escapeHtml(scopeSubtitle)} • 9:30 – 9:37 AM • Kingdom Hall</p>
+        </div>
+        <div class="print-doc-meta">
+          Printed ${escapeHtml(printedOn)}
+        </div>
+      </div>
+      ${blocksHtml}
+      <div class="print-footer-note">
+        <strong>Preparation References:</strong> (1) <em>mwb21</em> November p. 7 "Tips for Making Meetings for Field Service Practical" &nbsp;|&nbsp; (2) <em>km</em> 3/15 pp. 3–6 "Meetings for Field Service That Accomplish Their Purpose."<br>
+        If a scheduling conflict arises, please notify the schedule coordinator early to arrange a replacement or trade.
+      </div>
+    `;
+  }
+
+  function executeBoardPrint() {
+    const scope = document.getElementById("printScopeSelect").value;
+    document.getElementById("printSheetContainer").innerHTML = buildPrintSheetHTML(scope);
+    closePrintModal();
+    setTimeout(() => {
+      window.print();
+    }, 120);
+  }
+
+  window.addEventListener("beforeprint", () => {
+    const container = document.getElementById("printSheetContainer");
+    if (container && !container.innerHTML.trim()) {
+      container.innerHTML = buildPrintSheetHTML("month");
+    }
+  });
+
+  window.addEventListener("afterprint", () => {
+    const container = document.getElementById("printSheetContainer");
+    if (container) container.innerHTML = "";
+  });
+
+  /* --- GITHUB GIST CLOUD SYNC (DATE-LEVEL MERGE + SAFE CONNECT + COPY/PASTE) --- */
   function loadGistConfig() {
     try {
       const raw = localStorage.getItem(GIST_CONFIG_KEY);
@@ -1906,6 +2492,42 @@
     }
   }
 
+  function copySyncCredentials() {
+    const token = document.getElementById("gistTokenInput").value.trim();
+    const gistId = document.getElementById("gistIdInput").value.trim();
+    if (!token && !gistId) {
+      alert("Enter your Token and Gist ID first.");
+      return;
+    }
+    const bundle = `Conductor Schedule Sync\nToken: ${token}\nGist ID: ${gistId}`;
+    navigator.clipboard.writeText(bundle).then(() => {
+      const detail = document.getElementById("cloudSyncStatusDetail");
+      if (detail) {
+        detail.style.color = "#065f46";
+        detail.innerText = "📋 Copied Token & Gist ID! Paste into either box on your other device.";
+      }
+      showStatus("📋 Copied Cloud Sync credentials!");
+    }).catch(() => {
+      alert(bundle);
+    });
+  }
+
+  function handleSmartSyncPaste(rawValue) {
+    if (!rawValue) return;
+    const tokenMatch = rawValue.match(/Token:\s*([^\s\r\n]+)/i) || rawValue.match(/\b(gh[ps]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+)\b/);
+    const gistMatch = rawValue.match(/Gist\s*ID:\s*([a-f0-9]{20,40})/i) || rawValue.match(/\b([a-f0-9]{32})\b/i);
+
+    if (tokenMatch && gistMatch) {
+      document.getElementById("gistTokenInput").value = tokenMatch[1].trim();
+      document.getElementById("gistIdInput").value = gistMatch[1].trim();
+      const detail = document.getElementById("cloudSyncStatusDetail");
+      if (detail) {
+        detail.style.color = "#065f46";
+        detail.innerText = "✅ Auto-filled both Token and Private Gist ID! Tap Save & Connect.";
+      }
+    }
+  }
+
   function openCloudSyncModal() {
     const cfg = loadGistConfig();
     document.getElementById("gistTokenInput").value = cfg.token || "";
@@ -1918,7 +2540,7 @@
       const d = new Date(cfg.lastSyncedAt);
       detail.innerText = `Last synced: ${d.toLocaleString()}`;
     } else if (cfg.token && cfg.gistId) {
-      detail.innerText = "Connected. Tap Push Now or Pull Now to sync immediately.";
+      detail.innerText = "Connected. Tap Pull or Push to sync immediately.";
     } else {
       detail.innerText = "Not connected yet. Data is currently stored locally on this device.";
     }
@@ -2089,12 +2711,11 @@
       }
 
       const localState = loadAppState();
-      const remoteTime = Date.parse(remoteState.lastModified || "1970-01-01T00:00:00.000Z") || 0;
-      const localTime = Date.parse(localState.lastModified || "1970-01-01T00:00:00.000Z") || 0;
       const now = new Date();
 
-      if (forceOverwrite || remoteTime > localTime) {
-        localStorage.setItem("conductor_schedule_state", JSON.stringify(remoteState));
+      if (forceOverwrite) {
+        const normalizedRemote = ensureFieldTimestamps(remoteState);
+        localStorage.setItem("conductor_schedule_state", JSON.stringify(normalizedRemote));
         cfg.lastSyncedAt = now.toISOString();
         saveGistConfig(cfg);
         renderUI();
@@ -2102,21 +2723,34 @@
           detail.style.color = "#065f46";
           detail.innerText = `✅ Synced latest schedule from cloud! (${now.toLocaleTimeString()})`;
         }
-        if (!silent || remoteTime > localTime) {
+        if (!silent) showStatus("☁️ Synced latest schedule from cloud!");
+      } else {
+        const mergedState = mergeScheduleStates(localState, remoteState);
+        const localChanged = statesDiffer(localState, mergedState);
+        const remoteNeedsUpdate = statesDiffer(remoteState, mergedState);
+
+        if (localChanged) {
+          mergedState.lastModified = now.toISOString();
+          localStorage.setItem("conductor_schedule_state", JSON.stringify(mergedState));
+          renderUI();
           showStatus("☁️ Synced latest schedule from cloud!");
         }
-      } else if (!forceOverwrite && localTime > remoteTime && cfg.autoSync) {
-        isSyncingNow = false;
-        await pushToGitHubGist(true);
-        return;
-      } else {
+
+        if (remoteNeedsUpdate && cfg.autoSync) {
+          isSyncingNow = false;
+          await pushToGitHubGist(true);
+          return;
+        }
+
         cfg.lastSyncedAt = now.toISOString();
         saveGistConfig(cfg);
         if (detail) {
           detail.style.color = "#065f46";
-          detail.innerText = `✅ Schedule is already up to date! (${now.toLocaleTimeString()})`;
+          detail.innerText = localChanged
+            ? `✅ Merged latest updates from cloud! (${now.toLocaleTimeString()})`
+            : `✅ Schedule is already up to date! (${now.toLocaleTimeString()})`;
         }
-        if (!silent) showStatus("☁️ Schedule is already up to date!");
+        if (!silent && !localChanged) showStatus("☁️ Schedule is already up to date!");
       }
     } catch (err) {
       updateCloudSyncPill("☁️ Sync Error", "error");
@@ -2239,10 +2873,16 @@
       if (!parsed.reminders) {
         parsed.reminders = {};
       }
+      if (!parsed.overrides) {
+        parsed.overrides = {};
+      }
+      if (!parsed.blackouts) {
+        parsed.blackouts = {};
+      }
       if (!parsed.lastModified) {
         parsed.lastModified = "1970-01-01T00:00:00.000Z";
       }
-      return parsed;
+      return ensureFieldTimestamps(parsed);
     }
 
     const legacyRoster = localStorage.getItem("conductor_roster");
@@ -2268,7 +2908,7 @@
       }
     }
 
-    const newState = {
+    const newState = ensureFieldTimestamps({
       roster: migratedRoster,
       contacts: {},
       unavailability: {},
@@ -2278,13 +2918,14 @@
       templates: { ...DEFAULT_TEMPLATES },
       rotationStartDate: DEFAULT_ANCHOR_DATE,
       lastModified: "1970-01-01T00:00:00.000Z"
-    };
+    });
 
     localStorage.setItem("conductor_schedule_state", JSON.stringify(newState));
     return newState;
   }
 
   function saveAppState(state) {
+    ensureFieldTimestamps(state);
     state.lastModified = new Date().toISOString();
     localStorage.setItem("conductor_schedule_state", JSON.stringify(state));
     renderUI();
@@ -2294,6 +2935,7 @@
   function updateRotationStartDate(dateValue) {
     const state = loadAppState();
     state.rotationStartDate = dateValue || DEFAULT_ANCHOR_DATE;
+    touchCoreState(state);
     saveAppState(state);
     showStatus("Rotation start date updated!");
   }
@@ -2322,7 +2964,7 @@
 
     const anchorDateKey = state.rotationStartDate || DEFAULT_ANCHOR_DATE;
     const anchorYear = parseInt(anchorDateKey.split("-")[0], 10) || START_YEAR;
-    const endYear = Math.max(targetYear, anchorYear, 2028);
+    const endYear = Math.max(targetYear, anchorYear, new Date().getFullYear() + 3);
 
     let activeMeetings = [];
     for (let y = START_YEAR; y <= endYear; y++) {
@@ -2505,12 +3147,14 @@
     } else {
       state.overrides[key1] = newCond1;
     }
+    touchDateField(state, "overrides", key1);
 
     if (newCond2 === slot2.autoConductor) {
       delete state.overrides[key2];
     } else {
       state.overrides[key2] = newCond2;
     }
+    touchDateField(state, "overrides", key2);
 
     saveAppState(state);
     closeTradeModal();
@@ -2540,6 +3184,7 @@
     }
 
     toggleAddConductorDrawer(false);
+    touchCoreState(state);
     saveAppState(state);
     showStatus(`Added ${name} to roster!`);
   }
@@ -2555,6 +3200,7 @@
       if (state.contacts) delete state.contacts[name];
       if (state.unavailability) delete state.unavailability[name];
       closeContactModal();
+      touchCoreState(state);
       saveAppState(state);
       showStatus(`Removed ${name} from roster.`);
     }
@@ -2568,6 +3214,7 @@
     const temp = state.roster[index];
     state.roster[index] = state.roster[newIndex];
     state.roster[newIndex] = temp;
+    touchCoreState(state);
     saveAppState(state);
   }
 
@@ -2656,12 +3303,14 @@
         Object.keys(state.overrides).forEach(dateKey => {
           if (state.overrides[dateKey] === oldName) {
             state.overrides[dateKey] = newName;
+            touchDateField(state, "overrides", dateKey);
           }
         });
       }
       Object.keys(state.reminders).forEach(dateKey => {
         if (state.reminders[dateKey] && state.reminders[dateKey].conductor === oldName) {
           state.reminders[dateKey].conductor = newName;
+          touchDateField(state, "reminders", dateKey);
         }
       });
       if (activeShareContext.conductorName === oldName) {
@@ -2676,6 +3325,7 @@
       delete state.unavailability[newName];
     }
 
+    touchCoreState(state);
     saveAppState(state);
     closeContactModal();
     showStatus(`Saved details for ${newName}!`);
@@ -2771,7 +3421,7 @@
     });
   }
 
-  /* --- UP NEXT QUICK-ACTION BANNER --- */
+  /* --- UP NEXT QUICK-ACTION BANNER WITH REMINDER DUE PROMPT --- */
   function renderUpNextBanner(state) {
     const banner = document.getElementById("upNextBanner");
     const today = new Date();
@@ -2789,7 +3439,10 @@
     currentUpNextSlot = nextSlot;
     banner.style.display = "flex";
 
-    const isToday = nextSlot.slotDate.getTime() === today.getTime();
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const daysUntil = Math.round((nextSlot.slotDate.getTime() - today.getTime()) / msPerDay);
+    const isToday = daysUntil === 0;
+
     document.getElementById("upNextTodayBadge").style.display = isToday ? "inline-block" : "none";
     document.getElementById("upNextDateLabel").innerText = nextSlot.formattedDate;
     document.getElementById("upNextConductorName").innerText = nextSlot.conductor;
@@ -2814,6 +3467,15 @@
         <div class="reminder-sent-pill" style="margin-top: 2px;">
           <span>✓ Reminder was sent on ${escapeHtml(formatShortDate(activeRem.sentDate))}</span>
           <button type="button" title="Clear reminder tag" aria-label="Clear reminder tag" onclick="clearReminderTag('${escapeHtml(nextSlot.dateKey)}', event)">&times;</button>
+        </div>
+      `;
+    } else if (daysUntil >= 0 && daysUntil <= 4) {
+      const whenLabel = daysUntil === 0
+        ? "Meeting is today"
+        : (daysUntil === 1 ? "Tomorrow" : `In ${daysUntil} days`);
+      remWrap.innerHTML = `
+        <div class="reminder-due-pill" style="margin-top: 2px;">
+          <span>⏰ Reminder due (${escapeHtml(whenLabel)})</span>
         </div>
       `;
     } else {
@@ -2868,13 +3530,13 @@
 
   function changeMonth(delta) {
     currentDate.setMonth(currentDate.getMonth() + delta);
-    document.getElementById("yearSelect").value = currentDate.getFullYear();
+    populateYearSelect();
     renderUI();
   }
 
   function goToToday() {
     currentDate = new Date();
-    document.getElementById("yearSelect").value = currentDate.getFullYear();
+    populateYearSelect();
     renderUI();
   }
 
@@ -2884,16 +3546,6 @@
     renderUI();
   }
 
-  function toggleBlackout(dateKey) {
-    const state = loadAppState();
-    if (state.blackouts[dateKey]) {
-      delete state.blackouts[dateKey];
-    } else {
-      state.blackouts[dateKey] = true;
-    }
-    saveAppState(state);
-  }
-
   function setOverride(dateKey, conductorName) {
     const state = loadAppState();
     if (!conductorName) {
@@ -2901,6 +3553,7 @@
     } else {
       state.overrides[dateKey] = conductorName;
     }
+    touchDateField(state, "overrides", dateKey);
     saveAppState(state);
   }
 
@@ -2908,6 +3561,7 @@
     const badgeEl = document.getElementById("appVersionBadge");
     if (badgeEl) badgeEl.innerText = APP_VERSION;
 
+    populateYearSelect();
     updateCloudSyncPill();
     const state = loadAppState();
     renderRoster(state);
@@ -2968,16 +3622,23 @@
         const dayStr = String(day).padStart(2, '0');
         const dateKey = `${year}-${monthStr}-${dayStr}`;
 
-        const isBlackout = !!state.blackouts[dateKey];
+        const blackoutReason = getBlackoutReason(state.blackouts, dateKey);
         const savedOverride = state.overrides[dateKey];
         const autoAssigned = getRotationalConductor(year, month, day, state);
 
-        if (isBlackout) {
+        if (blackoutReason) {
           cell.classList.add("blackout");
           const tag = document.createElement("div");
           tag.className = "blackout-tag";
           tag.innerText = "Cancelled";
           cell.appendChild(tag);
+
+          if (blackoutReason !== "Cancelled") {
+            const reasonDiv = document.createElement("div");
+            reasonDiv.className = "blackout-reason-text";
+            reasonDiv.innerText = blackoutReason;
+            cell.appendChild(reasonDiv);
+          }
         } else {
           cell.classList.add("meeting");
           const tag = document.createElement("div");
@@ -3032,7 +3693,7 @@
 
         const actionsDiv = document.createElement("div");
         actionsDiv.className = "cell-actions";
-        actionsDiv.innerHTML = `<button class="btn-link" onclick="toggleBlackout('${dateKey}')">${isBlackout ? 'Restore' : 'Cancel'}</button>`;
+        actionsDiv.innerHTML = `<button class="btn-link" onclick="handleBlackoutAction('${dateKey}')">${blackoutReason ? 'Restore' : 'Cancel'}</button>`;
         cell.appendChild(actionsDiv);
       }
 
@@ -3055,20 +3716,23 @@
         const dayStr = String(day).padStart(2, '0');
         const dateKey = `${selectedYear}-${monthStr}-${dayStr}`;
 
-        const isBlackout = !!state.blackouts[dateKey];
+        const blackoutReason = getBlackoutReason(state.blackouts, dateKey);
         const override = state.overrides[dateKey];
         const assignInfo = getRotationalAssignmentInfo(selectedYear, month, day, state);
         const autoAssigned = assignInfo.conductor;
-        const conductor = isBlackout ? "CANCELLED / NO MEETING" : (override || autoAssigned);
+
+        const conductor = blackoutReason
+          ? (blackoutReason === "Cancelled" ? "CANCELLED / NO MEETING" : `CANCELLED — ${blackoutReason}`)
+          : (override || autoAssigned);
 
         let statusBadge = `<span class="badge badge-standard">Standard</span>`;
-        if (isBlackout) statusBadge = `<span class="badge badge-blackout">Cancelled</span>`;
+        if (blackoutReason) statusBadge = `<span class="badge badge-blackout">Cancelled</span>`;
         else if (override) statusBadge = `<span class="badge badge-override">Override</span>`;
         else if (assignInfo.skippedUnavailable.length > 0) {
           statusBadge = `<span class="badge badge-reassigned" title="Skipped unavailable: ${escapeHtml(assignInfo.skippedUnavailable.join(', '))}">Reassigned</span>`;
         }
 
-        const remInfo = !isBlackout ? getReminderForSlot(dateKey, conductor, state) : null;
+        const remInfo = !blackoutReason ? getReminderForSlot(dateKey, conductor, state) : null;
         if (remInfo) {
           statusBadge += ` <span class="badge badge-reminded">✓ Sent ${escapeHtml(formatShortDate(remInfo.sentDate))}</span>`;
         }
@@ -3083,7 +3747,7 @@
           <td>${statusBadge}</td>
           <td>
             <button class="outline" style="padding:2px 6px; min-height:auto;" onclick="promptTableOverride('${dateKey}', '${escapeHtml(override || '')}')">Override</button>
-            <button class="outline" style="padding:2px 6px; min-height:auto;" onclick="toggleBlackout('${dateKey}')">${isBlackout ? 'Restore' : 'Cancel'}</button>
+            <button class="outline" style="padding:2px 6px; min-height:auto;" onclick="handleBlackoutAction('${dateKey}')">${blackoutReason ? 'Restore' : 'Cancel'}</button>
           </td>
         `;
         tbody.appendChild(row);
@@ -3104,8 +3768,8 @@
   function getAllScheduleSlots(state) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const selectedYear = parseInt(document.getElementById("yearSelect").value, 10);
-    const maxYear = Math.max(today.getFullYear(), selectedYear) + 1;
+    const selectedYear = parseInt(document.getElementById("yearSelect").value, 10) || today.getFullYear();
+    const maxYear = Math.max(today.getFullYear(), selectedYear) + 2;
 
     let allSlots = [];
     for (let y = START_YEAR; y <= maxYear; y++) {
@@ -3509,6 +4173,7 @@
     }
 
     state.templates[templateKey] = templateToSave;
+    touchCoreState(state);
     saveAppState(state);
 
     const label = activeShareContext.format === "text" ? "Short Text" : "Longer Email";
@@ -3523,6 +4188,7 @@
     const templateKey = getActiveTemplateKey();
     state.templates[templateKey] = DEFAULT_TEMPLATES[templateKey];
 
+    touchCoreState(state);
     saveAppState(state);
     refreshShareModalPreview();
     showStatus("Template reset to original default.");
@@ -3852,7 +4518,10 @@
       const dayStr = String(day).padStart(2, '0');
       const dateKey = `${year}-${monthStr}-${dayStr}`;
 
-      if (state.blackouts[dateKey]) return "CANCELLED";
+      const blackoutReason = getBlackoutReason(state.blackouts, dateKey);
+      if (blackoutReason) {
+        return blackoutReason === "Cancelled" ? "CANCELLED" : `CANCELLED (${blackoutReason})`;
+      }
       return state.overrides[dateKey] || getRotationalConductor(year, month, day, state);
     };
 
@@ -3900,6 +4569,12 @@
       try {
         const importedData = JSON.parse(e.target.result);
         if (importedData && Array.isArray(importedData.roster)) {
+          ensureFieldTimestamps(importedData);
+          const nowTs = Date.now();
+          importedData.fieldTimestamps.core = nowTs;
+          Object.keys(importedData.reminders || {}).forEach(k => { importedData.fieldTimestamps.reminders[k] = nowTs; });
+          Object.keys(importedData.overrides || {}).forEach(k => { importedData.fieldTimestamps.overrides[k] = nowTs; });
+          Object.keys(importedData.blackouts || {}).forEach(k => { importedData.fieldTimestamps.blackouts[k] = nowTs; });
           saveAppState(importedData);
           showStatus("Schedule restored successfully!");
         } else {
@@ -3917,7 +4592,11 @@
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       closeAllDropdowns();
-      if (document.getElementById("tradeModal").classList.contains("open")) {
+      if (document.getElementById("cancelModal").classList.contains("open")) {
+        closeCancelModal();
+      } else if (document.getElementById("printModal").classList.contains("open")) {
+        closePrintModal();
+      } else if (document.getElementById("tradeModal").classList.contains("open")) {
         closeTradeModal();
       } else if (document.getElementById("cloudSyncModal").classList.contains("open")) {
         closeCloudSyncModal();

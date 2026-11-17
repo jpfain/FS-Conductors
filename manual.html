@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#f1f5f9">
-  <title>User Manual — Conductor Schedule (v37)</title>
+  <title>User Manual — Conductor Schedule (v38)</title>
   <style>
     :root {
       --primary: #1e3a8a;
@@ -206,6 +206,17 @@
       font-weight: 700;
     }
 
+    .pill-due-sample {
+      display: inline-block;
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fcd34d;
+      border-radius: 999px;
+      padding: 1px 8px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
     .callout-info {
       background: #eff6ff;
       border: 1px solid #bfdbfe;
@@ -267,7 +278,7 @@
   <header>
     <div class="title-group">
       <h1>Conductor Schedule — User Manual</h1>
-      <span class="version-badge">v37</span>
+      <span class="version-badge">v38</span>
     </div>
     <a href="./index.html" class="back-btn" onclick="if(window.opener){window.close(); return false;}">← Back to Schedule</a>
   </header>
@@ -281,7 +292,7 @@
       <a href="#sharing">4. Sharing Messages &amp; Templates</a>
       <a href="#overrides">5. Overrides, Trades &amp; Cancellations</a>
       <a href="#cloud-sync">6. Cloud Sync (GitHub Gist)</a>
-      <a href="#exports">7. Calendar (.ics) &amp; JSON Backups</a>
+      <a href="#exports">7. Print / PDF, .ics &amp; JSON Backups</a>
     </div>
   </nav>
 
@@ -292,14 +303,14 @@
     <ul>
       <li><strong>iPhone &amp; iPad (Safari):</strong> Open your schedule link in Safari, tap the <strong>Share</strong> icon (square with upward arrow), scroll down, and tap <strong>Add to Home Screen</strong>.</li>
       <li><strong>Mac (Chrome or Safari):</strong> In Chrome, click the <strong>Install</strong> icon in the right side of the address bar. In Safari, click <strong>File → Add to Dock</strong>.</li>
-      <li><strong>Checking for App Updates:</strong> The current build version (<code>v37</code>) is shown at the top next to the title. Whenever you publish a new version, open <strong>⚙️ Sync &amp; Tools ▾ → 🔄 Check for App Update</strong> on each device to refresh the cache.</li>
+      <li><strong>Checking for App Updates:</strong> The current build version (<code>v38</code>) is shown at the top next to the title. Whenever you publish a new version, open <strong>⚙️ Sync &amp; Tools ▾ → 🔄 Check for App Update</strong> on each device to refresh the cache.</li>
     </ul>
   </section>
 
   <!-- 2. ROSTER & ROTATION -->
   <section id="roster">
     <h2>2. Approved Conductors &amp; Rotation Rules</h2>
-    <p>The scheduler automatically assigns conductors in sequential order for every <strong>2nd, 4th, and 5th Saturday</strong> of the month (<strong>9:30 – 9:37 AM</strong> at the Kingdom Hall).</p>
+    <p>The scheduler automatically assigns conductors in sequential order for every <strong>2nd, 4th, and 5th Saturday</strong> of the month (<strong>9:30 – 9:37 AM</strong> at the Kingdom Hall). The year selector at the top right advances automatically into future years.</p>
     <ul>
       <li><strong>Start #1 Anchor Date:</strong> Use the <code>Start #1</code> date selector at the top right of the Approved Conductors panel to set which Saturday Conductor <code>#1</code> begins the rotation.</li>
       <li><strong>Yearly Assignment Tally (<code>×</code>):</strong> Each conductor card displays a badge (for example, <code>5×</code>) showing how many active Saturdays they are assigned in the currently selected year.</li>
@@ -313,13 +324,14 @@
     <h2>3. Up Next Banner &amp; Reminder Tracking</h2>
     <p>The highlighted <strong>Up Next</strong> banner at the top of the schedule always tracks the very next upcoming meeting Saturday.</p>
     <ul>
+      <li><strong>Gentle "Reminder Due" Prompt:</strong> When the next scheduled Saturday is within <strong>4 days</strong> and hasn't been tagged yet, the banner displays an amber prompt: <span class="pill-due-sample">⏰ Reminder due (In 3 days)</span>.</li>
       <li><strong>🔄 Quick Replace:</strong> Need a last-minute substitute for the upcoming Saturday? Tap <strong>🔄 Quick Replace</strong> right inside the Up Next card and choose the replacement conductor.</li>
       <li><strong>💬 Send Reminder:</strong> Opens the message composer pre-addressed to the upcoming conductor with their scheduled dates.</li>
-      <li><strong>Automatic Reminder Tagging:</strong> Whenever you send a reminder via <strong>💬 Open in Messages</strong>, <strong>✉️ Open in Email</strong>, <strong>📋 Copy</strong>, <strong>📤 Share Sheet</strong>, or tap <strong>✓ Tag Sent Today</strong> inside the share window, the app saves a green confirmation tag: <span class="pill-sample">✓ Reminder was sent on Nov 16, 2026</span>.</li>
+      <li><strong>Automatic Reminder Tagging:</strong> Whenever you send a reminder via <strong>💬 Open in Messages</strong>, <strong>✉️ Open in Email</strong>, <strong>📋 Copy</strong>, <strong>📤 Share Sheet</strong>, or tap <strong>✓ Tag Sent Today</strong> inside the share window, the amber prompt clears and the app saves a green confirmation tag: <span class="pill-sample">✓ Reminder was sent on Nov 16, 2026</span>.</li>
       <li><strong>Where Tags Appear:</strong> The sent-date badge appears simultaneously on the <strong>Up Next</strong> banner, the conductor's roster card, the <strong>Calendar</strong> day cell, and the <strong>Year List</strong> row. Tap the <strong>×</strong> on any badge (or <strong>Clear</strong> inside the share popup) to remove it.</li>
     </ul>
     <div class="callout-info">
-      <strong>Automatic Rollover:</strong> Once a scheduled Saturday passes, the <strong>Up Next</strong> banner automatically advances to the next upcoming meeting Saturday and clears the previous date's badge from the banner.
+      <strong>Automatic Rollover:</strong> Once a scheduled Saturday passes, the <strong>Up Next</strong> banner automatically advances to the next upcoming meeting Saturday.
     </div>
   </section>
 
@@ -337,36 +349,36 @@
 
   <!-- 5. OVERRIDES, TRADES & BLACKOUTS -->
   <section id="overrides">
-    <h2>5. Overrides, Trades &amp; Cancelled Meetings</h2>
+    <h2>5. Overrides, Trades &amp; Named Cancellations</h2>
     <ul>
       <li><strong>Single-Date Override:</strong> On any meeting Saturday in Calendar view, use the dropdown inside the day box to assign a specific conductor. Select <code>Auto (...)</code> at the top of the list to return that date to normal rotation.</li>
       <li><strong>⇄ Trade Dates:</strong> Tap <strong>⇄ Trade Dates</strong> in the toolbar to swap two scheduled Saturdays between two conductors. Yearly assignment counts remain balanced and no other future dates shift.</li>
-      <li><strong>Cancelling a Meeting (Blackout):</strong> Click <strong>Cancel</strong> on any meeting Saturday (for example, during a Circuit Assembly or Regional Convention). The rotation automatically pauses on cancelled dates and resumes with the next scheduled conductor on the following meeting Saturday.</li>
+      <li><strong>Named Cancellation Reasons:</strong> Click <strong>Cancel</strong> on any meeting Saturday and select a preset reason (<strong>Circuit Assembly</strong>, <strong>Regional Convention</strong>, <strong>CO Visit</strong>, <strong>Memorial / Special Event</strong>) or enter your own. The reason appears inside the Calendar cell, Year List, copied summaries, and printed sheets while the rotation automatically pauses and resumes on the next meeting Saturday.</li>
     </ul>
   </section>
 
   <!-- 6. CLOUD SYNC -->
   <section id="cloud-sync">
     <h2>6. Cloud Sync Across Mac, iPhone &amp; iPad (GitHub Gist)</h2>
-    <p>Cloud Sync keeps your roster, overrides, unavailable dates, custom templates, and reminder tags synchronized across all your devices using a private GitHub Gist.</p>
+    <p>Cloud Sync keeps your roster, overrides, unavailable dates, custom templates, and reminder tags synchronized across all your devices using a private GitHub Gist with <strong>date-level conflict merging</strong>.</p>
 
     <h3>First-Time Setup (Device 1 — e.g., Mac)</h3>
     <ol>
       <li>Sign in to <strong>GitHub.com</strong>, open <strong>Settings → Developer settings → Personal access tokens → Tokens (classic)</strong>, and generate a token with only the <code>gist</code> checkbox selected.</li>
       <li>In Conductor Schedule, tap the <strong>☁️ Local Only</strong> pill at the top (or <strong>⚙️ Sync &amp; Tools ▾ → ☁️ Cloud Sync</strong>).</li>
       <li>Paste your Personal Access Token, leave <strong>Private Gist ID</strong> blank, ensure <strong>Auto-Sync on Changes &amp; App Open</strong> is checked, and tap <strong>💾 Save &amp; Connect</strong>.</li>
-      <li>The app creates a private Gist and displays a 32-character <strong>Private Gist ID</strong>. Copy both your Token and this Gist ID for your other devices.</li>
+      <li>Tap <strong>📋 Copy Sync Info</strong> inside the Cloud Sync popup to copy both your Token and new 32-character Private Gist ID together.</li>
     </ol>
 
     <h3>Connecting Additional Devices (iPhone &amp; iPad)</h3>
     <ol>
       <li>Open Conductor Schedule on your iPhone or iPad and tap the <strong>☁️ Local Only</strong> pill at the top.</li>
-      <li>Paste the <strong>same GitHub Personal Access Token</strong> and the <strong>exact same 32-character Private Gist ID</strong> from Device 1.</li>
-      <li>Tap <strong>💾 Save &amp; Connect</strong>. In <code>v37</code>, connecting to an existing Gist ID automatically downloads your shared cloud schedule onto the new device without overwriting the cloud copy.</li>
+      <li>Paste the copied credentials into either input box—the app automatically fills in both the <strong>GitHub Personal Access Token</strong> and the <strong>Private Gist ID</strong>.</li>
+      <li>Tap <strong>💾 Save &amp; Connect</strong> to download your shared cloud schedule onto the new device without overwriting the cloud copy.</li>
     </ol>
 
     <div class="callout-warn">
-      <strong>Important:</strong> All devices must display the exact same 32-character <strong>Private Gist ID</strong> in the Cloud Sync window. If a device has a different Gist ID, it is syncing to a separate file.
+      <strong>Smart Date-Level Merging:</strong> If you tag a reminder on your iPhone and enter an override for a different date on your Mac seconds apart, Cloud Sync merges each date independently so both updates are preserved.
     </div>
 
     <h3>Cloud Sync Status &amp; Manual Controls</h3>
@@ -383,21 +395,26 @@
           <td>Connected. Automatically pushes changes when you edit the schedule and checks for updates when you open, switch to, or tap the app.</td>
         </tr>
         <tr>
-          <td><strong>⬇️ Pull Now</strong></td>
+          <td><strong>📋 Copy Sync Info</strong></td>
+          <td>Copies both your Token and Private Gist ID together for one-paste setup on another device.</td>
+        </tr>
+        <tr>
+          <td><strong>⬇️ Pull</strong></td>
           <td>Immediately downloads the cloud schedule from GitHub Gist and updates the current device.</td>
         </tr>
         <tr>
-          <td><strong>⬆️ Push Now</strong></td>
+          <td><strong>⬆️ Push</strong></td>
           <td>Immediately uploads the current device's schedule and reminder tags to GitHub Gist.</td>
         </tr>
       </tbody>
     </table>
   </section>
 
-  <!-- 7. EXPORTS & BACKUPS -->
+  <!-- 7. PRINT, EXPORTS & BACKUPS -->
   <section id="exports">
-    <h2>7. Calendar (.ics) &amp; JSON Backups</h2>
+    <h2>7. Print / Save PDF, Calendar (.ics) &amp; JSON Backups</h2>
     <ul>
+      <li><strong>Board-Ready Print / Save PDF:</strong> Open <strong>⚙️ Sync &amp; Tools ▾ → 🖨️ Print / Save PDF</strong> and choose <strong>Current Displayed Month</strong>, <strong>Quarterly Board Sheet (3 Months)</strong>, or <strong>Full Selected Year</strong>. This formats a clean, button-free sheet ready for the Kingdom Hall information board or saving as a PDF.</li>
       <li><strong>Personal Conductor Calendar:</strong> Tap the blue <strong>📅 Download .ics</strong> icon on any conductor card and choose a timeframe (1, 3, or 6 months, rest of year, or full year) to generate a calendar file with built-in 24-hour and 12-hour reminders.</li>
       <li><strong>Master Calendar Export:</strong> Use <strong>📅 Export .ics ▾</strong> in the toolbar to export the current month or the entire selected year for Apple Calendar, Google Calendar, or Outlook.</li>
       <li><strong>JSON Backup &amp; Restore:</strong> Use <strong>⚙️ Sync &amp; Tools ▾ → 💾 Backup Data (JSON)</strong> to save a complete offline snapshot file, and <strong>📂 Restore Backup (JSON)</strong> to reload it anytime.</li>
@@ -405,7 +422,7 @@
   </section>
 
   <footer>
-    <span>Conductor Schedule PWA — Version v37</span>
+    <span>Conductor Schedule PWA — Version v38</span>
     <a href="./index.html" style="color: var(--accent); font-weight: 600; text-decoration: none;" onclick="if(window.opener){window.close(); return false;}">Return to Schedule →</a>
   </footer>
 </div>
