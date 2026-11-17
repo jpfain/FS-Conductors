@@ -1203,7 +1203,7 @@
   <header>
     <div class="title-group">
       <h1>Conductor Schedule</h1>
-      <span id="appVersionBadge" class="version-badge">v36</span>
+      <span id="appVersionBadge" class="version-badge">v37</span>
       <span id="cloudSyncPill" class="sync-pill" onclick="openCloudSyncModal()" title="Configure or check GitHub Gist Cloud Sync">☁️ Local Only</span>
     </div>
     <div class="controls-group">
@@ -1576,7 +1576,7 @@
 </div>
 
 <script>
-  const APP_VERSION = "v36";
+  const APP_VERSION = "v37";
   let currentDate = new Date();
   let currentViewMode = "calendar";
   const monthNames = [
@@ -1870,7 +1870,7 @@
     if (backdrop) backdrop.classList.remove("open");
   }
 
-  /* --- GITHUB GIST CLOUD SYNC (iOS SAFARI COMPATIBLE + VISIBLE STATUS) --- */
+  /* --- GITHUB GIST CLOUD SYNC (iOS SAFARI COMPATIBLE + SAFE CONNECT) --- */
   function loadGistConfig() {
     try {
       const raw = localStorage.getItem(GIST_CONFIG_KEY);
@@ -1983,7 +1983,7 @@
         showStatus("☁️ Connected & created private sync Gist!");
       } else {
         saveGistConfig({ token, gistId, autoSync, lastSyncedAt: loadGistConfig().lastSyncedAt });
-        await pullFromGitHubGist(false, false);
+        await pullFromGitHubGist(true, false);
       }
     } catch (err) {
       detail.style.color = "#991b1b";
