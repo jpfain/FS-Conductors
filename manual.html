@@ -4,15 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#f1f5f9">
-  <title>User Manual — Conductor Schedule (v40)</title>
+  <title>Conductor Schedule — User Manual (v41)</title>
   <style>
     :root {
       --primary: #1e3a8a;
       --secondary: #059669;
       --accent: #2563eb;
       --danger: #dc2626;
-      --warning-bg: #fef3c7;
-      --warning-text: #92400e;
       --bg: #f1f5f9;
       --card-bg: #ffffff;
       --text: #0f172a;
@@ -22,415 +20,311 @@
 
     * { box-sizing: border-box; }
 
-    html {
-      background-color: var(--bg);
-      scroll-behavior: smooth;
-      -webkit-text-size-adjust: 100%;
-    }
-
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       background-color: var(--bg);
       color: var(--text);
       margin: 0 auto;
+      padding: calc(16px + env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom)) 16px;
+      max-width: 860px;
       line-height: 1.55;
-      padding-top: calc(clamp(12px, 2.5vw, 24px) + env(safe-area-inset-top));
-      padding-bottom: calc(clamp(24px, 4vw, 40px) + env(safe-area-inset-bottom));
-      padding-left: calc(clamp(10px, 2.5vw, 24px) + env(safe-area-inset-left));
-      padding-right: calc(clamp(10px, 2.5vw, 24px) + env(safe-area-inset-right));
-      max-width: 880px;
     }
 
-    .container {
-      background: var(--card-bg);
-      border-radius: 14px;
-      padding: clamp(16px, 3.5vw, 28px);
-      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
-      border: 1px solid #e2e8f0;
-    }
-
-    /* Sticky Top Header */
-    header {
+    .top-bar {
       position: sticky;
       top: 0;
       z-index: 50;
-      background: rgba(255, 255, 255, 0.96);
-      backdrop-filter: blur(6px);
+      background: rgba(241, 245, 249, 0.94);
+      backdrop-filter: blur(8px);
+      padding: 10px 0;
+      margin-bottom: 14px;
+      border-bottom: 1px solid #e2e8f0;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      flex-wrap: wrap;
       gap: 10px;
-      padding: 10px 0 14px 0;
-      margin-bottom: 18px;
-      border-bottom: 1px solid #e2e8f0;
+      flex-wrap: wrap;
     }
 
-    .title-group {
+    .top-title {
       display: flex;
       align-items: center;
       gap: 8px;
-      flex-wrap: wrap;
     }
 
-    h1 {
-      font-size: 1.35rem;
+    .top-title h1 {
+      font-size: 1.25rem;
       margin: 0;
       color: var(--primary);
-      letter-spacing: -0.01em;
     }
 
     .version-badge {
       background: #eff6ff;
       color: var(--primary);
-      font-size: 0.74rem;
-      font-weight: 700;
-      padding: 2px 9px;
-      border-radius: 999px;
       border: 1px solid #bfdbfe;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
     }
 
     .back-btn {
-      background: var(--primary);
-      color: #ffffff;
-      text-decoration: none;
-      border: none;
-      border-radius: 8px;
-      padding: 7px 14px;
-      min-height: 36px;
-      font-size: 0.85rem;
-      font-weight: 600;
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      cursor: pointer;
+      background: var(--primary);
+      color: #ffffff;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.85rem;
+      padding: 8px 14px;
+      border-radius: 8px;
     }
 
     .back-btn:hover { opacity: 0.92; }
 
-    /* Table of Contents */
-    .toc-box {
-      background: #f8fafc;
+    .card {
+      background: var(--card-bg);
       border: 1px solid #e2e8f0;
-      border-radius: 10px;
-      padding: 14px 16px;
-      margin-bottom: 22px;
+      border-radius: 12px;
+      padding: 18px 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
     }
 
-    .toc-title {
-      font-size: 0.8rem;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: var(--muted);
-      margin: 0 0 8px 0;
-    }
-
-    .toc-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 6px 16px;
-    }
-
-    .toc-grid a {
-      color: var(--accent);
-      text-decoration: none;
-      font-size: 0.88rem;
-      font-weight: 600;
-      padding: 2px 0;
-    }
-
-    .toc-grid a:hover { text-decoration: underline; }
-
-    /* Content Sections */
-    section {
-      margin-bottom: 26px;
-      padding-bottom: 20px;
-      border-bottom: 1px solid #f1f5f9;
-      scroll-margin-top: 76px;
-    }
-
-    section:last-of-type {
-      border-bottom: none;
-      margin-bottom: 0;
-      padding-bottom: 0;
-    }
-
-    h2 {
-      font-size: 1.12rem;
-      color: var(--primary);
+    .card h2 {
       margin: 0 0 10px 0;
+      font-size: 1.1rem;
+      color: var(--primary);
       display: flex;
       align-items: center;
       gap: 8px;
     }
 
-    h3 {
-      font-size: 0.96rem;
-      color: #1e293b;
-      margin: 14px 0 6px 0;
+    .new-pill {
+      background: #dcfce7;
+      color: #065f46;
+      border: 1px solid #86efac;
+      font-size: 0.7rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      padding: 1px 7px;
+      border-radius: 999px;
     }
 
-    p {
-      margin: 0 0 10px 0;
-      font-size: 0.92rem;
-      color: #1e293b;
+    .toc {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
     }
+
+    .toc a {
+      background: #f8fafc;
+      color: var(--primary);
+      border: 1px solid #cbd5e1;
+      border-radius: 999px;
+      padding: 4px 11px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .toc a:hover { background: #eff6ff; border-color: #93c5fd; }
 
     ul, ol {
-      margin: 0 0 12px 0;
-      padding-left: 22px;
-      font-size: 0.92rem;
+      margin: 8px 0 0 0;
+      padding-left: 20px;
     }
 
     li { margin-bottom: 6px; }
 
+    .callout {
+      background: #f8fafc;
+      border-left: 4px solid var(--accent);
+      border-radius: 6px;
+      padding: 10px 12px;
+      margin-top: 10px;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .status-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 10px 0;
+    }
+
+    .status-chip {
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .chip-sent { background: #ecfdf5; color: #065f46; border: 1px solid #6ee7b7; }
+    .chip-conf { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+    .chip-sub  { background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5; }
+
     code {
       background: #f1f5f9;
-      color: #0f172a;
       border: 1px solid #e2e8f0;
-      border-radius: 5px;
-      padding: 1px 6px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 0.83rem;
-    }
-
-    .pill-sample {
-      display: inline-block;
-      background: #ecfdf5;
-      color: #065f46;
-      border: 1px solid #6ee7b7;
-      border-radius: 999px;
-      padding: 1px 8px;
-      font-size: 0.78rem;
-      font-weight: 700;
-    }
-
-    .pill-due-sample {
-      display: inline-block;
-      background: #fef3c7;
-      color: #92400e;
-      border: 1px solid #fcd34d;
-      border-radius: 999px;
-      padding: 1px 8px;
-      font-size: 0.78rem;
-      font-weight: 700;
-    }
-
-    .callout-info {
-      background: #eff6ff;
-      border: 1px solid #bfdbfe;
-      border-left: 4px solid var(--accent);
-      border-radius: 8px;
-      padding: 10px 14px;
-      font-size: 0.88rem;
-      color: #1e3a8a;
-      margin: 12px 0;
-    }
-
-    .callout-warn {
-      background: var(--warning-bg);
-      border: 1px solid #fde68a;
-      border-left: 4px solid #d97706;
-      border-radius: 8px;
-      padding: 10px 14px;
-      font-size: 0.88rem;
-      color: var(--warning-text);
-      margin: 12px 0;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 10px 0 14px 0;
-      font-size: 0.86rem;
-    }
-
-    th, td {
-      text-align: left;
-      padding: 8px 10px;
-      border: 1px solid #e2e8f0;
-    }
-
-    th {
-      background: #f8fafc;
-      font-weight: 700;
-      color: #334155;
-    }
-
-    footer {
-      margin-top: 22px;
-      padding-top: 14px;
-      border-top: 1px solid #e2e8f0;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 10px;
-      font-size: 0.8rem;
-      color: var(--muted);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 0.85em;
     }
   </style>
 </head>
 <body>
 
-<div class="container">
-  <header>
-    <div class="title-group">
-      <h1>Conductor Schedule — User Manual</h1>
-      <span class="version-badge">v40</span>
+  <div class="top-bar">
+    <div class="top-title">
+      <h1>Conductor Schedule User Manual</h1>
+      <span class="version-badge">v41</span>
     </div>
-    <a href="./index.html" class="back-btn" onclick="if(window.opener){window.close(); return false;}">← Back to Schedule</a>
-  </header>
+    <a href="./index.html" class="back-btn" onclick="if (window.opener) { window.close(); return false; }">← Back to Schedule</a>
+  </div>
 
-  <nav class="toc-box" aria-label="Manual Contents">
-    <div class="toc-title">Quick Navigation</div>
-    <div class="toc-grid">
-      <a href="#install">1. Install on iPhone, iPad &amp; Mac</a>
-      <a href="#roster">2. Approved Conductors &amp; Rotation</a>
-      <a href="#up-next">3. Up Next Banner &amp; Reminder Tags</a>
-      <a href="#sharing">4. Sharing Messages &amp; Templates</a>
-      <a href="#overrides">5. Overrides, Trades &amp; Cancellations</a>
-      <a href="#cloud-sync">6. Cloud Sync &amp; Offline Mode</a>
-      <a href="#exports">7. Print / PDF, .ics &amp; JSON Backups</a>
+  <div class="card">
+    <h2>Quick Navigation</h2>
+    <p style="margin: 0 0 8px 0; color: var(--muted); font-size: 0.92rem;">
+      Jump to any feature guide below. All six <strong>v41</strong> enhancements work offline and sync automatically across your Mac, iPhone, and iPad when GitHub Gist Cloud Sync is enabled.
+    </p>
+    <div class="toc">
+      <a href="#history-lock">1. Past-Date History Lock</a>
+      <a href="#confirmation-status">2. Confirmation Status</a>
+      <a href="#fairness-stats">3. Last-Served &amp; Fairness Stats</a>
+      <a href="#unavailability-range">4. Date-Range Unavailability</a>
+      <a href="#time-location">5. Custom Time &amp; Location</a>
+      <a href="#undo">6. One-Tap Undo</a>
+      <a href="#rotation-trades">Rotation, Trades &amp; Cancellations</a>
+      <a href="#sharing-queue">Messaging &amp; 1-by-1 Queue</a>
+      <a href="#cloud-sync">GitHub Gist Cloud Sync</a>
+      <a href="#print-ics">Print / PDF &amp; .ics Calendars</a>
     </div>
-  </nav>
+  </div>
 
-  <!-- 1. INSTALLING AS AN APP -->
-  <section id="install">
-    <h2>1. Install on iPhone, iPad &amp; Mac</h2>
-    <p>Conductor Schedule is a Progressive Web App (PWA) that works offline and opens full-screen from your Home Screen or Dock.</p>
+  <!-- 1. PAST-DATE HISTORY LOCK -->
+  <div id="history-lock" class="card">
+    <h2>🔒 1. Past-Date History Lock <span class="new-pill">v41</span></h2>
+    <p>
+      Historical meeting Saturdays prior to today are automatically frozen so that adding a new conductor, reordering the rotation (<code>◀</code> / <code>▶</code>), or changing the <strong>Start #1</strong> anchor date never rewrites past records.
+    </p>
     <ul>
-      <li><strong>iPhone &amp; iPad (Safari):</strong> Open your schedule link in Safari, tap the <strong>Share</strong> icon (square with upward arrow), scroll down, and tap <strong>Add to Home Screen</strong>.</li>
-      <li><strong>Mac (Chrome or Safari):</strong> In Chrome, click the <strong>Install</strong> icon in the right side of the address bar. In Safari, click <strong>File → Add to Dock</strong>.</li>
-      <li><strong>Checking for App Updates:</strong> The current build version (<code>v40</code>) is shown at the top next to the title. Whenever you publish a new version, open <strong>⚙️ Sync &amp; Tools ▾ → 🔄 Check for App Update</strong> on each device to refresh the cache.</li>
+      <li><strong>Automatic Snapshotting:</strong> Every completed Saturday is locked with the exact brother who served on that date (shown with a <code>🔒</code> icon in the Calendar and a <code>🔒 Locked</code> badge in the Year List).</li>
+      <li><strong>Manual Toggle:</strong> Click the <strong><code>🔒 Past Locked</code></strong> pill in the <em>Approved Conductors</em> header if you ever need to temporarily unlock historical dates (<code>🔓 Past Unlocked</code>) to recalculate past assignments.</li>
     </ul>
-  </section>
+  </div>
 
-  <!-- 2. ROSTER & ROTATION -->
-  <section id="roster">
-    <h2>2. Approved Conductors &amp; Rotation Rules</h2>
-    <p>The scheduler automatically assigns conductors in sequential order for every <strong>2nd, 4th, and 5th Saturday</strong> of the month (<strong>9:30 – 9:37 AM</strong> at the Kingdom Hall). The year selector at the top right advances automatically into future years.</p>
-    <ul>
-      <li><strong>Start #1 Anchor Date:</strong> Use the <code>Start #1</code> date selector at the top right of the Approved Conductors panel to set which Saturday Conductor <code>#1</code> begins the rotation.</li>
-      <li><strong>Yearly Assignment Tally (<code>×</code>):</strong> Each conductor card displays a badge (for example, <code>5×</code>) showing how many active Saturdays they are assigned in the currently selected year.</li>
-      <li><strong>Reordering Conductors:</strong> Use the <strong>◀</strong> and <strong>▶</strong> buttons on any conductor card to move them earlier or later in the rotation sequence.</li>
-      <li><strong>Contact Info &amp; Unavailable Dates:</strong> Tap the <strong>✏️ Edit</strong> button on a conductor card to save their mobile number (<code>📱</code>), email address (<code>✉️</code>), or specific <strong>Unavailable Dates</strong> (<code>🚫</code>). When a conductor is marked unavailable for a date, the app automatically assigns the next available conductor in order for that single date without shifting anyone else's future dates.</li>
-    </ul>
-  </section>
-
-  <!-- 3. UP NEXT & REMINDER TRACKING -->
-  <section id="up-next">
-    <h2>3. Up Next Banner &amp; Reminder Tracking</h2>
-    <p>The highlighted <strong>Up Next</strong> banner at the top of the schedule always tracks the very next upcoming meeting Saturday.</p>
-    <ul>
-      <li><strong>Gentle "Reminder Due" Prompt:</strong> When the next scheduled Saturday is within <strong>4 days</strong> and hasn't been tagged yet, the banner displays an amber prompt: <span class="pill-due-sample">⏰ Reminder due (In 3 days)</span>.</li>
-      <li><strong>🔄 Quick Replace:</strong> Need a last-minute substitute for the upcoming Saturday? Tap <strong>🔄 Quick Replace</strong> right inside the Up Next card and choose the replacement conductor.</li>
-      <li><strong>💬 Send Reminder:</strong> Opens the message composer pre-addressed to the upcoming conductor with their scheduled dates.</li>
-      <li><strong>Automatic Reminder Tagging:</strong> Whenever you send a reminder via <strong>💬 Open in Messages</strong>, <strong>✉️ Open in Email</strong>, <strong>📋 Copy</strong>, <strong>📤 Share Sheet</strong>, or tap <strong>✓ Tag Sent Today</strong> inside the share window, the amber prompt clears and the app saves a green confirmation tag: <span class="pill-sample">✓ Reminder was sent on Nov 16, 2026</span>.</li>
-      <li><strong>Where Tags Appear:</strong> The sent-date badge appears simultaneously on the <strong>Up Next</strong> banner, the conductor's roster card, the <strong>Calendar</strong> day cell, and the <strong>Year List</strong> row. Tap the <strong>×</strong> on any badge (or <strong>Clear</strong> inside the share popup) to remove it.</li>
-    </ul>
-    <div class="callout-info">
-      <strong>Automatic Rollover:</strong> Once a scheduled Saturday passes, the <strong>Up Next</strong> banner automatically advances to the next upcoming meeting Saturday.
+  <!-- 2. CONFIRMATION STATUS -->
+  <div id="confirmation-status" class="card">
+    <h2>✅ 2. One-Tap Confirmation Status <span class="new-pill">v41</span></h2>
+    <p>
+      Sending or copying a schedule message automatically tags that assignment as <strong>Sent</strong>. When a brother replies to confirm or asks for a substitute, tap the reminder badge anywhere in the app to cycle its status:
+    </p>
+    <div class="status-row">
+      <span class="status-chip chip-sent">✓ Reminder sent</span>
+      <span>→</span>
+      <span class="status-chip chip-conf">✅ Confirmed</span>
+      <span>→</span>
+      <span class="status-chip chip-sub">⚠️ Needs Sub</span>
     </div>
-  </section>
-
-  <!-- 4. SHARING & TEMPLATES -->
-  <section id="sharing">
-    <h2>4. Sharing Messages &amp; Custom Templates</h2>
-    <p>Tap the green <strong>💬 Message</strong> icon on a single conductor card to send their personal schedule, or tap <strong>📢 Share All Schedules</strong> in the toolbar to notify the entire group.</p>
     <ul>
-      <li><strong>Short Text vs. Longer Email:</strong> Switch between SMS/Messages formatting and full email formatting at the top of the Share popup.</li>
-      <li><strong>Single Group Text vs. 1-by-1 Individual Queue:</strong> When sharing all schedules via Short Text, choose <strong>👥 Single Group Text</strong> to message everyone in one thread, or <strong>📲 1-by-1 Individual Queue</strong> to step through each conductor individually with personalized messages.</li>
-      <li><strong>Quick Contact Editing:</strong> Tap <strong>Edit Saved Contact</strong> above the recipient box when messaging an individual conductor to update their mobile number, email, or unavailable dates directly on top of the Share popup.</li>
-      <li><strong>Dynamic Placeholders:</strong> Templates automatically fill in <code>{firstName}</code>, <code>{fullName}</code>, <code>{dates}</code>, <code>{schedules}</code>, and <code>{timeframe}</code>.</li>
-      <li><strong>Customizing Defaults:</strong> Edit the wording in the message box and tap <strong>💾 Save as Default</strong> to keep your custom wording for future reminders, or <strong>↺ Reset Default</strong> to restore the built-in template.</li>
+      <li><strong>Where to Tap:</strong> Tap the badge on the <strong>Up Next</strong> banner, inside the brother's <strong>Approved Conductors</strong> card, on the <strong>Calendar</strong> day cell, in the <strong>Year List</strong>, or at the top of the <strong>Share</strong> modal.</li>
+      <li><strong>Clear Tag:</strong> Tap the small <code>&times;</code> on the right side of a badge to remove the status tag completely.</li>
     </ul>
-  </section>
+  </div>
 
-  <!-- 5. OVERRIDES, TRADES & BLACKOUTS -->
-  <section id="overrides">
-    <h2>5. Overrides, Trades &amp; Named Cancellations</h2>
+  <!-- 3. LAST-SERVED & FAIRNESS STATS -->
+  <div id="fairness-stats" class="card">
+    <h2>📊 3. Last-Served &amp; Fairness Stats <span class="new-pill">v41</span></h2>
+    <p>
+      Keep assignments balanced when picking a last-minute substitute or reviewing yearly totals.
+    </p>
     <ul>
-      <li><strong>Single-Date Override:</strong> On any meeting Saturday in Calendar view, use the dropdown inside the day box to assign a specific conductor. Select <code>Auto (...)</code> at the top of the list to return that date to normal rotation.</li>
-      <li><strong>⇄ Trade Dates:</strong> Tap <strong>⇄ Trade Dates</strong> in the toolbar to swap two scheduled Saturdays between two conductors. Yearly assignment counts remain balanced and no other future dates shift.</li>
-      <li><strong>Named Cancellation Reasons:</strong> Click <strong>Cancel</strong> on any meeting Saturday and select a preset reason (<strong>Circuit Assembly</strong>, <strong>Regional Convention</strong>, <strong>CO Visit</strong>, <strong>Memorial / Special Event</strong>) or enter your own. The reason appears inside the Calendar cell, Year List, copied summaries, and printed sheets while the rotation automatically pauses and resumes on the next meeting Saturday.</li>
+      <li><strong>Stats Drawer:</strong> Click <strong><code>📊 Stats</code></strong> in the <em>Approved Conductors</em> header to open a live breakdown showing each brother's <strong>Last Served</strong> date (with days elapsed), <strong>Completed</strong> turns, <strong>Upcoming</strong> turns, and <strong>Year Total</strong>. The brother who has waited longest is highlighted with a <strong>Longest Wait</strong> badge.</li>
+      <li><strong>Quick Replace Hints:</strong> When you tap <strong><code>🔄 Quick Replace</code></strong> on the <em>Up Next</em> banner, each option in the dropdown displays when that brother last served and how many times they are scheduled this year.</li>
     </ul>
-  </section>
+  </div>
 
-  <!-- 6. CLOUD SYNC & OFFLINE MODE -->
-  <section id="cloud-sync">
-    <h2>6. Cloud Sync &amp; Offline Mode (GitHub Gist)</h2>
-    <p>Cloud Sync keeps your roster, overrides, unavailable dates, custom templates, and reminder tags synchronized across all your devices using a private GitHub Gist with <strong>date-level conflict merging</strong> and automatic offline queuing.</p>
-
-    <h3>First-Time Setup (Device 1 — e.g., Mac)</h3>
+  <!-- 4. DATE-RANGE UNAVAILABILITY -->
+  <div id="unavailability-range" class="card">
+    <h2>🚫 4. Date-Range Unavailability Picker <span class="new-pill">v41</span></h2>
+    <p>
+      When a brother is traveling or unavailable, the rotation automatically skips them on those Saturdays and assigns the next available brother—without shifting everyone else's subsequent dates.
+    </p>
     <ol>
-      <li>Sign in to <strong>GitHub.com</strong>, open <strong>Settings → Developer settings → Personal access tokens → Tokens (classic)</strong>, and generate a token with only the <code>gist</code> checkbox selected.</li>
-      <li>In Conductor Schedule, tap the <strong>☁️ Local Only</strong> pill at the top (or <strong>⚙️ Sync &amp; Tools ▾ → ☁️ Cloud Sync</strong>).</li>
-      <li>Paste your Personal Access Token, leave <strong>Private Gist ID</strong> blank, ensure <strong>Auto-Sync on Changes &amp; App Open</strong> is checked, and tap <strong>💾 Save &amp; Connect</strong>.</li>
-      <li>Tap <strong>📋 Copy Sync Info</strong> inside the Cloud Sync popup to copy both your Token and new 32-character Private Gist ID together.</li>
+      <li>Tap the <strong>Edit (✏️)</strong> icon on the brother's card in <em>Approved Conductors</em>.</li>
+      <li>Use <strong>Vacation From → Vacation To</strong> and tap <strong><code>+ Add Range</code></strong> to automatically block every 2nd, 4th, or 5th Saturday inside that window.</li>
+      <li>Alternatively, use the <strong>Quick-Toggle Upcoming Meeting Saturdays</strong> checkboxes or add a single date, then tap <strong><code>💾 Save</code></strong>.</li>
     </ol>
+  </div>
 
-    <h3>Connecting Additional Devices (iPhone &amp; iPad)</h3>
-    <ol>
-      <li>Open Conductor Schedule on your iPhone or iPad and tap the <strong>☁️ Local Only</strong> pill at the top.</li>
-      <li>Paste the copied credentials into either input box—the app automatically fills in both the <strong>GitHub Personal Access Token</strong> and the <strong>Private Gist ID</strong>.</li>
-      <li>Tap <strong>💾 Save &amp; Connect</strong> to download your shared cloud schedule onto the new device without overwriting the cloud copy.</li>
-    </ol>
-
-    <div class="callout-warn">
-      <strong>Offline Edits &amp; Auto-Reconnect:</strong> If you edit the schedule without Wi-Fi or cellular signal, your changes save locally and the top pill displays <strong>☁️ Offline Saved</strong>. The moment your device reconnects, the app automatically merges and uploads your changes to GitHub Gist.
-    </div>
-
-    <h3>Cloud Sync Status &amp; Manual Controls</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Control / Indicator</th>
-          <th>What It Does</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><code>☁️ Auto-Sync On</code></td>
-          <td>Connected and online. Automatically pushes changes when you edit the schedule and checks for updates when you open, switch to, or tap the app.</td>
-        </tr>
-        <tr>
-          <td><code>☁️ Offline Saved</code></td>
-          <td>Changes were saved locally while offline and will automatically upload as soon as Wi-Fi or cellular data reconnects.</td>
-        </tr>
-        <tr>
-          <td><strong>📋 Copy Sync Info</strong></td>
-          <td>Copies both your Token and Private Gist ID together for one-paste setup on another device.</td>
-        </tr>
-        <tr>
-          <td><strong>⬇️ Pull</strong></td>
-          <td>Immediately downloads the cloud schedule from GitHub Gist and updates the current device.</td>
-        </tr>
-        <tr>
-          <td><strong>⬆️ Push</strong></td>
-          <td>Immediately uploads the current device's schedule and reminder tags to GitHub Gist.</td>
-        </tr>
-      </tbody>
-    </table>
-  </section>
-
-  <!-- 7. PRINT, EXPORTS & BACKUPS -->
-  <section id="exports">
-    <h2>7. Print / Save PDF, Calendar (.ics) &amp; JSON Backups</h2>
+  <!-- 5. CUSTOM TIME & LOCATION -->
+  <div id="time-location" class="card">
+    <h2>🕒 5. Custom Time &amp; Location <span class="new-pill">v41</span></h2>
+    <p>
+      Update your standard meeting time and location globally or override individual Saturdays (for example, when meeting at a field service group home instead of the Kingdom Hall).
+    </p>
     <ul>
-      <li><strong>Board-Ready Print / Save PDF:</strong> Open <strong>⚙️ Sync &amp; Tools ▾ → 🖨️ Print / Save PDF</strong> and choose <strong>Current Displayed Month</strong>, <strong>Quarterly Board Sheet (3 Months)</strong>, or <strong>Full Selected Year</strong>. This formats a clean, button-free sheet ready for the Kingdom Hall information board or saving as a PDF.</li>
-      <li><strong>Personal Conductor Calendar:</strong> Tap the blue <strong>📅 Download .ics</strong> icon on any conductor card and choose a timeframe (1, 3, or 6 months, rest of year, or full year) to generate a calendar file with built-in 24-hour and 12-hour reminders.</li>
-      <li><strong>Master Calendar Export:</strong> Use <strong>📅 Export .ics ▾</strong> in the toolbar to export the current month or the entire selected year for Apple Calendar, Google Calendar, or Outlook.</li>
-      <li><strong>JSON Backup &amp; Restore:</strong> Use <strong>⚙️ Sync &amp; Tools ▾ → 💾 Backup Data (JSON)</strong> to save a complete offline snapshot file, and <strong>📂 Restore Backup (JSON)</strong> to reload it anytime.</li>
+      <li><strong>How to Open:</strong> Select <strong><code>⚙️ Sync &amp; Tools ▾ → 🕒 Time &amp; Location</code></strong>, tap <strong><code>✏️ Edit Time/Loc</code></strong> on the <em>Up Next</em> banner, or tap the <code>🕒</code> icon on any future calendar cell.</li>
+      <li><strong>Automatic Propagation:</strong> Custom times and locations automatically appear on calendar cells (<code>📍</code> badge), in text/email messages (<code>{defaultTime}</code> and <code>{defaultLocation}</code>), in <code>.ics</code> calendar invites, and on printed sheets.</li>
     </ul>
-  </section>
+  </div>
 
-  <footer>
-    <span>Conductor Schedule PWA — Version v40</span>
-    <a href="./index.html" style="color: var(--accent); font-weight: 600; text-decoration: none;" onclick="if(window.opener){window.close(); return false;}">Return to Schedule →</a>
-  </footer>
-</div>
+  <!-- 6. ONE-TAP UNDO -->
+  <div id="undo" class="card">
+    <h2>↩ 6. One-Tap Undo <span class="new-pill">v41</span></h2>
+    <p>
+      The toolbar tracks your last <strong>15 schedule changes</strong> (dropdown overrides, date trades, cancellations, status updates, and roster edits).
+    </p>
+    <ul>
+      <li>Tap <strong><code>↩ Undo</code></strong> in the main toolbar to immediately revert your most recent change and push the restored schedule to your synced devices.</li>
+    </ul>
+  </div>
+
+  <!-- ROTATION, TRADES & CANCELLATIONS -->
+  <div id="rotation-trades" class="card">
+    <h2>⇄ Rotation, Date Trades &amp; Cancellations</h2>
+    <ul>
+      <li><strong>2nd, 4th &amp; 5th Saturdays:</strong> The schedule automatically populates the 2nd, 4th, and occasional 5th Saturdays of every month in strict roster order starting from the <strong>Start #1</strong> anchor date.</li>
+      <li><strong>Two-Way Date Trade (<code>⇄ Trade Dates</code>):</strong> Swap two brothers' scheduled Saturdays in one step while keeping yearly assignment counts balanced.</li>
+      <li><strong>Named Cancellations:</strong> Tap <strong>Cancel</strong> on a meeting date to pause the rotation for a <em>Circuit Assembly</em>, <em>Regional Convention</em>, <em>CO Visit</em>, or custom event. The next brother in line automatically rolls forward to the next active Saturday.</li>
+    </ul>
+  </div>
+
+  <!-- MESSAGING & 1-BY-1 QUEUE -->
+  <div id="sharing-queue" class="card">
+    <h2>💬 Messaging, Templates &amp; 1-by-1 Queue</h2>
+    <ul>
+      <li><strong>Individual Reminders:</strong> Tap the green speech-bubble icon on a conductor's card or <strong><code>💬 Send Reminder</code></strong> on the <em>Up Next</em> banner to generate a pre-filled text or email with preparation references.</li>
+      <li><strong>Group Text vs. 1-by-1 Queue:</strong> Tap <strong><code>📢 Share All Schedules</code></strong> and switch between <strong>Single Group Text</strong> or <strong>1-by-1 Individual Queue</strong> to step through each brother one by one and launch individual SMS threads.</li>
+      <li><strong>Custom Templates:</strong> Edit the wording in the message box and tap <strong><code>💾 Save as Default</code></strong> to store your preferred phrasing across devices.</li>
+    </ul>
+  </div>
+
+  <!-- CLOUD SYNC -->
+  <div id="cloud-sync" class="card">
+    <h2>☁️ Multi-Device Cloud Sync (GitHub Gist)</h2>
+    <ol>
+      <li>Open <strong><code>⚙️ Sync &amp; Tools ▾ → ☁️ Cloud Sync (GitHub Gist)</code></strong>.</li>
+      <li>Paste a GitHub Personal Access Token (classic) with the <code>gist</code> scope and tap <strong><code>💾 Save &amp; Connect</code></strong> to create your private sync Gist.</li>
+      <li>Tap <strong><code>📋 Copy Sync Info</code></strong> and paste it into either field on your iPhone or iPad to pair them.</li>
+    </ol>
+    <div class="callout">
+      <strong>Conflict-Safe Date Sync:</strong> Reminders, confirmation statuses, overrides, cancellations, and custom slot times merge per date so simultaneous edits on two devices never overwrite each other.
+    </div>
+  </div>
+
+  <!-- PRINT & ICS -->
+  <div id="print-ics" class="card">
+    <h2>🖨️ Board-Ready Print / PDF &amp; .ics Calendars</h2>
+    <ul>
+      <li><strong>Print / Save PDF:</strong> Open <strong><code>⚙️ Sync &amp; Tools ▾ → 🖨️ Print / Save PDF</code></strong> to format a clean Month, 3-Month Quarter, or Full-Year sheet for the Kingdom Hall information board.</li>
+      <li><strong>Calendar Invites (.ics):</strong> Download a personal <code>.ics</code> file from any conductor's card (with built-in 24-hour and 12-hour alerts) or export the entire month/year via <strong><code>📅 Export .ics ▾</code></strong>.</li>
+    </ul>
+  </div>
 
 </body>
 </html>
