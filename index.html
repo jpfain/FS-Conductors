@@ -1561,14 +1561,15 @@
       Formats a clean, button-free schedule sheet suitable for posting on the Kingdom Hall information board or saving as a PDF.
     </p>
 
-    <div class="modal-field">
+   <div class="modal-field">
       <div class="modal-field-header">
-        <label for="printScopeSelect">Schedule Scope</label>
+        <label for="printScopeSelect">Schedule Duration (Starting From Displayed Month)</label>
       </div>
       <select id="printScopeSelect">
-        <option value="month">Current Displayed Month</option>
-        <option value="quarter" selected>Quarterly Board Sheet (3 Months)</option>
-        <option value="year">Full Selected Year</option>
+        <option value="1">1 Month</option>
+        <option value="3" selected>3 Months (Quarterly)</option>
+        <option value="6">6 Months (Semi-Annual)</option>
+        <option value="12">12 Months (Full Year)</option>
       </select>
     </div>
 
@@ -2627,35 +2628,31 @@
     syncModalBodyLock();
   }
 
-  function buildPrintSheetHTML(scope) {
+ function buildPrintSheetHTML(scope) {
     const state = loadAppState();
     const baseYear = currentDate.getFullYear();
     const baseMonth = currentDate.getMonth();
-    const selectedYear = parseInt(document.getElementById("yearSelect").value, 10) || baseYear;
     const defTime = state.defaultTime || DEFAULT_MEETING_TIME;
     const defLoc = state.defaultLocation || DEFAULT_MEETING_LOCATION;
 
-    let monthsToRender = [];
-    let scopeSubtitle = "";
+    const legacyMap = { month: 1, quarter: 3, year: 12 };
+    const monthCount = legacyMap[scope] || parseInt(scope, 10) || 3;
 
-    if (scope === "month") {
-      monthsToRender.push({ year: baseYear, month: baseMonth });
-      scopeSubtitle = `${monthNames[baseMonth]} ${baseYear}`;
-    } else if (scope === "quarter") {
-      for (let offset = 0; offset < 3; offset++) {
-        const d = new Date(baseYear, baseMonth + offset, 1);
-        monthsToRender.push({ year: d.getFullYear(), month: d.getMonth() });
-      }
-      const first = monthsToRender[0];
-      const last = monthsToRender[2];
+    let monthsToRender = [];
+    for (let offset = 0; offset < monthCount; offset++) {
+      const d = new Date(baseYear, baseMonth + offset, 1);
+      monthsToRender.push({ year: d.getFullYear(), month: d.getMonth() });
+    }
+
+    const first = monthsToRender[0];
+    const last = monthsToRender[monthsToRender.length - 1];
+    let scopeSubtitle = "";
+    if (monthCount === 1) {
+      scopeSubtitle = `${monthNames[first.month]} ${first.year}`;
+    } else {
       scopeSubtitle = first.year === last.year
         ? `${monthNames[first.month]} – ${monthNames[last.month]} ${first.year}`
         : `${monthNames[first.month]} ${first.year} – ${monthNames[last.month]} ${last.year}`;
-    } else {
-      for (let m = 0; m < 12; m++) {
-        monthsToRender.push({ year: selectedYear, month: m });
-      }
-      scopeSubtitle = `Full Year ${selectedYear}`;
     }
 
     let blocksHtml = "";
