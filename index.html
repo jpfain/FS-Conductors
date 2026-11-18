@@ -471,7 +471,10 @@
 
     .reminder-sent-pill .pill-cycle-text {
       flex: 1;
+      min-width: 0;
       text-align: left;
+      word-break: break-word;
+      overflow-wrap: break-word;
     }
 
     .reminder-sent-pill button {
@@ -805,12 +808,17 @@
 
     .cell-reminded-badge {
       display: inline-block;
+      max-width: 100%;
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      line-height: 1.2;
       background: #dcfce7;
       color: #065f46;
       border: 1px solid #86efac;
       border-radius: 4px;
-      padding: 1px 5px;
-      font-size: 0.66rem;
+      padding: 2px 5px;
+      font-size: 0.65rem;
       font-weight: 700;
       margin-top: 2px;
       margin-bottom: 2px;
@@ -1209,7 +1217,7 @@
     #printSheetContainer { display: none; }
 
     @media print {
-      @page { margin: 0.45in; }
+      @page { margin: 0.6in; }
       html, body {
         background: #ffffff !important;
         padding: 0 !important;
@@ -1227,32 +1235,40 @@
       }
       .print-doc-header {
         border-bottom: 2px solid #1e3a8a;
-        padding-bottom: 8px;
-        margin-bottom: 14px;
+        padding-bottom: 7px;
+        margin-bottom: 12px;
         display: flex;
         justify-content: space-between;
         align-items: flex-end;
       }
-      .print-doc-title { font-size: 18pt; font-weight: 800; color: #1e3a8a; margin: 0; }
-      .print-doc-subtitle { font-size: 10.5pt; font-weight: 600; color: #334155; margin: 2px 0 0 0; }
-      .print-doc-meta { font-size: 9pt; color: #475569; text-align: right; }
-      .print-month-block { margin-bottom: 16px; page-break-inside: avoid; }
+      .print-doc-title { font-size: 16pt; font-weight: 800; color: #1e3a8a; margin: 0; }
+      .print-doc-subtitle { font-size: 9.5pt; font-weight: 600; color: #334155; margin: 2px 0 0 0; }
+      .print-doc-meta { font-size: 8.5pt; color: #475569; text-align: right; }
+      .print-month-block { margin-bottom: 14px; page-break-inside: avoid; }
       .print-month-heading {
-        font-size: 12.5pt;
+        font-size: 11pt;
         font-weight: 700;
         color: #0f172a;
         background: #f1f5f9;
-        padding: 5px 10px;
+        padding: 4px 8px;
         border: 1px solid #cbd5e1;
         border-bottom: none;
         border-radius: 6px 6px 0 0;
         margin: 0;
       }
-      .print-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
-      .print-table th, .print-table td { border: 1px solid #cbd5e1; padding: 7px 10px; font-size: 10pt; text-align: left; }
+      .print-table { width: 100%; border-collapse: collapse; margin-bottom: 5px; table-layout: fixed; }
+      .print-table th, .print-table td {
+        border: 1px solid #cbd5e1;
+        padding: 5px 7px;
+        font-size: 8.8pt;
+        text-align: left;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        vertical-align: top;
+      }
       .print-table th { background: #f8fafc; font-weight: 700; color: #1e293b; }
       .print-row-cancelled td { background: #fef2f2; color: #991b1b; }
-      .print-footer-note { margin-top: 12px; padding-top: 8px; border-top: 1px solid #cbd5e1; font-size: 8.5pt; color: #475569; line-height: 1.4; }
+      .print-footer-note { margin-top: 10px; padding-top: 7px; border-top: 1px solid #cbd5e1; font-size: 8pt; color: #475569; line-height: 1.38; }
     }
 
     @media (max-width: 640px) {
@@ -1276,7 +1292,7 @@
   <header>
     <div class="title-group">
       <h1>Conductor Schedule</h1>
-      <span id="appVersionBadge" class="version-badge">v41</span>
+      <span id="appVersionBadge" class="version-badge">v43</span>
       <span id="cloudSyncPill" class="sync-pill" onclick="openCloudSyncModal()" title="Configure or check GitHub Gist Cloud Sync">☁️ Local Only</span>
     </div>
     <div class="controls-group">
@@ -1800,7 +1816,7 @@
 </div>
 
 <script>
-  const APP_VERSION = "v41";
+  const APP_VERSION = "v43";
   let currentDate = new Date();
   let currentViewMode = "calendar";
   const monthNames = [
@@ -2244,7 +2260,7 @@
     return null;
   }
 
-  function recordReminderSent(dateKey, conductorName, silent = false) {
+  function recordReminderSent(dateKey, conductorName, silent = false, skipAutoPush = false) {
     if (!dateKey || !conductorName) return;
     const state = loadAppState();
     recordUndoSnapshot("Tag Reminder Sent", state);
@@ -2257,7 +2273,7 @@
       status: (existing && existing.conductor === conductorName && existing.status) ? existing.status : "sent"
     };
     touchDateField(state, "reminders", dateKey);
-    saveAppState(state);
+    saveAppState(state, skipAutoPush);
     refreshShareReminderBanner();
     if (!silent) {
       showStatus(`Tagged ${conductorName}: Reminder sent on ${formatShortDate(sentDate)}`);
@@ -2639,9 +2655,9 @@
     monthsToRender.forEach(({ year, month }) => {
       const sats = getMeetingSaturdays(year, month);
       const slots = [
-        { day: sats.second, label: "2nd Saturday" },
-        { day: sats.fourth, label: "4th Saturday" },
-        { day: sats.fifth, label: "5th Saturday" }
+        { day: sats.second, label: "2nd Sat" },
+        { day: sats.fourth, label: "4th Sat" },
+        { day: sats.fifth, label: "5th Sat" }
       ].filter(s => !!s.day);
 
       let rowsHtml = "";
@@ -2660,7 +2676,9 @@
         if (blackoutReason) {
           rowsHtml += `
             <tr class="print-row-cancelled">
-              <td><strong>${escapeHtml(displayDate)}</strong> (${label})</td>
+              <td><strong>${escapeHtml(displayDate)}</strong></td>
+              <td>${escapeHtml(label)}</td>
+              <td>—</td>
               <td><strong>CANCELLED — ${escapeHtml(blackoutReason)}</strong></td>
               <td>No Meeting</td>
             </tr>
@@ -2670,13 +2688,21 @@
           const autoAssigned = getRotationalConductor(year, month, day, state);
           const conductor = override || autoAssigned;
           const slotTL = getSlotTimeLocation(state, dateKey);
-          const customNote = slotTL.isCustom ? ` • ${slotTL.time} @ ${slotTL.location}` : "";
-          const noteText = (override ? "Substitute / Trade" : "Scheduled") + customNote;
+          const timeLocText = `${slotTL.time} • ${slotTL.location}`;
+          const remInfo = getReminderForSlot(dateKey, conductor, state);
+          let statusText = override ? "Substitute / Trade" : "Scheduled";
+          if (remInfo) {
+            if (remInfo.status === "confirmed") statusText = "Confirmed";
+            else if (remInfo.status === "needs_sub") statusText = "Needs Sub";
+            else statusText = `Sent ${formatShortDate(remInfo.sentDate).replace(/,\s*\d{4}$/, '')}`;
+          }
           rowsHtml += `
             <tr>
-              <td><strong>${escapeHtml(displayDate)}</strong> (${label})</td>
+              <td><strong>${escapeHtml(displayDate)}</strong></td>
+              <td>${escapeHtml(label)}</td>
+              <td>${escapeHtml(timeLocText)}</td>
               <td><strong>${escapeHtml(conductor)}</strong></td>
-              <td>${escapeHtml(noteText)}</td>
+              <td>${escapeHtml(statusText)}</td>
             </tr>
           `;
         }
@@ -2688,9 +2714,11 @@
           <table class="print-table">
             <thead>
               <tr>
-                <th style="width: 36%;">Date</th>
-                <th style="width: 38%;">Assigned Conductor</th>
-                <th style="width: 26%;">Notes</th>
+                <th style="width: 22%;">Date</th>
+                <th style="width: 11%;">Week</th>
+                <th style="width: 26%;">Time &amp; Location</th>
+                <th style="width: 23%;">Assigned Conductor</th>
+                <th style="width: 18%;">Status / Notes</th>
               </tr>
             </thead>
             <tbody>${rowsHtml}</tbody>
@@ -2944,17 +2972,19 @@
     const state = loadAppState();
 
     try {
+      const payloadStr = JSON.stringify({
+        files: { [GIST_FILENAME]: { content: JSON.stringify(state, null, 2) } }
+      });
       const res = await fetch(`https://api.github.com/gists/${cfg.gistId}`, {
         method: "PATCH",
         cache: "no-store",
+        keepalive: payloadStr.length < 60000,
         headers: {
           "Authorization": `Bearer ${cfg.token}`,
           "Accept": "application/vnd.github+json",
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          files: { [GIST_FILENAME]: { content: JSON.stringify(state, null, 2) } }
-        })
+        body: payloadStr
       });
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -3202,13 +3232,15 @@
     return newState;
   }
 
-  function saveAppState(state) {
+  function saveAppState(state, skipAutoPush = false) {
     ensureFieldTimestamps(state);
     snapshotPastDates(state);
     state.lastModified = new Date().toISOString();
     localStorage.setItem("conductor_schedule_state", JSON.stringify(state));
     renderUI();
-    scheduleCloudPush();
+    if (!skipAutoPush) {
+      scheduleCloudPush();
+    }
   }
 
   function updateRotationStartDate(dateValue) {
@@ -4680,6 +4712,20 @@
     showStatus("Template reset to original default.");
   }
 
+  async function flushReminderToCloud(targetInfo) {
+    if (!targetInfo || !targetInfo.conductorName || !targetInfo.dateKey) return;
+    recordReminderSent(targetInfo.dateKey, targetInfo.conductorName, true, true);
+    const cfg = loadGistConfig();
+    if (!cfg.token || !cfg.gistId || !cfg.autoSync) return;
+    if (!navigator.onLine) {
+      cfg.pendingOfflineSync = true;
+      saveGistConfig(cfg);
+      return;
+    }
+    showStatus(`☁️ Syncing ${targetInfo.conductorName} to cloud...`);
+    await pushToGitHubGist(true);
+  }
+
   async function shareModalMessage() {
     const text = document.getElementById("shareMessageTextarea").value;
     const title = activeShareContext.format === "email"
@@ -4694,10 +4740,8 @@
     if (navigator.share) {
       try {
         await navigator.share({ title, text });
-        if (targetInfo.conductorName && targetInfo.dateKey) {
-          recordReminderSent(targetInfo.dateKey, targetInfo.conductorName, true);
-        }
-        showStatus("Schedule shared & reminder tagged!");
+        await flushReminderToCloud(targetInfo);
+        showStatus("Schedule shared & reminder synced!");
         if (isQueueActive() && activeShareContext.queueIndex + 1 < activeShareContext.queueItems.length) {
           stepQueue(1);
         } else {
@@ -4711,16 +4755,14 @@
     }
   }
 
-  function smsModalMessage() {
+  async function smsModalMessage() {
     const text = document.getElementById("shareMessageTextarea").value;
     const rawRecipients = document.getElementById("shareRecipientInput").value;
     const phones = rawRecipients.split(",").map(p => p.replace(/[^\d+]/g, "")).filter(Boolean);
 
     const state = loadAppState();
     const targetInfo = getShareTargetSlotInfo(state);
-    if (targetInfo.conductorName && targetInfo.dateKey) {
-      recordReminderSent(targetInfo.dateKey, targetInfo.conductorName, true);
-    }
+    await flushReminderToCloud(targetInfo);
 
     if (phones.length === 1) {
       window.location.href = `sms:${phones[0]}?&body=${encodeURIComponent(text)}`;
@@ -4734,16 +4776,16 @@
       const currentIdx = activeShareContext.queueIndex;
       const total = activeShareContext.queueItems.length;
       const sentName = activeShareContext.queueItems[currentIdx].name;
-      showStatus(`Opened Messages & tagged ${sentName} (${currentIdx + 1}/${total})`);
+      showStatus(`Opened Messages & synced ${sentName} (${currentIdx + 1}/${total})`);
       if (currentIdx + 1 < total) setTimeout(() => stepQueue(1), 400);
     } else if (targetInfo.conductorName) {
-      showStatus(`Opened Messages & tagged ${targetInfo.conductorName} (${formatShortDate(getTodayLocalKey())})`);
+      showStatus(`Opened Messages & synced ${targetInfo.conductorName} (${formatShortDate(getTodayLocalKey())})`);
     } else {
       showStatus("Opened in Messages app!");
     }
   }
 
-  function emailModalMessage() {
+  async function emailModalMessage() {
     const text = document.getElementById("shareMessageTextarea").value;
     const subject = document.getElementById("shareEmailSubject").value || "FS Conductor Schedule";
     const rawRecipients = document.getElementById("shareRecipientInput").value;
@@ -4751,13 +4793,11 @@
 
     const state = loadAppState();
     const targetInfo = getShareTargetSlotInfo(state);
-    if (targetInfo.conductorName && targetInfo.dateKey) {
-      recordReminderSent(targetInfo.dateKey, targetInfo.conductorName, true);
-    }
+    await flushReminderToCloud(targetInfo);
 
     const toParam = emails.map(e => encodeURIComponent(e)).join(",");
     window.location.href = `mailto:${toParam}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
-    showStatus(targetInfo.conductorName ? `Opened Email & tagged ${targetInfo.conductorName}!` : "Opened in Email app!");
+    showStatus(targetInfo.conductorName ? `Opened Email & synced ${targetInfo.conductorName}!` : "Opened in Email app!");
   }
 
   function copyModalMessage() {
@@ -5154,3 +5194,4 @@
 
 </body>
 </html>
+<!-- v43-release -->

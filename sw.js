@@ -1,4 +1,4 @@
-const CACHE_NAME = 'conductor-schedule-v41';
+const CACHE_NAME = 'conductor-schedule-v43';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -50,7 +50,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Network-first for HTML navigation & pages so v41 updates appear immediately
+  // Network-first for HTML navigation & pages so v43 updates appear immediately
   const isHtmlRequest =
     req.mode === 'navigate' ||
     (req.headers.get('accept') || '').includes('text/html') ||
@@ -88,3 +88,4 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+// v43-release
