@@ -1217,7 +1217,6 @@
     #printSheetContainer { display: none; }
 
     @media print {
-      @media print {
       @page {
         size: letter portrait;
         margin: 0.65in 0.85in;
@@ -1561,7 +1560,7 @@
       Formats a clean, button-free schedule sheet suitable for posting on the Kingdom Hall information board or saving as a PDF.
     </p>
 
-   <div class="modal-field">
+    <div class="modal-field">
       <div class="modal-field-header">
         <label for="printScopeSelect">Schedule Duration (Starting From Displayed Month)</label>
       </div>
@@ -2628,7 +2627,7 @@
     syncModalBodyLock();
   }
 
- function buildPrintSheetHTML(scope) {
+  function buildPrintSheetHTML(scope) {
     const state = loadAppState();
     const baseYear = currentDate.getFullYear();
     const baseMonth = currentDate.getMonth();
@@ -2659,9 +2658,9 @@
     monthsToRender.forEach(({ year, month }) => {
       const sats = getMeetingSaturdays(year, month);
       const slots = [
-        { day: sats.second, label: "2nd Sat" },
-        { day: sats.fourth, label: "4th Sat" },
-        { day: sats.fifth, label: "5th Sat" }
+        { day: sats.second, label: "2nd Saturday" },
+        { day: sats.fourth, label: "4th Saturday" },
+        { day: sats.fifth, label: "5th Saturday" }
       ].filter(s => !!s.day);
 
       let rowsHtml = "";
@@ -2680,10 +2679,9 @@
         if (blackoutReason) {
           rowsHtml += `
             <tr class="print-row-cancelled">
-              <td><strong>${escapeHtml(displayDate)}</strong></td>
-              <td>${escapeHtml(label)}</td>
-              <td>—</td>
+              <td><strong>${escapeHtml(displayDate)}</strong> (${escapeHtml(label)})</td>
               <td><strong>CANCELLED — ${escapeHtml(blackoutReason)}</strong></td>
+              <td>—</td>
               <td>No Meeting</td>
             </tr>
           `;
@@ -2694,18 +2692,14 @@
           const slotTL = getSlotTimeLocation(state, dateKey);
           const timeLocText = `${slotTL.time} • ${slotTL.location}`;
           const remInfo = getReminderForSlot(dateKey, conductor, state);
-          let statusText = override ? "Substitute / Trade" : "Scheduled";
-          if (remInfo) {
-            if (remInfo.status === "confirmed") statusText = "Confirmed";
-            else if (remInfo.status === "needs_sub") statusText = "Needs Sub";
-            else statusText = `Sent ${formatShortDate(remInfo.sentDate).replace(/,\s*\d{4}$/, '')}`;
-          }
+          const statusText = (remInfo && remInfo.sentDate)
+            ? `Reminder sent on ${formatShortDate(remInfo.sentDate)}`
+            : "Scheduled";
           rowsHtml += `
             <tr>
-              <td><strong>${escapeHtml(displayDate)}</strong></td>
-              <td>${escapeHtml(label)}</td>
-              <td>${escapeHtml(timeLocText)}</td>
+              <td><strong>${escapeHtml(displayDate)}</strong> (${escapeHtml(label)})</td>
               <td><strong>${escapeHtml(conductor)}</strong></td>
+              <td>${escapeHtml(timeLocText)}</td>
               <td>${escapeHtml(statusText)}</td>
             </tr>
           `;
@@ -2718,11 +2712,10 @@
           <table class="print-table">
             <thead>
               <tr>
-                <th style="width: 22%;">Date</th>
-                <th style="width: 11%;">Week</th>
-                <th style="width: 26%;">Time &amp; Location</th>
-                <th style="width: 23%;">Assigned Conductor</th>
-                <th style="width: 18%;">Status / Notes</th>
+                <th style="width: 29%;">Date</th>
+                <th style="width: 22%;">Assigned Conductor</th>
+                <th style="width: 27%;">Time &amp; Location</th>
+                <th style="width: 22%;">Status/Reminder</th>
               </tr>
             </thead>
             <tbody>${rowsHtml}</tbody>
