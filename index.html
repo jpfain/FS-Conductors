@@ -1217,7 +1217,11 @@
     #printSheetContainer { display: none; }
 
     @media print {
-      @page { margin: 0.6in; }
+      @media print {
+      @page {
+        size: letter portrait;
+        margin: 0.65in 0.85in;
+      }
       html, body {
         background: #ffffff !important;
         padding: 0 !important;
@@ -1231,6 +1235,9 @@
       #printSheetContainer {
         display: block !important;
         width: 100%;
+        max-width: 100%;
+        padding: 0 0.15in;
+        box-sizing: border-box;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       }
       .print-doc-header {
