@@ -1370,7 +1370,7 @@
   <header>
     <div class="title-group">
       <h1>Conductor Schedule</h1>
-      <span id="appVersionBadge" class="version-badge">v47</span>
+      <span id="appVersionBadge" class="version-badge">v46</span>
       <span id="cloudSyncPill" class="sync-pill" onclick="openCloudSyncModal()" title="Configure or check GitHub Gist Cloud Sync">☁️ Local Only</span>
     </div>
     <div class="controls-group">
@@ -1634,17 +1634,6 @@
 
     <div class="modal-field">
       <div class="modal-field-header">
-        <label for="printStatusOptionSelect">Assignment Status (4th Column)</label>
-      </div>
-      <select id="printStatusOptionSelect" onchange="prepareSafariPrintLink()">
-        <option value="assignment_sent" selected>Assignment sent on [date]</option>
-        <option value="reminder_sent">Reminder sent on [date]</option>
-        <option value="scheduled">Scheduled</option>
-      </select>
-    </div>
-
-    <div class="modal-field">
-      <div class="modal-field-header">
         <label for="printScopeSelect">Schedule Duration (Starting From Displayed Month)</label>
       </div>
       <select id="printScopeSelect" onchange="prepareSafariPrintLink()">
@@ -1657,7 +1646,7 @@
 
     <div class="modal-actions" style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #f1f5f9;">
       <button type="button" class="outline" style="min-height: 36px;" onclick="closePrintModal()">Cancel</button>
-      <a id="safariPrintAnchor" href="./index.html?print=3&status=assignment_sent" target="_blank" rel="noopener" onclick="prepareSafariPrintLink()" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 36px; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--border); background: #ffffff; color: var(--text); font-size: 0.84rem; font-weight: 600;">🌐 Safari Print</a>
+      <a id="safariPrintAnchor" href="./index.html?print=3" target="_blank" rel="noopener" onclick="prepareSafariPrintLink()" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 36px; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--border); background: #ffffff; color: var(--text); font-size: 0.84rem; font-weight: 600;">🌐 Safari Print</a>
       <button type="button" class="success" style="min-height: 36px;" onclick="shareOrDownloadBoardPDF()">📄 Share / Save PDF</button>
       <button type="button" class="primary" style="min-height: 36px;" onclick="executeBoardPrint()">🖨️ Print</button>
     </div>
@@ -1908,7 +1897,7 @@
 </div>
 
 <script>
-  const APP_VERSION = "v47";
+  const APP_VERSION = "v46";
   let currentDate = new Date();
   let currentViewMode = "calendar";
   const monthNames = [
@@ -2713,30 +2702,21 @@
     syncModalBodyLock();
   }
 
-  function getSelectedPrintOptions() {
-    const scopeEl = document.getElementById("printScopeSelect");
-    const statusEl = document.getElementById("printStatusOptionSelect");
-    return {
-      scope: (scopeEl && scopeEl.value) || "3",
-      statusOption: (statusEl && statusEl.value) || "assignment_sent"
-    };
-  }
-
   function prepareSafariPrintLink() {
-    const { scope, statusOption } = getSelectedPrintOptions();
+    const scopeEl = document.getElementById("printScopeSelect");
+    const scope = (scopeEl && scopeEl.value) || "3";
     const y = currentDate.getFullYear();
     const m = currentDate.getMonth();
     const anchor = document.getElementById("safariPrintAnchor");
     if (anchor) {
-      anchor.href = `./index.html?print=${encodeURIComponent(scope)}&status=${encodeURIComponent(statusOption)}&y=${y}&m=${m}`;
+      anchor.href = `./index.html?print=${encodeURIComponent(scope)}&y=${y}&m=${m}`;
     }
   }
 
-  function getPrintMonthsData(scope, baseYear, baseMonth, statusOption = "assignment_sent") {
+  function getPrintMonthsData(scope, baseYear, baseMonth) {
     const state = loadAppState();
     const defTime = state.defaultTime || DEFAULT_MEETING_TIME;
     const defLoc = state.defaultLocation || DEFAULT_MEETING_LOCATION;
-    const printedOn = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
     const legacyMap = { month: 1, quarter: 3, year: 12 };
     const monthCount = legacyMap[scope] || parseInt(scope, 10) || 3;
@@ -2790,16 +2770,9 @@
         const conductor = override || autoAssigned;
         const slotTL = getSlotTimeLocation(state, dateKey);
         const remInfo = getReminderForSlot(dateKey, conductor, state);
-
-        let statusText = "Scheduled";
-        if (statusOption === "assignment_sent") {
-          const sentLabel = (remInfo && remInfo.sentDate) ? formatShortDate(remInfo.sentDate) : printedOn;
-          statusText = `Assignment sent on ${sentLabel}`;
-        } else if (statusOption === "reminder_sent") {
-          statusText = (remInfo && remInfo.sentDate)
-            ? `Reminder sent on ${formatShortDate(remInfo.sentDate)}`
-            : "Scheduled";
-        }
+        const statusText = (remInfo && remInfo.sentDate)
+          ? `Reminder sent on ${formatShortDate(remInfo.sentDate)}`
+          : "Scheduled";
 
         return {
           cancelled: false,
@@ -2816,11 +2789,12 @@
       };
     });
 
+    const printedOn = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     return { scopeSubtitle, defTime, defLoc, blocks, printedOn };
   }
 
-  function buildPrintSheetHTML(scope, baseYear = currentDate.getFullYear(), baseMonth = currentDate.getMonth(), statusOption = "assignment_sent") {
-    const data = getPrintMonthsData(scope, baseYear, baseMonth, statusOption);
+  function buildPrintSheetHTML(scope, baseYear = currentDate.getFullYear(), baseMonth = currentDate.getMonth()) {
+    const data = getPrintMonthsData(scope, baseYear, baseMonth);
     let blocksHtml = "";
 
     data.blocks.forEach(block => {
@@ -2856,7 +2830,7 @@
                 <th style="width: 29%;">Date</th>
                 <th style="width: 22%;">Assigned Conductor</th>
                 <th style="width: 27%;">Time &amp; Location</th>
-                <th style="width: 22%;">Assignment Status</th>
+                <th style="width: 22%;">Status/Reminder</th>
               </tr>
             </thead>
             <tbody>${rowsHtml}</tbody>
@@ -2882,13 +2856,9 @@
   }
 
   function executeBoardPrint() {
-    const { scope, statusOption } = getSelectedPrintOptions();
-    document.getElementById("printSheetContainer").innerHTML = buildPrintSheetHTML(
-      scope,
-      currentDate.getFullYear(),
-      currentDate.getMonth(),
-      statusOption
-    );
+    const scopeEl = document.getElementById("printScopeSelect");
+    const scope = (scopeEl && scopeEl.value) || "3";
+    document.getElementById("printSheetContainer").innerHTML = buildPrintSheetHTML(scope);
     closePrintModal();
     window.print();
   }
@@ -2923,8 +2893,8 @@
     return lines;
   }
 
-  function generateBoardPDFBlob(scope, statusOption = "assignment_sent") {
-    const data = getPrintMonthsData(scope, currentDate.getFullYear(), currentDate.getMonth(), statusOption);
+  function generateBoardPDFBlob(scope) {
+    const data = getPrintMonthsData(scope, currentDate.getFullYear(), currentDate.getMonth());
     const pageW = 612;
     const pageH = 792;
     const marginL = 54;
@@ -2957,14 +2927,21 @@
       pushPageHeader(continued);
     };
 
-    const pushMonthTableHeader = (headingText) => {
+    startNewPage(false);
+
+    data.blocks.forEach(block => {
+      const estBlockH = 38 + block.rows.length * 24;
+      if (y - estBlockH < 64) {
+        startNewPage(true);
+      }
+
       ops.push("0.945 0.961 0.976 rg 0.796 0.835 0.882 RG 0.7 w");
       ops.push(marginL + " " + (y - 18) + " " + contentW + " 18 re B");
       ops.push("0.059 0.090 0.165 rg");
-      ops.push("BT /F2 10 Tf " + (marginL + 6) + " " + (y - 13) + " Td (" + toPdfAscii(headingText) + ") Tj ET");
+      ops.push("BT /F2 10 Tf " + (marginL + 6) + " " + (y - 13) + " Td (" + toPdfAscii(block.heading) + ") Tj ET");
       y -= 18;
 
-      const headers = ["Date", "Assigned Conductor", "Time & Location", "Assignment Status"];
+      const headers = ["Date", "Assigned Conductor", "Time & Location", "Status/Reminder"];
       ops.push("0.973 0.980 0.988 rg 0.796 0.835 0.882 RG 0.7 w");
       ops.push(marginL + " " + (y - 17) + " " + contentW + " 17 re B");
       let cx = marginL;
@@ -2977,17 +2954,6 @@
         cx += colWidths[idx];
       });
       y -= 17;
-    };
-
-    startNewPage(false);
-
-    data.blocks.forEach(block => {
-      const estBlockH = 38 + block.rows.length * 24;
-      if (y - estBlockH < 64) {
-        startNewPage(true);
-      }
-
-      pushMonthTableHeader(block.heading);
 
       block.rows.forEach(r => {
         const cells = [r.dateText, r.conductorText, r.timeLocText, r.statusText];
@@ -2997,7 +2963,6 @@
 
         if (y - rowH < 56) {
           startNewPage(true);
-          pushMonthTableHeader(block.heading + " (Cont.)");
         }
 
         if (r.cancelled) {
@@ -3084,8 +3049,9 @@
   }
 
   async function shareOrDownloadBoardPDF() {
-    const { scope, statusOption } = getSelectedPrintOptions();
-    const pdfBlob = generateBoardPDFBlob(scope, statusOption);
+    const scopeEl = document.getElementById("printScopeSelect");
+    const scope = (scopeEl && scopeEl.value) || "3";
+    const pdfBlob = generateBoardPDFBlob(scope);
     const fileName = `FS_Conductor_Schedule_${scope}Mo.pdf`;
     closePrintModal();
 
@@ -3093,6 +3059,7 @@
       const pdfFile = new File([pdfBlob], fileName, { type: "application/pdf" });
       if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
         await navigator.share({
+          title: "Field Service Conductor Schedule",
           files: [pdfFile]
         });
         showStatus("📄 Shared PDF — tap Print or Save to Files in the iOS sheet!");
@@ -3113,7 +3080,7 @@
     showStatus("📄 Downloaded " + fileName + "!");
   }
 
-  function enterStandalonePrintMode(scopeParam, yearParam, monthParam, statusParam) {
+  function enterStandalonePrintMode(scopeParam, yearParam, monthParam) {
     const baseYear = !isNaN(yearParam) ? yearParam : currentDate.getFullYear();
     const baseMonth = !isNaN(monthParam) ? monthParam : currentDate.getMonth();
     const container = document.getElementById("printSheetContainer");
@@ -3126,15 +3093,16 @@
           <button type="button" class="primary" style="min-height: 34px; padding: 6px 12px;" onclick="window.print()">🖨️ Print</button>
         </div>
       </div>
-      ${buildPrintSheetHTML(scopeParam || "3", baseYear, baseMonth, statusParam || "assignment_sent")}
+      ${buildPrintSheetHTML(scopeParam || "3", baseYear, baseMonth)}
     `;
   }
 
   window.addEventListener("beforeprint", () => {
     const container = document.getElementById("printSheetContainer");
-    const { scope, statusOption } = getSelectedPrintOptions();
+    const scopeEl = document.getElementById("printScopeSelect");
+    const selectedScope = (scopeEl && scopeEl.value) || "3";
     if (container && !container.innerHTML.trim()) {
-      container.innerHTML = buildPrintSheetHTML(scope, currentDate.getFullYear(), currentDate.getMonth(), statusOption);
+      container.innerHTML = buildPrintSheetHTML(selectedScope);
     }
   });
 
@@ -5574,8 +5542,7 @@
       enterStandalonePrintMode(
         printScope,
         parseInt(params.get("y"), 10),
-        parseInt(params.get("m"), 10),
-        params.get("status")
+        parseInt(params.get("m"), 10)
       );
       return;
     }
@@ -5586,4 +5553,4 @@
 
 </body>
 </html>
-<!-- v47-release -->
+<!-- v46-release -->
