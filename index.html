@@ -2825,12 +2825,12 @@
         <div class="print-month-block">
           <h3 class="print-month-heading">${escapeHtml(block.heading)}</h3>
           <table class="print-table">
-            <thead>
+         <thead>
               <tr>
                 <th style="width: 29%;">Date</th>
-                <th style="width: 22%;">Assigned Conductor</th>
+                <th style="width: 22%;">Conductor</th>
                 <th style="width: 27%;">Time &amp; Location</th>
-                <th style="width: 22%;">Status/Reminder</th>
+                <th style="width: 22%;">Assignment Status</th>
               </tr>
             </thead>
             <tbody>${rowsHtml}</tbody>
@@ -2941,7 +2941,7 @@
       ops.push("BT /F2 10 Tf " + (marginL + 6) + " " + (y - 13) + " Td (" + toPdfAscii(block.heading) + ") Tj ET");
       y -= 18;
 
-      const headers = ["Date", "Assigned Conductor", "Time & Location", "Status/Reminder"];
+     const headers = ["Date", "Conductor", "Time & Location", "Assignment Status"];
       ops.push("0.973 0.980 0.988 rg 0.796 0.835 0.882 RG 0.7 w");
       ops.push(marginL + " " + (y - 17) + " " + contentW + " 17 re B");
       let cx = marginL;
