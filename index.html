@@ -512,8 +512,8 @@
 
     .tag-actions {
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 5px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
       padding-top: 7px;
       border-top: 1px solid #f1f5f9;
       width: 100%;
@@ -1427,15 +1427,42 @@
     <div class="roster-tags" id="rosterContainer"></div>
   </div>
 
+  <!-- UP NEXT QUICK-ACTION BANNER -->
+  <div id="upNextBanner" class="up-next-card" style="display: none;">
+    <div class="up-next-info">
+      <div class="up-next-eyebrow">
+        <span>Up Next</span>
+        <span id="upNextTodayBadge" class="up-next-today-pill" style="display: none;">TODAY</span>
+        <span id="upNextDateLabel"></span>
+      </div>
+      <div class="up-next-main">
+        <span id="upNextConductorName"></span>
+        <span id="upNextBadges" style="font-size: 0.8rem;"></span>
+      </div>
+      <div id="upNextReminderTagWrap"></div>
+      <div id="upNextSubtext" class="up-next-sub">9:30 - 9:37 AM • Kingdom Hall</div>
+    </div>
+
+    <div class="up-next-actions">
+      <div id="quickReplaceBox" class="quick-replace-box">
+        <select id="quickReplaceSelect" onchange="applyQuickReplace(this.value)" aria-label="Quick Replace Conductor"></select>
+        <button type="button" class="btn-link" onclick="toggleQuickReplace(false)">Done</button>
+      </div>
+      <button type="button" id="btnOpenQuickReplace" class="outline" style="min-height: 34px; padding: 4px 10px; font-size: 0.82rem;" onclick="toggleQuickReplace()">🔄 Quick Replace</button>
+      <button type="button" class="success" style="min-height: 34px; padding: 4px 12px; font-size: 0.82rem;" onclick="remindUpNextConductor()">💬 Send Reminder</button>
+    </div>
+  </div>
+
   <!-- ORGANIZED ACTION TOOLBAR -->
   <div class="toolbar">
     <div class="toolbar-left">
       <button type="button" class="accent" onclick="openShareModal('all', null, 'text')">📢 Share All Schedules</button>
       <button type="button" class="outline" onclick="openTradeModal()">⇄ Trade Dates</button>
-      <button type="button" id="btnUndo" class="outline" onclick="undoLastChange()" disabled title="Undo last schedule change">↩ Undo</button>
     </div>
 
     <div class="toolbar-right">
+      <button type="button" id="btnUndo" class="outline" onclick="undoLastChange()" disabled title="Undo last schedule change">↩ Undo</button>
+
       <!-- EXPORT CALENDAR DROPDOWN -->
       <div class="dropdown">
         <button type="button" class="outline" onclick="toggleDropdown('exportMenu', event)">📅 Export .ics ▾</button>
@@ -1470,32 +1497,6 @@
         </div>
       </div>
       <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="importJSONBackup(event)">
-    </div>
-  </div>
-
-  <!-- UP NEXT QUICK-ACTION BANNER -->
-  <div id="upNextBanner" class="up-next-card" style="display: none;">
-    <div class="up-next-info">
-      <div class="up-next-eyebrow">
-        <span>Up Next</span>
-        <span id="upNextTodayBadge" class="up-next-today-pill" style="display: none;">TODAY</span>
-        <span id="upNextDateLabel"></span>
-      </div>
-      <div class="up-next-main">
-        <span id="upNextConductorName"></span>
-        <span id="upNextBadges" style="font-size: 0.8rem;"></span>
-      </div>
-      <div id="upNextReminderTagWrap"></div>
-      <div id="upNextSubtext" class="up-next-sub">9:30 - 9:37 AM • Kingdom Hall</div>
-    </div>
-
-    <div class="up-next-actions">
-      <div id="quickReplaceBox" class="quick-replace-box">
-        <select id="quickReplaceSelect" onchange="applyQuickReplace(this.value)" aria-label="Quick Replace Conductor"></select>
-        <button type="button" class="btn-link" onclick="toggleQuickReplace(false)">Done</button>
-      </div>
-      <button type="button" id="btnOpenQuickReplace" class="outline" style="min-height: 34px; padding: 4px 10px; font-size: 0.82rem;" onclick="toggleQuickReplace()">🔄 Quick Replace</button>
-      <button type="button" class="success" style="min-height: 34px; padding: 4px 12px; font-size: 0.82rem;" onclick="remindUpNextConductor()">💬 Send Reminder</button>
     </div>
   </div>
 
@@ -1698,6 +1699,10 @@
     <div class="modal-field">
       <div class="modal-field-header">
         <label for="editConductorName">Full Name</label>
+        <div class="controls-group" style="gap: 4px;">
+          <button type="button" id="btnModalMoveEarlier" class="outline" style="min-height: 28px; padding: 2px 8px; font-size: 0.74rem;" onclick="reorderFromContactModal(-1)">&larr; Earlier</button>
+          <button type="button" id="btnModalMoveLater" class="outline" style="min-height: 28px; padding: 2px 8px; font-size: 0.74rem;" onclick="reorderFromContactModal(1)">Later &rarr;</button>
+        </div>
       </div>
       <input type="text" id="editConductorName" placeholder="Conductor name" onkeydown="if(event.key==='Enter') saveConductorContact()">
     </div>
@@ -4007,6 +4012,22 @@
     state.roster[newIndex] = temp;
     touchCoreState(state);
     saveAppState(state);
+    return newIndex;
+  }
+
+  function reorderFromContactModal(direction) {
+    if (editingRosterIndex === null) return;
+    const state = loadAppState();
+    const nextIdx = editingRosterIndex + direction;
+    if (nextIdx < 0 || nextIdx >= state.roster.length) return;
+    moveConductor(editingRosterIndex, direction);
+    editingRosterIndex = nextIdx;
+    const updatedState = loadAppState();
+    const earlierBtn = document.getElementById("btnModalMoveEarlier");
+    const laterBtn = document.getElementById("btnModalMoveLater");
+    if (earlierBtn) earlierBtn.disabled = editingRosterIndex === 0;
+    if (laterBtn) laterBtn.disabled = editingRosterIndex === updatedState.roster.length - 1;
+    showStatus(`Updated rotation order (#${editingRosterIndex + 1})`);
   }
 
   function openContactModal(index) {
@@ -4019,6 +4040,10 @@
     tempUnavailableDates = [...((state.unavailability && state.unavailability[name]) || [])].sort();
 
     document.getElementById("editConductorName").value = name;
+    const earlierBtn = document.getElementById("btnModalMoveEarlier");
+    const laterBtn = document.getElementById("btnModalMoveLater");
+    if (earlierBtn) earlierBtn.disabled = index === 0;
+    if (laterBtn) laterBtn.disabled = index === state.roster.length - 1;
     document.getElementById("editConductorPhone").value = contact.phone || "";
     document.getElementById("editConductorEmail").value = contact.email || "";
     document.getElementById("unavailRangeStart").value = "";
@@ -4283,11 +4308,9 @@
         </div>
         ${reminderNoteHtml}
         <div class="tag-actions">
-          <button type="button" class="tag-icon-btn" onclick="moveConductor(${index}, -1)" title="Move earlier in rotation" aria-label="Move ${escapeHtml(name)} earlier" ${isFirst ? 'disabled' : ''}>${ROSTER_ICONS.prev}</button>
-          <button type="button" class="tag-icon-btn" onclick="moveConductor(${index}, 1)" title="Move later in rotation" aria-label="Move ${escapeHtml(name)} later" ${isLast ? 'disabled' : ''}>${ROSTER_ICONS.next}</button>
           <button type="button" class="tag-icon-btn share-btn" data-name="${encodeURIComponent(name)}" title="Send Text or Email schedule" aria-label="Send schedule to ${escapeHtml(name)}">${ROSTER_ICONS.message}</button>
           <button type="button" class="tag-icon-btn ics-btn" data-name="${encodeURIComponent(name)}" title="Download personal .ics calendar file" aria-label="Download .ics calendar for ${escapeHtml(name)}">${ROSTER_ICONS.calendarDownload}</button>
-          <button type="button" class="tag-icon-btn" onclick="openContactModal(${index})" title="Edit contact, unavailable dates, or remove" aria-label="Edit ${escapeHtml(name)}">${ROSTER_ICONS.edit}</button>
+          <button type="button" class="tag-icon-btn" onclick="openContactModal(${index})" title="Edit contact, rotation order, unavailable dates, or remove" aria-label="Edit ${escapeHtml(name)}">${ROSTER_ICONS.edit}</button>
         </div>
       `;
 
