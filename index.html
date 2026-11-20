@@ -3168,18 +3168,30 @@
     }
 
     if (cfg.token && cfg.gistId) {
+      const syncedTitle = cfg.lastSyncedAt
+        ? `Last synced: ${new Date(cfg.lastSyncedAt).toLocaleString()}`
+        : "Connected to GitHub Gist";
       if (cfg.pendingOfflineSync) {
         pill.classList.add("offline");
         pill.innerText = "☁️ Offline Saved";
+        pill.title = `Offline edits waiting to merge & sync (${syncedTitle})`;
       } else if (!navigator.onLine) {
         pill.classList.add("offline");
         pill.innerText = "☁️ Offline";
+        pill.title = `Currently offline (${syncedTitle})`;
       } else {
         pill.classList.add("connected");
-        pill.innerText = cfg.autoSync ? "☁️ Auto-Sync On" : "☁️ Cloud Ready";
+        if (cfg.lastSyncedAt) {
+          const tStr = new Date(cfg.lastSyncedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+          pill.innerText = cfg.autoSync ? `☁️ Synced ${tStr}` : "☁️ Cloud Ready";
+        } else {
+          pill.innerText = cfg.autoSync ? "☁️ Auto-Sync On" : "☁️ Cloud Ready";
+        }
+        pill.title = syncedTitle;
       }
     } else {
       pill.innerText = "☁️ Local Only";
+      pill.title = "Configure or check GitHub Gist Cloud Sync";
     }
   }
 
@@ -3320,7 +3332,7 @@
     pushToGitHubGist(true);
   }
 
-  async function pushToGitHubGist(silent = false) {
+  async function pushToGitHubGist(silent = false, skipPreMerge = false) {
     const cfg = loadGistConfig();
     if (!cfg.token || !cfg.gistId) return;
 
@@ -3330,7 +3342,7 @@
       saveGistConfig(cfg);
       if (detail) {
         detail.style.color = "#92400e";
-        detail.innerText = "📴 Offline Saved — will upload automatically when connection returns.";
+        detail.innerText = "📴 Offline Saved — will merge & upload automatically when connection returns.";
       }
       if (!silent) showStatus("📴 Offline Saved — will upload when reconnected.");
       return;
@@ -3338,9 +3350,39 @@
 
     isSyncingNow = true;
     updateCloudSyncPill("☁️ Saving...", "connected");
-    const state = loadAppState();
+    let state = loadAppState();
 
     try {
+      // Safe Merge-Before-Push: if offline edits were queued or pre-merge is enabled, fetch remote Gist first so other devices' edits aren't overwritten
+      if (cfg.pendingOfflineSync && !skipPreMerge) {
+        updateCloudSyncPill("☁️ Merging...", "connected");
+        const preRes = await fetch(`https://api.github.com/gists/${cfg.gistId}?t=${Date.now()}`, {
+          cache: "no-store",
+          headers: {
+            "Authorization": `Bearer ${cfg.token}`,
+            "Accept": "application/vnd.github+json"
+          }
+        });
+        if (preRes.ok) {
+          const preData = await preRes.json();
+          const preFile = preData.files && preData.files[GIST_FILENAME];
+          if (preFile && preFile.content) {
+            const remoteState = JSON.parse(preFile.content);
+            if (remoteState && Array.isArray(remoteState.roster)) {
+              const merged = mergeScheduleStates(state, remoteState);
+              snapshotPastDates(merged);
+              if (statesDiffer(state, merged)) {
+                merged.lastModified = new Date().toISOString();
+                localStorage.setItem("conductor_schedule_state", JSON.stringify(merged));
+                renderUI();
+              }
+              state = merged;
+            }
+          }
+        }
+        updateCloudSyncPill("☁️ Saving...", "connected");
+      }
+
       const payloadStr = JSON.stringify({
         files: { [GIST_FILENAME]: { content: JSON.stringify(state, null, 2) } }
       });
@@ -3446,7 +3488,7 @@
 
         if (remoteNeedsUpdate && cfg.autoSync) {
           isSyncingNow = false;
-          await pushToGitHubGist(true);
+          await pushToGitHubGist(true, true);
           return;
         }
 
@@ -3717,6 +3759,9 @@
       const yearSlots = mySlots.filter(s => s.year === selectedYear);
       const completedYTD = yearSlots.filter(s => s.slotDate < today).length;
       const upcomingYTD = yearSlots.filter(s => s.slotDate >= today).length;
+      const skippedYTD = allSlots.filter(
+        s => s.year === selectedYear && Array.isArray(s.skippedUnavailable) && s.skippedUnavailable.includes(name)
+      ).length;
 
       return {
         name,
@@ -3724,6 +3769,7 @@
         daysSince,
         completedYTD,
         upcomingYTD,
+        skippedYTD,
         yearTotal: completedYTD + upcomingYTD
       };
     });
@@ -3753,12 +3799,16 @@
         ? `${formatShortDate(s.lastSlot.dateKey)} (${s.daysSince}d ago)`
         : "No past turns yet";
       const badge = s.longestWait ? `<span class="due-longest-badge">Longest Wait</span>` : "";
+      const skippedCell = s.skippedYTD > 0
+        ? `<span style="background:#fef2f2; color:#991b1b; border:1px solid #fecaca; border-radius:999px; padding:1px 7px; font-size:0.73rem; font-weight:700;" title="Skipped due to saved unavailable dates in ${selectedYear}">${s.skippedYTD}</span>`
+        : `<span style="color:#94a3b8;">0</span>`;
       return `
         <tr>
           <td><strong>${escapeHtml(s.name)}</strong>${badge}</td>
           <td>${escapeHtml(lastLabel)}</td>
           <td>${s.completedYTD}</td>
           <td>${s.upcomingYTD}</td>
+          <td>${skippedCell}</td>
           <td><strong>${s.yearTotal}&times;</strong></td>
         </tr>
       `;
@@ -3773,6 +3823,7 @@
             <th>Last Served</th>
             <th>Completed (${selectedYear})</th>
             <th>Upcoming (${selectedYear})</th>
+            <th>Auto-Skipped</th>
             <th>Year Total</th>
           </tr>
         </thead>
