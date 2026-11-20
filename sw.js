@@ -50,7 +50,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Network-first for HTML navigation & pages so v46 updates appear immediately
+  // Network-first for HTML navigation & pages so v47 updates appear immediately
   const isHtmlRequest =
     req.mode === 'navigate' ||
     (req.headers.get('accept') || '').includes('text/html') ||
@@ -88,4 +88,4 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
-// v46-release
+// v47-release

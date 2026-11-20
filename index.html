@@ -1432,7 +1432,6 @@
     <div class="toolbar-left">
       <button type="button" class="accent" onclick="openShareModal('all', null, 'text')">📢 Share All Schedules</button>
       <button type="button" class="outline" onclick="openTradeModal()">⇄ Trade Dates</button>
-      <button type="button" class="outline" onclick="copyTextSummary()">📋 Copy Month</button>
       <button type="button" id="btnUndo" class="outline" onclick="undoLastChange()" disabled title="Undo last schedule change">↩ Undo</button>
     </div>
 
@@ -3706,7 +3705,8 @@
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const msPerDay = 24 * 60 * 60 * 1000;
-    const allSlots = getAllScheduleSlots(state);
+    const statsStartKey = state.rotationStartDate || DEFAULT_ANCHOR_DATE;
+    const allSlots = getAllScheduleSlots(state).filter(s => s.dateKey >= statsStartKey);
 
     const statsList = state.roster.map(name => {
       const mySlots = allSlots.filter(s => s.conductor === name);
@@ -3740,6 +3740,7 @@
     const panel = document.getElementById("statsPanel");
     if (!panel) return;
     const selectedYear = parseInt(document.getElementById("yearSelect").value, 10);
+    const statsStartKey = state.rotationStartDate || DEFAULT_ANCHOR_DATE;
     const stats = computeConductorStats(state, selectedYear);
 
     if (stats.length === 0) {
@@ -3764,6 +3765,7 @@
     }).join("");
 
     panel.innerHTML = `
+      <div style="font-size:0.75rem; color:#64748b; margin-bottom:6px;">Stats calculated from rotation start date: <strong>${escapeHtml(formatShortDate(statsStartKey))}</strong> (${escapeHtml(statsStartKey)})</div>
       <table class="stats-table">
         <thead>
           <tr>
@@ -4333,6 +4335,7 @@
     replaceSelect.appendChild(autoOpt);
 
     const selectedYear = nextSlot.year;
+    const statsStartKey = state.rotationStartDate || DEFAULT_ANCHOR_DATE;
     const stats = computeConductorStats(state, selectedYear);
     stats.forEach(s => {
       const opt = document.createElement("option");
@@ -5382,43 +5385,6 @@
     link.click();
     document.body.removeChild(link);
     showStatus(`Exported ${monthNames[month]} .ics!`);
-  }
-
-  function copyTextSummary() {
-    const state = loadAppState();
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const sats = getMeetingSaturdays(year, month);
-
-    const getFormattedSlot = (day) => {
-      if (!day) return "";
-      const monthStr = String(month + 1).padStart(2, '0');
-      const dayStr = String(day).padStart(2, '0');
-      const dateKey = `${year}-${monthStr}-${dayStr}`;
-
-      const blackoutReason = getBlackoutReason(state.blackouts, dateKey);
-      if (blackoutReason) {
-        return blackoutReason === "Cancelled" ? "CANCELLED" : `CANCELLED (${blackoutReason})`;
-      }
-      const cond = state.overrides[dateKey] || getRotationalConductor(year, month, day, state);
-      const slotTL = getSlotTimeLocation(state, dateKey);
-      return slotTL.isCustom ? `${cond} [${slotTL.time} @ ${slotTL.location}]` : cond;
-    };
-
-    const lines = [
-      `Conductor Schedule - ${monthNames[month]} ${year}`,
-      `----------------------------------------`,
-      `• ${monthNames[month]} ${sats.second}, ${year} (2nd Sat): ${getFormattedSlot(sats.second)}`,
-      `• ${monthNames[month]} ${sats.fourth}, ${year} (4th Sat): ${getFormattedSlot(sats.fourth)}`
-    ];
-
-    if (sats.fifth) {
-      lines.push(`• ${monthNames[month]} ${sats.fifth}, ${year} (5th Sat): ${getFormattedSlot(sats.fifth)}`);
-    }
-
-    navigator.clipboard.writeText(lines.join("\n")).then(() => {
-      showStatus(`Copied ${monthNames[month]} ${year} summary to clipboard!`);
-    });
   }
 
   /* --- JSON BACKUP & RESTORE HANDLERS --- */
