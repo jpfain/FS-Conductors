@@ -1448,6 +1448,7 @@
         <select id="quickReplaceSelect" onchange="applyQuickReplace(this.value)" aria-label="Quick Replace Conductor"></select>
         <button type="button" class="btn-link" onclick="toggleQuickReplace(false)">Done</button>
       </div>
+      <button type="button" id="btnPendingFollowups" class="outline" style="min-height: 34px; padding: 4px 10px; font-size: 0.82rem;" onclick="openPendingFollowupQueue()" title="Step through upcoming conductors who still need a reminder or confirmation">📋 Follow-Ups</button>
       <button type="button" id="btnOpenQuickReplace" class="outline" style="min-height: 34px; padding: 4px 10px; font-size: 0.82rem;" onclick="toggleQuickReplace()">🔄 Quick Replace</button>
       <button type="button" class="success" style="min-height: 34px; padding: 4px 12px; font-size: 0.82rem;" onclick="remindUpNextConductor()">💬 Send Reminder</button>
     </div>
@@ -2494,6 +2495,69 @@
     if (dateKey) {
       clearReminderTag(dateKey);
     }
+  }
+
+  function getCandidateConflictNote(conductorName, dateKey, state) {
+    if (!conductorName || !dateKey) return "";
+    const notes = [];
+    const unavail = (state.unavailability && state.unavailability[conductorName]) || [];
+    if (unavail.includes(dateKey)) {
+      notes.push("Unavailable");
+    }
+    const allSlots = getAllScheduleSlots(state);
+    const idx = allSlots.findIndex(s => s.dateKey === dateKey);
+    if (idx !== -1) {
+      if (idx > 0 && allSlots[idx - 1].conductor === conductorName) {
+        notes.push("Prev Sat");
+      }
+      if (idx + 1 < allSlots.length && allSlots[idx + 1].conductor === conductorName) {
+        notes.push("Next Sat");
+      }
+    }
+    const activeRem = getActiveConductorReminder(conductorName, state);
+    if (activeRem && (activeRem.status === "requested_sub" || activeRem.status === "needs_sub")) {
+      notes.push("Sub Pending");
+    }
+    return notes.join(" • ");
+  }
+
+  function getUpcomingFollowupQueue(state) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const upcomingSlots = getAllScheduleSlots(state).filter(s => s.slotDate >= today).slice(0, 8);
+    const groupedMap = new Map();
+
+    upcomingSlots.forEach(slot => {
+      const rem = getReminderForSlot(slot.dateKey, slot.conductor, state);
+      const isConfirmed = rem && rem.status === "confirmed";
+      if (isConfirmed) return;
+
+      if (!groupedMap.has(slot.conductor)) {
+        groupedMap.set(slot.conductor, { name: slot.conductor, dates: [] });
+      }
+      groupedMap.get(slot.conductor).dates.push(slot);
+    });
+
+    return Array.from(groupedMap.values());
+  }
+
+  function openPendingFollowupQueue() {
+    const state = loadAppState();
+    const pendingItems = getUpcomingFollowupQueue(state);
+    if (pendingItems.length === 0) {
+      showStatus("✅ All upcoming conductors are already confirmed!");
+      return;
+    }
+    openShareModal("all", null, "text");
+    activeShareContext.allTextMode = "queue";
+    activeShareContext.queueItems = pendingItems;
+    activeShareContext.queueIndex = 0;
+    document.getElementById("btnQueueModeGroup").className = "outline";
+    document.getElementById("btnQueueModeQueue").className = "active";
+    document.getElementById("queueStepperRow").style.display = "flex";
+    const hintEl = document.getElementById("sharePlaceholdersHint");
+    hintEl.innerText = "Unconfirmed upcoming queue • Dynamic tags: {firstName}, {fullName}, {dates}, {defaultTime}, {defaultLocation}";
+    refreshShareModalPreview();
   }
 
   /* --- UI DRAWERS & DROPDOWN MENUS --- */
@@ -3920,7 +3984,14 @@
         <span class="trade-shift">${escapeHtml(slot2.conductor)} &rarr; <span class="new-name">${escapeHtml(slot1.conductor)}</span></span>
       </div>
       <div class="trade-note">
-        Yearly assignment counts stay balanced, and all other future rotation dates remain unchanged.
+        ${(() => {
+          const c1 = getCandidateConflictNote(slot2.conductor, key1, state);
+          const c2 = getCandidateConflictNote(slot1.conductor, key2, state);
+          const warnings = [c1 ? `${slot2.conductor} on ${formatShortDate(key1)}: ${c1}` : "", c2 ? `${slot1.conductor} on ${formatShortDate(key2)}: ${c2}` : ""].filter(Boolean);
+          return warnings.length > 0
+            ? `<div style="color:#92400e; font-weight:700; margin-bottom:4px;">⚠️ Note: ${escapeHtml(warnings.join(" | "))}</div>`
+            : "";
+        })()}Yearly assignment counts stay balanced, and all other future rotation dates remain unchanged.
       </div>
     `;
   }
@@ -4415,10 +4486,17 @@
       const opt = document.createElement("option");
       opt.value = s.name;
       const lastHint = s.lastSlot ? `Last: ${formatShortDate(s.lastSlot.dateKey).replace(/,\s*\d{4}$/, '')} (${s.daysSince}d)` : "Last: None";
-      opt.innerText = `${s.name} — ${lastHint} • ${s.yearTotal}×`;
+      const conflictNote = getCandidateConflictNote(s.name, nextSlot.dateKey, state);
+      const conflictSuffix = conflictNote ? ` [${conflictNote}]` : "";
+      opt.innerText = `${s.name} — ${lastHint} • ${s.yearTotal}×${conflictSuffix}`;
       replaceSelect.appendChild(opt);
     });
     replaceSelect.value = (state.overrides && state.overrides[nextSlot.dateKey]) || "";
+    const followupsBtn = document.getElementById("btnPendingFollowups");
+    if (followupsBtn) {
+      const pendingCount = getUpcomingFollowupQueue(state).length;
+      followupsBtn.innerText = pendingCount > 0 ? `📋 Follow-Ups (${pendingCount})` : "📋 Follow-Ups";
+    }
   }
 
   function toggleQuickReplace(forceState) {
@@ -4622,7 +4700,8 @@
           state.roster.forEach(name => {
             const opt = document.createElement("option");
             opt.value = name;
-            opt.innerText = name;
+            const cNote = getCandidateConflictNote(name, dateKey, state);
+            opt.innerText = cNote ? `${name} (${cNote})` : name;
             select.appendChild(opt);
           });
 

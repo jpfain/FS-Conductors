@@ -1,31 +1,18 @@
-# Handoff Note: FS-Conductors (v46)
+# HANDOFF.md — FS-Conductors PWA (v48)
 
-* **App & Stack:** FS-Conductors PWA (`index.html`, `sw.js`, `manual.html`), managed via GitHub Desktop; tested across desktop Chrome, iPhone, and iPad.
+## Current Baseline & Stack
+- **App:** Field Service Conductor Schedule PWA (`v48`)
+- **Primary Files:** `index.html`, `sw.js`, `manual.html`, `manifest.json`, `icon-192.png`
+- **Version Control:** Managed via GitHub Desktop (`index.html`, `sw.js`, `manual.html`, `HANDOFF.md`)
+- **Target Environments:** Desktop Chrome on Mac; Home Screen PWA and Safari on iPhone 14 and iPad
 
-* **Current Baseline (v46 — Reverted from v47):**
+## Key Capabilities in v48
+- **Home Screen Hierarchy:** **Up Next** quick-action card positioned above the action toolbar, `Undo` placed on the right side near `Export .ics` and `Sync & Tools`, and streamlined 3-button conductor cards (`Share`, `.ics`, `Edit`) with `Earlier` / `Later` rotation reordering inside the Edit Conductor modal.
+- **Conflict-Aware Reassignment & Trading:** Replacement selectors (**Quick Replace**, calendar dropdowns, and **Trade Dates**) surface conflict indicators when a candidate is marked unavailable on that date, assigned on an adjacent Saturday, or has a pending sub request.
+- **Upcoming Follow-Up Queue:** **Up Next** includes a **Follow-Ups** count trigger that opens the individual text queue filtered to upcoming conductors who are not yet confirmed.
+- **Sync, History Lock & Export:** Supports GitHub Gist sync with merge-before-push and offline queueing, past-date locking, per-date time/location overrides, `.ics` exports, and board-ready print/PDF output.
 
-  * Stable pre-v47 baseline before the print/PDF multi-month layout, margin, column reorder, and assignment status sent-date changes were introduced.
-
-  * Core PWA scheduling, service worker caching (`sw.js`), and user manual (`manual.html`) are intact at v46.
-
-* **Key Constraints & Gotchas:**
-
-  * Keep `sw.js` cache versioning aligned with `index.html` / `manual.html` updates so installed PWAs on iPhone, iPad, and desktop don't serve stale cached files.
-
-  * Test any print/PDF or responsive layout changes against desktop Chrome as well as iOS/iPadOS Safari print/share behavior.
-
-  * Keep edits surgical or scoped to specific sections/functions in `index.html` rather than full-file rewrites to prevent context bloat or truncation.
-
-  * Never include secrets, tokens, or sensitive credentials in pasted code or commits.
-
-* **What Changed / Lessons from v47 Rollback:**
-
-  * \[Optional: Note briefly what broke or felt off in v47—e.g., print overflow, column widths, or status data binding—so we avoid repeating it\]
-
-* **Goal for This Thread:**
-
-  * \[State the exact feature, layout fix, or incremental step you want to build on top of v46\]
-
-* **Relevant Code Attached/Pasted:**
-
-  * \[Paste only the relevant section/function from `index.html`, `sw.js`, or `manual.html`\]
+## Next Steps for Commit & Push
+1. Open **GitHub Desktop** and review the modified `index.html` and `HANDOFF.md` files.
+2. Enter a concise commit summary (e.g., `v48: refine home screen layout, conflict cues, and follow-up queue`) and commit to the working branch.
+3. Push changes to the remote repository and verify the updated app loads cleanly in Chrome and on iOS/iPadOS.
