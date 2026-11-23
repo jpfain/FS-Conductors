@@ -5,7 +5,7 @@ workers_dev = true
 
 [vars]
 APP_URL = "https://jpfain.github.io/FS-Conductors/"
-GITHUB_CLIENT_ID = "REPLACE_WITH_GITHUB_OAUTH_CLIENT_ID"
+GITHUB_CLIENT_ID = "Ov23likOC2nwmzUebBwx"
 
 [[kv_namespaces]]
 binding = "SESSIONS"
