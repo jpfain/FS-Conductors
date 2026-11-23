@@ -1,7 +1,12 @@
-const CACHE_NAME = 'conductor-schedule-v48';
+const CACHE_NAME = 'conductor-schedule-v49';
 const CORE_ASSETS = [
   './',
   './index.html',
+  './app.css',
+  './js/core.js',
+  './js/reminders-ui.js',
+  './js/sync.js',
+  './js/app.js',
   './manual.html',
   './manifest.json',
   './icon-192.png',
@@ -88,4 +93,4 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
-// v48-release
+// v49-release

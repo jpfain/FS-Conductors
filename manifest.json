@@ -1,7 +1,7 @@
 {
   "name": "Conductor Schedule",
   "short_name": "Conductor",
-  "description": "Rotational meeting schedule and conductor assignment tool for 2nd and 4th Saturdays.",
+  "description": "Rotational meeting schedule and conductor assignment tool for 2nd, 4th, and 5th Saturdays.",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f8fafc",
