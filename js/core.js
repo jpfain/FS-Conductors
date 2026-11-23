@@ -1,4 +1,4 @@
-  const APP_VERSION = "v49";
+  const APP_VERSION = "v53";
   let currentDate = new Date();
   let currentViewMode = "calendar";
   const monthNames = [
@@ -81,6 +81,7 @@
   let lastAutoUpdateCheck = 0;
   let lastAutoCloudPull = 0;
   let isSyncingNow = false;
+  let lastModalFocus = null;
 
   function escapeHtml(str) {
     return String(str || "")
@@ -139,9 +140,50 @@
   }
 
   function syncModalBodyLock() {
-    const anyModalOpen = document.querySelectorAll(".modal-backdrop.open").length > 0;
+    const openModals = document.querySelectorAll(".modal-backdrop.open");
+    const anyModalOpen = openModals.length > 0;
     document.body.classList.toggle("modal-open", anyModalOpen);
+
+    if (anyModalOpen) {
+      const activeModal = openModals[openModals.length - 1];
+      if (!activeModal.contains(document.activeElement)) {
+        lastModalFocus = document.activeElement;
+        const dialog = activeModal.querySelector('[role="dialog"]') || activeModal;
+        const firstFocusable = dialog.querySelector(
+          'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        (firstFocusable || dialog).focus();
+      }
+    } else if (lastModalFocus && lastModalFocus.isConnected) {
+      lastModalFocus.focus();
+      lastModalFocus = null;
+    }
   }
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Tab") return;
+    const openModals = document.querySelectorAll(".modal-backdrop.open");
+    if (!openModals.length) return;
+    const dialog = openModals[openModals.length - 1].querySelector('[role="dialog"]');
+    if (!dialog) return;
+    const focusable = [...dialog.querySelectorAll(
+      'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )].filter(element => element.getClientRects().length > 0);
+    if (!focusable.length) {
+      event.preventDefault();
+      dialog.focus();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement))) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && (document.activeElement === last || !dialog.contains(document.activeElement))) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
 
   /* --- ONE-TAP UNDO STACK --- */
   function recordUndoSnapshot(label, existingState = null) {
@@ -208,20 +250,15 @@
   /* --- DATE-LEVEL FIELD TIMESTAMP HELPERS --- */
   function ensureFieldTimestamps(state) {
     const fallback = Date.parse(state.lastModified || "1970-01-01T00:00:00.000Z") || 0;
-    if (!state.fieldTimestamps || typeof state.fieldTimestamps !== "object") {
-      state.fieldTimestamps = {
-        reminders: {},
-        overrides: {},
-        blackouts: {},
-        slotDetails: {},
-        core: fallback
-      };
-    }
-    if (!state.fieldTimestamps.reminders) state.fieldTimestamps.reminders = {};
-    if (!state.fieldTimestamps.overrides) state.fieldTimestamps.overrides = {};
-    if (!state.fieldTimestamps.blackouts) state.fieldTimestamps.blackouts = {};
-    if (!state.fieldTimestamps.slotDetails) state.fieldTimestamps.slotDetails = {};
-    if (typeof state.fieldTimestamps.core !== "number") state.fieldTimestamps.core = fallback;
+    if (!state.fieldTimestamps || typeof state.fieldTimestamps !== "object") state.fieldTimestamps = {};
+    ["reminders", "overrides", "blackouts", "slotDetails", "contacts", "unavailability", "templates"].forEach(field => {
+      if (!state.fieldTimestamps[field] || typeof state.fieldTimestamps[field] !== "object") {
+        state.fieldTimestamps[field] = {};
+      }
+    });
+    ["core", "roster", "settings"].forEach(field => {
+      if (typeof state.fieldTimestamps[field] !== "number") state.fieldTimestamps[field] = fallback;
+    });
     return state;
   }
 
@@ -231,41 +268,19 @@
     state.fieldTimestamps[category][dateKey] = Date.now();
   }
 
-  function touchCoreState(state) {
+  function touchCoreState(state, category = "core") {
     ensureFieldTimestamps(state);
-    state.fieldTimestamps.core = Date.now();
+    const now = Date.now();
+    state.fieldTimestamps.core = now;
+    if (category === "roster" || category === "settings") {
+      state.fieldTimestamps[category] = now;
+    }
   }
 
   function mergeDateMap(localObj, remoteObj, localTsMap, remoteTsMap, localCoreTs, remoteCoreTs) {
-    const mergedObj = {};
-    const mergedTs = {};
-    const allKeys = new Set([
-      ...Object.keys(localObj || {}),
-      ...Object.keys(remoteObj || {}),
-      ...Object.keys(localTsMap || {}),
-      ...Object.keys(remoteTsMap || {})
-    ]);
-
-    allKeys.forEach(dateKey => {
-      const hasLocalTs = localTsMap && typeof localTsMap[dateKey] === "number";
-      const hasRemoteTs = remoteTsMap && typeof remoteTsMap[dateKey] === "number";
-      const lTime = hasLocalTs ? localTsMap[dateKey] : localCoreTs;
-      const rTime = hasRemoteTs ? remoteTsMap[dateKey] : remoteCoreTs;
-
-      if (rTime > lTime) {
-        if (remoteObj && remoteObj[dateKey] !== undefined) {
-          mergedObj[dateKey] = remoteObj[dateKey];
-        }
-        mergedTs[dateKey] = rTime;
-      } else {
-        if (localObj && localObj[dateKey] !== undefined) {
-          mergedObj[dateKey] = localObj[dateKey];
-        }
-        mergedTs[dateKey] = lTime;
-      }
-    });
-
-    return { mergedObj, mergedTs };
+    return ScheduleStateSchema.mergeDateMap(
+      localObj, remoteObj, localTsMap, remoteTsMap, localCoreTs, remoteCoreTs
+    );
   }
 
   function mergeScheduleStates(localRaw, remoteRaw) {
@@ -274,8 +289,25 @@
 
     const lCore = local.fieldTimestamps.core;
     const rCore = remote.fieldTimestamps.core;
-    const useRemoteCore = rCore > lCore;
-    const base = useRemoteCore ? remote : local;
+    const useRemoteRoster = remote.fieldTimestamps.roster > local.fieldTimestamps.roster;
+    const useRemoteSettings = remote.fieldTimestamps.settings > local.fieldTimestamps.settings;
+    const rosterBase = useRemoteRoster ? remote : local;
+    const settingsBase = useRemoteSettings ? remote : local;
+    const contactMerge = mergeDateMap(
+      local.contacts, remote.contacts,
+      local.fieldTimestamps.contacts, remote.fieldTimestamps.contacts,
+      lCore, rCore
+    );
+    const unavailableMerge = mergeDateMap(
+      local.unavailability, remote.unavailability,
+      local.fieldTimestamps.unavailability, remote.fieldTimestamps.unavailability,
+      lCore, rCore
+    );
+    const templateMerge = mergeDateMap(
+      local.templates, remote.templates,
+      local.fieldTimestamps.templates, remote.fieldTimestamps.templates,
+      lCore, rCore
+    );
 
     const remMerge = mergeDateMap(
       local.reminders, remote.reminders,
@@ -304,14 +336,15 @@
     );
 
     return {
-      roster: base.roster || [],
-      contacts: base.contacts || {},
-      unavailability: base.unavailability || {},
-      templates: base.templates || { ...DEFAULT_TEMPLATES },
-      rotationStartDate: base.rotationStartDate || DEFAULT_ANCHOR_DATE,
-      defaultTime: base.defaultTime || DEFAULT_MEETING_TIME,
-      defaultLocation: base.defaultLocation || DEFAULT_MEETING_LOCATION,
-      lockPastDates: base.lockPastDates !== false,
+      schemaVersion: ScheduleStateSchema.CURRENT_SCHEMA_VERSION,
+      roster: rosterBase.roster || [],
+      contacts: contactMerge.mergedObj,
+      unavailability: unavailableMerge.mergedObj,
+      templates: { ...DEFAULT_TEMPLATES, ...templateMerge.mergedObj },
+      rotationStartDate: settingsBase.rotationStartDate || DEFAULT_ANCHOR_DATE,
+      defaultTime: settingsBase.defaultTime || DEFAULT_MEETING_TIME,
+      defaultLocation: settingsBase.defaultLocation || DEFAULT_MEETING_LOCATION,
+      lockPastDates: settingsBase.lockPastDates !== false,
       lockedHistory: { ...(local.lockedHistory || {}), ...(remote.lockedHistory || {}) },
       reminders: remMerge.mergedObj,
       overrides: ovrMerge.mergedObj,
@@ -319,6 +352,11 @@
       slotDetails: slotMerge.mergedObj,
       fieldTimestamps: {
         core: Math.max(lCore, rCore),
+        roster: Math.max(local.fieldTimestamps.roster, remote.fieldTimestamps.roster),
+        settings: Math.max(local.fieldTimestamps.settings, remote.fieldTimestamps.settings),
+        contacts: contactMerge.mergedTs,
+        unavailability: unavailableMerge.mergedTs,
+        templates: templateMerge.mergedTs,
         reminders: remMerge.mergedTs,
         overrides: ovrMerge.mergedTs,
         blackouts: blkMerge.mergedTs,
@@ -330,6 +368,7 @@
 
   function statesDiffer(a, b) {
     const stripMeta = (s) => JSON.stringify({
+      schemaVersion: ScheduleStateSchema.CURRENT_SCHEMA_VERSION,
       roster: s.roster || [],
       contacts: s.contacts || {},
       unavailability: s.unavailability || {},
@@ -388,7 +427,7 @@
     if (state.lockPastDates) {
       snapshotPastDates(state);
     }
-    touchCoreState(state);
+    touchCoreState(state, "settings");
     saveAppState(state);
     showStatus(state.lockPastDates
       ? "🔒 Past Saturdays locked — historical assignments are now protected."

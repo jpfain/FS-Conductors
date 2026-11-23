@@ -1,9 +1,13 @@
-const CACHE_NAME = 'conductor-schedule-v49';
+const CACHE_NAME = 'conductor-schedule-v53';
 const CORE_ASSETS = [
   './',
   './index.html',
   './app.css',
   './js/core.js',
+  './js/state-schema.js',
+  './js/schedule-domain.js',
+  './js/storage.js',
+  './js/deployment-config.js',
   './js/reminders-ui.js',
   './js/sync.js',
   './js/app.js',
@@ -23,7 +27,6 @@ self.addEventListener('install', (event) => {
       );
     })
   );
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
@@ -55,7 +58,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Network-first for HTML navigation & pages so v47 updates appear immediately
+  // Network-first for HTML navigation so hosted markup updates are discovered promptly.
   const isHtmlRequest =
     req.mode === 'navigate' ||
     (req.headers.get('accept') || '').includes('text/html') ||
@@ -93,4 +96,4 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
-// v49-release
+// v53-release
