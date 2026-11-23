@@ -407,7 +407,7 @@
 
     state.slotDetails = { ...tempSlotDetails };
     allChangedKeys.forEach(k => touchDateField(state, "slotDetails", k));
-    touchCoreState(state, "settings");
+    touchCoreState(state);
 
     saveAppState(state);
     closeTimeLocModal();

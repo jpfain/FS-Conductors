@@ -8,7 +8,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Conductor Schedule</title>
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="stylesheet" href="./app.css">
 </head>
@@ -22,9 +21,8 @@
   <header>
     <div class="title-group">
       <h1>Conductor Schedule</h1>
-      <span id="appVersionBadge" class="version-badge">v53</span>
-      <button type="button" id="cloudSyncPill" class="sync-pill" onclick="openCloudSyncModal()" title="Configure or check GitHub Gist Cloud Sync">☁️ Local Only</button>
-      <span id="networkStatusPill" class="network-pill" role="status" aria-live="polite" hidden>📴 Offline — changes stay on this device</span>
+      <span id="appVersionBadge" class="version-badge">v48</span>
+      <span id="cloudSyncPill" class="sync-pill" onclick="openCloudSyncModal()" title="Configure or check GitHub Gist Cloud Sync">☁️ Local Only</span>
     </div>
     <div class="controls-group">
       <div class="view-toggle">
@@ -150,18 +148,7 @@
     </div>
   </div>
 
-  <div id="statusMsg" class="status-banner" role="status" aria-live="polite"></div>
-  <div id="appUpdateBanner" class="app-notice" role="status" aria-live="polite" hidden>
-    <span>A new version is ready. Reload to update the app.</span>
-    <div class="controls-group">
-      <button type="button" class="outline" onclick="dismissAppUpdate()">Later</button>
-      <button type="button" class="success" onclick="applyAppUpdate()">Reload to Update</button>
-    </div>
-  </div>
-  <div id="storageRecoveryNotice" class="app-notice warning" role="alert" hidden>
-    <span>Saved schedule data could not be read. Download a recovery copy before restoring a backup.</span>
-    <button type="button" class="outline" onclick="downloadStorageRecovery()">Download Recovery Copy</button>
-  </div>
+  <div id="statusMsg" class="status-banner"></div>
 
   <!-- MONTHLY CALENDAR VIEW -->
   <div id="calendarViewSection">
@@ -194,9 +181,9 @@
 
 <!-- TIME & LOCATION SETTINGS (DEFAULT + PER-DATE OVERRIDE) MODAL -->
 <div id="timeLocModal" class="modal-backdrop" onclick="if(event.target === this) closeTimeLocModal()">
-  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="timeLocTitle" tabindex="-1" style="max-width: 490px;">
+  <div class="modal-card" style="max-width: 490px;">
     <div class="modal-header">
-      <h3 id="timeLocTitle">🕒 Time &amp; Location Settings</h3>
+      <h3>🕒 Time &amp; Location Settings</h3>
       <button type="button" class="modal-close-pill" onclick="closeTimeLocModal()">✕ Close</button>
     </div>
 
@@ -252,9 +239,9 @@
 
 <!-- CANCEL MEETING WITH REASON MODAL -->
 <div id="cancelModal" class="modal-backdrop" onclick="if(event.target === this) closeCancelModal()">
-  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="cancelTitle" tabindex="-1" style="max-width: 440px;">
+  <div class="modal-card" style="max-width: 440px;">
     <div class="modal-header">
-      <h3 id="cancelTitle">Cancel Meeting Date</h3>
+      <h3>Cancel Meeting Date</h3>
       <button type="button" class="modal-close-pill" onclick="closeCancelModal()">✕ Close</button>
     </div>
 
@@ -287,9 +274,9 @@
 
 <!-- BOARD-READY PRINT / SAVE PDF MODAL -->
 <div id="printModal" class="modal-backdrop" onclick="if(event.target === this) closePrintModal()">
-  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="printTitle" tabindex="-1" style="max-width: 440px;">
+  <div class="modal-card" style="max-width: 440px;">
     <div class="modal-header">
-      <h3 id="printTitle">🖨️ Print / Save Board-Ready PDF</h3>
+      <h3>🖨️ Print / Save Board-Ready PDF</h3>
       <button type="button" class="modal-close-pill" onclick="closePrintModal()">✕ Close</button>
     </div>
 
@@ -320,9 +307,9 @@
 
 <!-- TWO-WAY TRADE DATES MODAL -->
 <div id="tradeModal" class="modal-backdrop" onclick="if(event.target === this) closeTradeModal()">
-  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="tradeTitle" tabindex="-1" style="max-width: 480px;">
+  <div class="modal-card" style="max-width: 480px;">
     <div class="modal-header">
-      <h3 id="tradeTitle">⇄ Trade Two Scheduled Dates</h3>
+      <h3>⇄ Trade Two Scheduled Dates</h3>
       <button type="button" class="modal-close-pill" onclick="closeTradeModal()">✕ Close</button>
     </div>
 
@@ -351,9 +338,9 @@
 
 <!-- EDIT CONDUCTOR CONTACT, DATE-RANGE UNAVAILABILITY & MANAGEMENT MODAL -->
 <div id="contactModal" class="modal-backdrop" onclick="if(event.target === this) closeContactModal()">
-  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="contactTitle" tabindex="-1" style="max-width: 480px;">
+  <div class="modal-card" style="max-width: 480px;">
     <div class="modal-header">
-      <h3 id="contactTitle">Edit Conductor Details</h3>
+      <h3>Edit Conductor Details</h3>
       <button type="button" class="modal-close-pill" onclick="closeContactModal()">✕ Close</button>
     </div>
 
@@ -425,21 +412,31 @@
 
 <!-- CLOUD SYNC (GITHUB GIST) MODAL -->
 <div id="cloudSyncModal" class="modal-backdrop" onclick="if(event.target === this) closeCloudSyncModal()">
-  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="cloudSyncTitle" tabindex="-1" style="max-width: 500px;">
+  <div class="modal-card" style="max-width: 500px;">
     <div class="modal-header">
-      <h3 id="cloudSyncTitle">☁️ Cloud Sync (GitHub Gist)</h3>
+      <h3>☁️ Cloud Sync (GitHub Gist)</h3>
       <button type="button" class="modal-close-pill" onclick="closeCloudSyncModal()">✕ Close</button>
     </div>
 
     <div class="helper-box">
-      <strong>Secure cloud sync:</strong> Sign in to GitHub through the app's sync service. Your GitHub OAuth token stays on the server and is never placed in this page or browser storage. Sign in separately on each device.
+      <strong>How to sync Mac, iPhone &amp; iPad automatically:</strong><br>
+      1. On GitHub.com, go to <strong>Settings → Developer settings → Personal access tokens → Tokens (classic)</strong> and generate a token with only the <strong><code>gist</code></strong> checkbox selected.<br>
+      2. Paste the token below and tap <strong>Save &amp; Connect</strong> (leave Gist ID blank on your first device to create one automatically).<br>
+      3. Tap <strong>📋 Copy Sync Info</strong> and paste it into either box on your other devices once.
     </div>
 
     <div class="modal-field">
       <div class="modal-field-header">
-        <label for="gistIdInput">Private Gist ID (leave blank to create one)</label>
+        <label for="gistTokenInput">GitHub Personal Access Token (<code>gist</code> scope)</label>
       </div>
-      <input type="text" id="gistIdInput" placeholder="Paste the shared Gist ID, or leave blank on first setup">
+      <input type="password" id="gistTokenInput" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" oninput="handleSmartSyncPaste(this.value)">
+    </div>
+
+    <div class="modal-field">
+      <div class="modal-field-header">
+        <label for="gistIdInput">Private Gist ID (Auto-created if blank)</label>
+      </div>
+      <input type="text" id="gistIdInput" placeholder="Leave blank on first setup, or paste existing Gist ID" oninput="handleSmartSyncPaste(this.value)">
     </div>
 
     <div class="modal-field" style="display: flex; align-items: center; justify-content: space-between; background: #f8fafc; padding: 10px 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
@@ -451,34 +448,21 @@
 
     <div class="modal-actions-split">
       <div class="controls-group">
-        <button type="button" class="outline" style="min-height: 36px; font-size: 0.8rem;" onclick="copySyncCredentials()">📋 Copy Gist ID</button>
-        <button type="button" class="outline" style="min-height: 36px; font-size: 0.8rem;" onclick="openSyncHistory()">🕘 Merge History</button>
+        <button type="button" class="outline" style="min-height: 36px; font-size: 0.8rem;" onclick="copySyncCredentials()">📋 Copy Sync Info</button>
         <button type="button" class="outline" style="min-height: 36px; font-size: 0.8rem;" onclick="manualPullFromGist()">⬇️ Pull</button>
         <button type="button" class="outline" style="min-height: 36px; font-size: 0.8rem;" onclick="manualPushToGist()">⬆️ Push</button>
       </div>
       <div class="controls-group">
-        <button type="button" class="outline" style="min-height: 36px;" onclick="disconnectCloudSync()">Disconnect</button>
         <button type="button" class="outline" style="min-height: 36px;" onclick="closeCloudSyncModal()">Close</button>
-        <button type="button" class="accent" style="min-height: 36px;" onclick="authenticateGitHub()">🔐 Connect with GitHub</button>
-        <button type="button" class="success" style="min-height: 36px;" onclick="saveCloudSyncSettings()">💾 Save Gist Settings</button>
+        <button type="button" class="success" style="min-height: 36px;" onclick="saveCloudSyncSettings()">💾 Save &amp; Connect</button>
       </div>
     </div>
-  </div>
-</div>
-
-<div id="syncHistoryModal" class="modal-backdrop" onclick="if(event.target === this) closeSyncHistory()">
-  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="syncHistoryTitle" tabindex="-1" style="max-width: 500px;">
-    <div class="modal-header">
-      <h3 id="syncHistoryTitle">🕘 Cloud Merge History</h3>
-      <button type="button" class="modal-close-pill" onclick="closeSyncHistory()">✕ Close</button>
-    </div>
-    <ul id="syncHistoryList" class="sync-history-list"></ul>
   </div>
 </div>
 
 <!-- SHARE & MESSAGE TEMPLATE MODAL -->
 <div id="shareModal" class="modal-backdrop" onclick="if(event.target === this) closeShareModal()">
-  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="shareModalTitle" tabindex="-1">
+  <div class="modal-card">
     <div class="modal-header">
       <h3 id="shareModalTitle">Share Schedule</h3>
       <button type="button" class="modal-close-pill" onclick="closeShareModal()">✕ Close</button>
@@ -569,14 +553,10 @@
 </div>
 
   <script src="./js/core.js"></script>
-  <script src="./js/state-schema.js"></script>
-  <script src="./js/schedule-domain.js"></script>
-  <script src="./js/storage.js"></script>
-  <script src="./js/deployment-config.js"></script>
   <script src="./js/reminders-ui.js"></script>
   <script src="./js/sync.js"></script>
   <script src="./js/app.js"></script>
 
 </body>
 </html>
-<!-- v53-release -->
+<!-- v49-release -->

@@ -1,11 +1,32 @@
   /* --- UNIFIED STATE ARCHITECTURE --- */
-  let appStateCache = null;
-  let storageRecoveryData = "";
+  function loadAppState() {
+    const saved = localStorage.getItem("conductor_schedule_state");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (!parsed.templates) parsed.templates = { ...DEFAULT_TEMPLATES };
+      if (!parsed.rotationStartDate) parsed.rotationStartDate = DEFAULT_ANCHOR_DATE;
+      if (!parsed.defaultTime) parsed.defaultTime = DEFAULT_MEETING_TIME;
+      if (!parsed.defaultLocation) parsed.defaultLocation = DEFAULT_MEETING_LOCATION;
+      if (parsed.lockPastDates === undefined) parsed.lockPastDates = true;
+      if (!parsed.lockedHistory) parsed.lockedHistory = {};
+      if (!parsed.contacts) parsed.contacts = {};
+      if (!parsed.unavailability) parsed.unavailability = {};
+      if (!parsed.reminders) parsed.reminders = {};
+      if (!parsed.overrides) parsed.overrides = {};
+      if (!parsed.blackouts) parsed.blackouts = {};
+      if (!parsed.slotDetails) parsed.slotDetails = {};
+      if (!parsed.lastModified) parsed.lastModified = "1970-01-01T00:00:00.000Z";
 
-  function createDefaultAppState() {
-    return ensureFieldTimestamps({
-      schemaVersion: ScheduleStateSchema.CURRENT_SCHEMA_VERSION,
-      roster: ["Julian Ramirez", "Judy Fain", "Dow Stephens", "Martin Tavarez", "Stacy Jaffnson"],
+      ensureFieldTimestamps(parsed);
+      if (snapshotPastDates(parsed)) {
+        localStorage.setItem("conductor_schedule_state", JSON.stringify(parsed));
+      }
+      return parsed;
+    }
+
+    const defaultRoster = ["Julian Ramirez", "Judy Fain", "Dow Stephens", "Martin Tavarez", "Stacy Jaffnson"];
+    const newState = ensureFieldTimestamps({
+      roster: defaultRoster,
       contacts: {},
       unavailability: {},
       reminders: {},
@@ -20,78 +41,20 @@
       rotationStartDate: DEFAULT_ANCHOR_DATE,
       lastModified: "1970-01-01T00:00:00.000Z"
     });
-  }
-
-  async function initializeAppStorage() {
-    const result = await ScheduleStorage.open({
-      createDefaultState: createDefaultAppState,
-      validate: ScheduleStateSchema.validate,
-      normalize: state => ensureFieldTimestamps(ScheduleStateSchema.normalize(state, createDefaultAppState()))
-    });
-    appStateCache = result.state;
-    storageRecoveryData = result.recoveredRaw;
-
-    if (snapshotPastDates(appStateCache)) {
-      await ScheduleStorage.persistSchedule(appStateCache);
-    }
-
-    const recoveryNotice = document.getElementById("storageRecoveryNotice");
-    if (recoveryNotice) recoveryNotice.hidden = !storageRecoveryData;
-    if (result.storageError) {
-      showStatus(`⚠️ Storage warning: ${result.storageError}. Schedule changes will use local storage when possible.`);
-    } else if (!result.usingIndexedDB) {
-      showStatus("⚠️ IndexedDB is unavailable. Schedule data is using local storage on this device.");
-    }
-    return result;
-  }
-
-  function downloadStorageRecovery() {
-    if (!storageRecoveryData) return;
-    const blob = new Blob([storageRecoveryData], { type: "application/json" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `conductor-schedule-recovery-${getTodayLocalKey()}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(link.href);
-  }
-
-  function loadAppState() {
-    if (!appStateCache) throw new Error("Schedule storage has not finished initializing.");
-    return appStateCache;
+    snapshotPastDates(newState);
+    localStorage.setItem("conductor_schedule_state", JSON.stringify(newState));
+    return newState;
   }
 
   function saveAppState(state, skipAutoPush = false) {
     ensureFieldTimestamps(state);
     snapshotPastDates(state);
-    state.schemaVersion = ScheduleStateSchema.CURRENT_SCHEMA_VERSION;
     state.lastModified = new Date().toISOString();
-    appStateCache = state;
-    ScheduleStorage.persistSchedule(state).then(result => {
-      if (result.fallback) {
-        showStatus(`⚠️ ${result.reason} Schedule saved using local storage.`);
-      }
-    }).catch(error => {
-      showStatus(`❌ Schedule storage failed: ${error.message}. Changes may not persist.`);
-    });
+    localStorage.setItem("conductor_schedule_state", JSON.stringify(state));
     renderUI();
     if (!skipAutoPush) {
       scheduleCloudPush();
     }
-  }
-
-  async function replaceAppState(state) {
-    const normalized = ensureFieldTimestamps(
-      ScheduleStateSchema.normalize(state, createDefaultAppState())
-    );
-    snapshotPastDates(normalized);
-    appStateCache = normalized;
-    const result = await ScheduleStorage.persistSchedule(normalized);
-    if (result.fallback) {
-      showStatus(`⚠️ ${result.reason} Schedule saved using local storage.`);
-    }
-    renderUI();
   }
 
   function updateRotationStartDate(dateValue) {
@@ -99,20 +62,73 @@
     recordUndoSnapshot("Change Start #1 Date", state);
     snapshotPastDates(state);
     state.rotationStartDate = dateValue || DEFAULT_ANCHOR_DATE;
-    touchCoreState(state, "settings");
+    touchCoreState(state);
     saveAppState(state);
     showStatus("Rotation start date updated!");
   }
 
   function getMeetingSaturdays(year, month) {
-    return ScheduleDomain.getMeetingSaturdays(year, month);
+    let saturdays = [];
+    let date = new Date(year, month, 1);
+    while (date.getMonth() === month) {
+      if (date.getDay() === 6) saturdays.push(date.getDate());
+      date.setDate(date.getDate() + 1);
+    }
+    return { second: saturdays[1], fourth: saturdays[3], fifth: saturdays[4] };
   }
 
   // Raw rotational calculation (before checking past-date lock)
   function computeRotationalAssignmentInfo(targetYear, targetMonth, targetDay, state) {
-    return ScheduleDomain.computeRotationalAssignmentInfo(
-      targetYear, targetMonth, targetDay, state, START_YEAR, new Date().getFullYear()
-    );
+    if (!state.roster || state.roster.length === 0) {
+      return { conductor: "Unassigned", baseConductor: "Unassigned", skippedUnavailable: [], isLocked: false };
+    }
+
+    const anchorDateKey = state.rotationStartDate || DEFAULT_ANCHOR_DATE;
+    const anchorYear = parseInt(anchorDateKey.split("-")[0], 10) || START_YEAR;
+    const endYear = Math.max(targetYear, anchorYear, new Date().getFullYear() + 3);
+
+    let activeMeetings = [];
+    for (let y = START_YEAR; y <= endYear; y++) {
+      for (let m = 0; m < 12; m++) {
+        const sats = getMeetingSaturdays(y, m);
+        [sats.second, sats.fourth, sats.fifth].forEach(day => {
+          if (!day) return;
+          const dateKey = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          if (!state.blackouts || !state.blackouts[dateKey]) {
+            activeMeetings.push(dateKey);
+          }
+        });
+      }
+    }
+
+    const targetKey = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}`;
+    const targetIndex = activeMeetings.indexOf(targetKey);
+    if (targetIndex === -1) {
+      return { conductor: state.roster[0], baseConductor: state.roster[0], skippedUnavailable: [], isLocked: false };
+    }
+
+    let anchorIndex = activeMeetings.findIndex(k => k >= anchorDateKey);
+    if (anchorIndex === -1) anchorIndex = 0;
+
+    const offset = targetIndex - anchorIndex;
+    const len = state.roster.length;
+    const baseIndex = ((offset % len) + len) % len;
+    const baseConductor = state.roster[baseIndex];
+
+    const unavailMap = state.unavailability || {};
+    let skipped = [];
+
+    for (let step = 0; step < len; step++) {
+      const candidateIndex = (baseIndex + step) % len;
+      const candidateName = state.roster[candidateIndex];
+      const unavailableDates = unavailMap[candidateName] || [];
+      if (!unavailableDates.includes(targetKey)) {
+        return { conductor: candidateName, baseConductor, skippedUnavailable: skipped, isLocked: false };
+      }
+      skipped.push(candidateName);
+    }
+
+    return { conductor: baseConductor, baseConductor, skippedUnavailable: [], isLocked: false };
   }
 
   // Respects Past-Date History Lock for dates before today
@@ -365,7 +381,7 @@
     if (phone || email) state.contacts[name] = { phone, email };
 
     toggleAddConductorDrawer(false);
-    touchCoreState(state, "roster");
+    touchCoreState(state);
     saveAppState(state);
     showStatus(`Added ${name} to roster!`);
   }
@@ -383,7 +399,7 @@
       if (state.contacts) delete state.contacts[name];
       if (state.unavailability) delete state.unavailability[name];
       closeContactModal();
-      touchCoreState(state, "roster");
+      touchCoreState(state);
       saveAppState(state);
       showStatus(`Removed ${name} from roster.`);
     }
@@ -399,7 +415,7 @@
     const temp = state.roster[index];
     state.roster[index] = state.roster[newIndex];
     state.roster[newIndex] = temp;
-    touchCoreState(state, "roster");
+    touchCoreState(state);
     saveAppState(state);
     return newIndex;
   }
@@ -584,8 +600,6 @@
     if (oldName !== newName) {
       delete state.contacts[oldName];
       delete state.unavailability[oldName];
-      touchDateField(state, "contacts", oldName);
-      touchDateField(state, "unavailability", oldName);
       if (state.overrides) {
         Object.keys(state.overrides).forEach(dateKey => {
           if (state.overrides[dateKey] === oldName) {
@@ -613,15 +627,13 @@
     }
 
     state.contacts[newName] = { phone, email };
-    touchDateField(state, "contacts", newName);
     if (tempUnavailableDates.length > 0) {
       state.unavailability[newName] = [...tempUnavailableDates];
     } else {
       delete state.unavailability[newName];
     }
-    touchDateField(state, "unavailability", newName);
 
-    touchCoreState(state, oldName !== newName ? "roster" : "core");
+    touchCoreState(state);
     saveAppState(state);
     closeContactModal();
     showStatus(`Saved details for ${newName}!`);
@@ -978,11 +990,9 @@
 
           const slotTL = getSlotTimeLocation(state, dateKey);
           if (slotTL.isCustom) {
-            const customPill = document.createElement("button");
-            customPill.type = "button";
+            const customPill = document.createElement("div");
             customPill.className = "custom-slot-pill";
             customPill.title = `${slotTL.time} • ${slotTL.location}`;
-            customPill.setAttribute("aria-label", `Edit meeting time and location for ${formatFullDateWithDay(dateKey)}`);
             customPill.innerText = `📍 ${slotTL.time}`;
             customPill.onclick = () => openTimeLocModal(dateKey);
             cell.appendChild(customPill);
@@ -1039,7 +1049,7 @@
         if (!lockedPast) {
           actionsDiv.innerHTML = `
             <button class="btn-link" onclick="handleBlackoutAction('${dateKey}')">${blackoutReason ? 'Restore' : 'Cancel'}</button>
-            ${!blackoutReason ? `<button class="btn-link" aria-label="Edit meeting time and location for ${dateKey}" title="Custom time/location" onclick="openTimeLocModal('${dateKey}')">🕒</button>` : ''}
+            ${!blackoutReason ? `<button class="btn-link" title="Custom time/location" onclick="openTimeLocModal('${dateKey}')">🕒</button>` : ''}
           `;
         } else {
           actionsDiv.innerHTML = `<span style="font-size:0.68rem; color:#64748b;">Recorded</span>`;
@@ -1540,7 +1550,6 @@
     }
 
     state.templates[templateKey] = templateToSave;
-    touchDateField(state, "templates", templateKey);
     touchCoreState(state);
     saveAppState(state);
 
@@ -1557,7 +1566,6 @@
     const templateKey = getActiveTemplateKey();
     state.templates[templateKey] = DEFAULT_TEMPLATES[templateKey];
 
-    touchDateField(state, "templates", templateKey);
     touchCoreState(state);
     saveAppState(state);
     refreshShareModalPreview();
@@ -1568,7 +1576,7 @@
     if (!targetInfo || !targetInfo.conductorName || !targetInfo.dateKey) return;
     recordReminderSent(targetInfo.dateKey, targetInfo.conductorName, true, true);
     const cfg = loadGistConfig();
-    if (!cfg.sessionToken || !cfg.gistId || !cfg.autoSync) return;
+    if (!cfg.token || !cfg.gistId || !cfg.autoSync) return;
     if (!navigator.onLine) {
       cfg.pendingOfflineSync = true;
       saveGistConfig(cfg);
@@ -1887,21 +1895,19 @@
     reader.onload = function(e) {
       try {
         const importedData = JSON.parse(e.target.result);
-        if (ScheduleStateSchema.validate(importedData)) {
+        if (importedData && Array.isArray(importedData.roster)) {
           recordUndoSnapshot("Restore JSON Backup", loadAppState());
-          const restored = ScheduleStateSchema.normalize(importedData, createDefaultAppState());
-          ensureFieldTimestamps(restored);
+          ensureFieldTimestamps(importedData);
           const nowTs = Date.now();
-          restored.fieldTimestamps.core = nowTs;
-          restored.fieldTimestamps.roster = nowTs;
-          restored.fieldTimestamps.settings = nowTs;
-          ["reminders", "overrides", "blackouts", "slotDetails", "contacts", "unavailability", "templates"].forEach(category => {
-            Object.keys(restored[category] || {}).forEach(key => { restored.fieldTimestamps[category][key] = nowTs; });
-          });
-          saveAppState(restored);
+          importedData.fieldTimestamps.core = nowTs;
+          Object.keys(importedData.reminders || {}).forEach(k => { importedData.fieldTimestamps.reminders[k] = nowTs; });
+          Object.keys(importedData.overrides || {}).forEach(k => { importedData.fieldTimestamps.overrides[k] = nowTs; });
+          Object.keys(importedData.blackouts || {}).forEach(k => { importedData.fieldTimestamps.blackouts[k] = nowTs; });
+          Object.keys(importedData.slotDetails || {}).forEach(k => { importedData.fieldTimestamps.slotDetails[k] = nowTs; });
+          saveAppState(importedData);
           showStatus("Schedule restored successfully!");
         } else {
-          alert("Invalid or unsupported backup. The roster, dates, or stored fields did not pass validation.");
+          alert("Invalid backup file format. Expected a conductor schedule backup object.");
         }
       } catch (err) {
         alert("Error reading JSON backup file: " + err.message);
@@ -1925,8 +1931,6 @@
         closeTradeModal();
       } else if (document.getElementById("cloudSyncModal").classList.contains("open")) {
         closeCloudSyncModal();
-      } else if (document.getElementById("syncHistoryModal").classList.contains("open")) {
-        closeSyncHistory();
       } else if (document.getElementById("contactModal").classList.contains("open")) {
         closeContactModal();
       } else if (document.getElementById("shareModal").classList.contains("open")) {
@@ -1940,18 +1944,14 @@
   // Automatically upload queued offline changes when connection returns
   window.addEventListener('online', () => {
     const cfg = loadGistConfig();
-    updateNetworkStatus();
     updateCloudSyncPill();
-    if (cfg.sessionToken && cfg.gistId && cfg.autoSync) {
+    if (cfg.token && cfg.gistId && cfg.autoSync) {
       if (cfg.pendingOfflineSync) showStatus("📶 Back online — uploading offline changes...");
       syncWithGitHubGist(true, 0);
     }
   });
 
-  window.addEventListener('offline', () => {
-    updateNetworkStatus();
-    updateCloudSyncPill();
-  });
+  window.addEventListener('offline', () => { updateCloudSyncPill(); });
 
   function handleUserInteractionSync() {
     syncWithGitHubGist(true, 6000);
@@ -1965,13 +1965,7 @@
     if (document.visibilityState === 'visible') {
       checkForServiceWorkerUpdate();
       syncWithGitHubGist(true);
-    } else {
-      flushScheduledCloudPush();
     }
-  });
-
-  window.addEventListener("pagehide", () => {
-    flushScheduledCloudPush();
   });
 
   window.addEventListener('pageshow', () => {
@@ -1990,61 +1984,33 @@
       navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then((registration) => {
         swRegistration = registration;
         lastAutoUpdateCheck = Date.now();
-        showAppUpdateAvailable(registration);
+        activateWaitingServiceWorker(registration);
 
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;
           if (newWorker) {
             newWorker.addEventListener('statechange', () => {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                showAppUpdateAvailable(registration);
-              } else if (newWorker.state === 'installed' && !navigator.serviceWorker.controller) {
                 newWorker.postMessage({ action: 'skipWaiting' });
               }
             });
           }
         });
-      }).catch((error) => {
-        showStatus(`Could not register offline support: ${error.message}`);
-      });
+      }).catch(() => {});
     });
 
+    let refreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (appUpdateReloadRequested) {
-        appUpdateReloadRequested = false;
+      if (!refreshing) {
+        refreshing = true;
         window.location.reload();
       }
     });
   }
 
-  window.addEventListener("DOMContentLoaded", async () => {
+  window.addEventListener("DOMContentLoaded", () => {
     window.scrollTo(0, 0);
     const params = new URLSearchParams(window.location.search);
-    const hashParams = new URLSearchParams(window.location.hash.slice(1));
-    let storageResult;
-    try {
-      storageResult = await initializeAppStorage();
-      await initializeSyncConfig(storageResult.sessionToken);
-    } catch (error) {
-      showStatus(`❌ App startup failed: ${error.message}`);
-      return;
-    }
-
-    const oauthTicket = hashParams.get("oauth_ticket") || params.get("oauth_ticket");
-    if (oauthTicket) {
-      try {
-        await finishGitHubOAuth(oauthTicket);
-      } catch (error) {
-        showStatus(`❌ GitHub sign-in failed: ${error.message}`);
-      } finally {
-        params.delete("oauth_ticket");
-        hashParams.delete("oauth_ticket");
-        const query = params.toString();
-        const hash = hashParams.toString();
-        history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}${hash ? `#${hash}` : ""}`);
-      }
-    }
-
     const printScope = params.get("print");
     if (printScope) {
       enterStandalonePrintMode(
@@ -2055,6 +2021,5 @@
       return;
     }
     renderUI();
-    updateNetworkStatus();
     syncWithGitHubGist(true);
   });

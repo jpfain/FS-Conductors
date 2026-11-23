@@ -1,175 +1,23 @@
-  const GIST_PROXY_URL = (window.CONDUCTOR_CONFIG && window.CONDUCTOR_CONFIG.gistApiBaseUrl || "").replace(/\/+$/, "");
-  const SYNC_HISTORY_KEY = "conductor_sync_history";
-  let gistConfigCache = null;
-  let syncSessionToken = "";
-  let cloudPushTimer = null;
-  let queuedCloudPush = false;
-
   function loadGistConfig() {
-    if (!gistConfigCache) {
-      try {
-        gistConfigCache = {
+    try {
+      const raw = localStorage.getItem(GIST_CONFIG_KEY);
+      if (raw) {
+        return {
+          token: "",
           gistId: "",
           autoSync: true,
           lastSyncedAt: "",
           pendingOfflineSync: false,
-          ...JSON.parse(localStorage.getItem(GIST_CONFIG_KEY) || "{}")
+          ...JSON.parse(raw)
         };
-      } catch (error) {
-        gistConfigCache = { gistId: "", autoSync: true, lastSyncedAt: "", pendingOfflineSync: false };
       }
-      delete gistConfigCache.token;
-      delete gistConfigCache.sessionToken;
-    }
-    return { ...gistConfigCache, sessionToken: syncSessionToken };
+    } catch (e) {}
+    return { token: "", gistId: "", autoSync: true, lastSyncedAt: "", pendingOfflineSync: false };
   }
 
   function saveGistConfig(cfg) {
-    const hasSessionToken = Object.prototype.hasOwnProperty.call(cfg, "sessionToken");
-    if (hasSessionToken) syncSessionToken = cfg.sessionToken || "";
-    gistConfigCache = {
-      gistId: cfg.gistId || "",
-      autoSync: cfg.autoSync !== false,
-      lastSyncedAt: cfg.lastSyncedAt || "",
-      pendingOfflineSync: cfg.pendingOfflineSync === true
-    };
-    try {
-      localStorage.setItem(GIST_CONFIG_KEY, JSON.stringify(gistConfigCache));
-    } catch (error) {
-      showStatus(`⚠️ Cloud preferences could not be saved in this browser: ${error.message}`);
-    }
-    if (hasSessionToken) {
-      ScheduleStorage.saveSessionToken(syncSessionToken).catch(error => {
-        showStatus(`❌ Cloud session could not be saved securely: ${error.message}`);
-      });
-    }
+    localStorage.setItem(GIST_CONFIG_KEY, JSON.stringify(cfg));
     updateCloudSyncPill();
-  }
-
-  async function initializeSyncConfig(sessionToken) {
-    syncSessionToken = sessionToken || "";
-    try {
-      const raw = localStorage.getItem(GIST_CONFIG_KEY);
-      if (raw) {
-        try {
-          const oldConfig = JSON.parse(raw);
-          if (oldConfig.token) {
-            localStorage.setItem(GIST_CONFIG_KEY, JSON.stringify({
-              gistId: oldConfig.gistId || "",
-              autoSync: oldConfig.autoSync !== false,
-              lastSyncedAt: oldConfig.lastSyncedAt || "",
-              pendingOfflineSync: oldConfig.pendingOfflineSync === true
-            }));
-            showStatus("🔐 Legacy GitHub token removed from this browser. Reconnect using GitHub OAuth.");
-          }
-        } catch (error) {
-          showStatus(`⚠️ Existing cloud settings could not be read; local schedule remains available: ${error.message}`);
-        }
-      }
-    } catch (error) {
-      showStatus(`⚠️ Browser storage settings are unavailable; schedule remains local: ${error.message}`);
-    }
-    gistConfigCache = null;
-    loadGistConfig();
-  }
-
-  function getSyncHistory() {
-    try {
-      const entries = JSON.parse(localStorage.getItem(SYNC_HISTORY_KEY) || "[]");
-      return Array.isArray(entries) ? entries : [];
-    } catch (error) {
-      return [];
-    }
-  }
-
-  function recordSyncHistory(summary) {
-    const entries = getSyncHistory();
-    entries.unshift({ at: new Date().toISOString(), summary });
-    try {
-      localStorage.setItem(SYNC_HISTORY_KEY, JSON.stringify(entries.slice(0, 20)));
-    } catch (error) {
-      showStatus(`⚠️ Sync completed, but its history could not be saved: ${error.message}`);
-    }
-  }
-
-  function openSyncHistory() {
-    const list = document.getElementById("syncHistoryList");
-    const entries = getSyncHistory();
-    list.innerHTML = entries.length
-      ? entries.map(entry => `<li><strong>${escapeHtml(new Date(entry.at).toLocaleString())}</strong><br>${escapeHtml(entry.summary)}</li>`).join("")
-      : "<li>No merges recorded yet.</li>";
-    document.getElementById("cloudSyncModal").classList.remove("open");
-    syncModalBodyLock();
-    document.getElementById("syncHistoryModal").classList.add("open");
-    syncModalBodyLock();
-  }
-
-  function closeSyncHistory() {
-    document.getElementById("syncHistoryModal").classList.remove("open");
-    syncModalBodyLock();
-  }
-
-  function apiUrl(path) {
-    if (!GIST_PROXY_URL) {
-      throw new Error("Cloud sync is not configured for this deployment. Set gistApiBaseUrl in js/deployment-config.js.");
-    }
-    return `${GIST_PROXY_URL}${path}`;
-  }
-
-  async function gistProxyRequest(path, options = {}) {
-    const cfg = loadGistConfig();
-    if (!cfg.sessionToken) throw new Error("Connect your GitHub account before syncing.");
-    const headers = new Headers(options.headers || {});
-    headers.set("Authorization", `Bearer ${cfg.sessionToken}`);
-    headers.set("Accept", "application/json");
-    const response = await fetch(apiUrl(path), {
-      ...options,
-      cache: "no-store",
-      headers
-    });
-    if (!response.ok) {
-      if (response.status === 401) {
-        syncSessionToken = "";
-        gistConfigCache = { ...gistConfigCache, pendingOfflineSync: false };
-        ScheduleStorage.saveSessionToken("").catch(error => {
-          showStatus(`Cloud session cleanup failed: ${error.message}`);
-        });
-        updateCloudSyncPill("☁️ Reconnect Required", "error");
-      }
-      let detail = "";
-      try {
-        const body = await response.json();
-        detail = body.error || "";
-      } catch (error) {}
-      throw new Error(detail || `Cloud sync service returned HTTP ${response.status}.`);
-    }
-    return response;
-  }
-
-  function authenticateGitHub() {
-    if (!GIST_PROXY_URL) {
-      showStatus("Cloud sync service is not configured for this deployment.");
-      return;
-    }
-    window.location.assign(apiUrl("/auth/login"));
-  }
-
-  async function finishGitHubOAuth(ticket) {
-    if (!GIST_PROXY_URL) throw new Error("Cloud sync service is not configured for this deployment.");
-    const response = await fetch(apiUrl("/auth/exchange"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Accept": "application/json" },
-      body: JSON.stringify({ ticket })
-    });
-    const body = await response.json();
-    if (!response.ok || !body.sessionToken) {
-      throw new Error(body.error || `GitHub sign-in failed (HTTP ${response.status}).`);
-    }
-    syncSessionToken = body.sessionToken;
-    await ScheduleStorage.saveSessionToken(syncSessionToken);
-    const cfg = loadGistConfig();
-    saveGistConfig({ ...cfg, sessionToken: syncSessionToken });
-    showStatus(`🔐 Connected to GitHub as ${body.user}.`);
   }
 
   function updateCloudSyncPill(overrideText, stateClass) {
@@ -184,7 +32,7 @@
       return;
     }
 
-    if (cfg.sessionToken && cfg.gistId) {
+    if (cfg.token && cfg.gistId) {
       const syncedTitle = cfg.lastSyncedAt
         ? `Last synced: ${new Date(cfg.lastSyncedAt).toLocaleString()}`
         : "Connected to GitHub Gist";
@@ -207,58 +55,65 @@
         pill.title = syncedTitle;
       }
     } else {
-      pill.innerText = cfg.sessionToken ? "☁️ Cloud Ready" : "☁️ Local Only";
-      pill.title = cfg.sessionToken
-        ? "GitHub connected; enter a private Gist ID to sync"
-        : "Connect GitHub to configure cloud sync";
+      pill.innerText = "☁️ Local Only";
+      pill.title = "Configure or check GitHub Gist Cloud Sync";
     }
-  }
-
-  function updateNetworkStatus() {
-    const indicator = document.getElementById("networkStatusPill");
-    if (indicator) indicator.hidden = navigator.onLine;
   }
 
   function copySyncCredentials() {
+    const token = document.getElementById("gistTokenInput").value.trim();
     const gistId = document.getElementById("gistIdInput").value.trim();
-    if (!gistId) {
-      alert("Enter or create a private Gist ID first.");
+    if (!token && !gistId) {
+      alert("Enter your Token and Gist ID first.");
       return;
     }
-    navigator.clipboard.writeText(gistId).then(() => {
+    const bundle = `Conductor Schedule Sync\nToken: ${token}\nGist ID: ${gistId}`;
+    navigator.clipboard.writeText(bundle).then(() => {
       const detail = document.getElementById("cloudSyncStatusDetail");
       if (detail) {
         detail.style.color = "#065f46";
-        detail.innerText = "📋 Copied the Gist ID. Sign in with GitHub on each device, then enter this ID.";
+        detail.innerText = "📋 Copied Token & Gist ID! Paste into either box on your other device.";
       }
-      showStatus("📋 Copied private Gist ID.");
-    }).catch(error => { showStatus(`Could not copy Gist ID: ${error.message}`); });
+      showStatus("📋 Copied Cloud Sync credentials!");
+    }).catch(() => { alert(bundle); });
+  }
+
+  function handleSmartSyncPaste(rawValue) {
+    if (!rawValue) return;
+    const tokenMatch = rawValue.match(/Token:\s*([^\s\r\n]+)/i) || rawValue.match(/\b(gh[ps]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+)\b/);
+    const gistMatch = rawValue.match(/Gist\s*ID:\s*([a-f0-9]{20,40})/i) || rawValue.match(/\b([a-f0-9]{32})\b/i);
+
+    if (tokenMatch && gistMatch) {
+      document.getElementById("gistTokenInput").value = tokenMatch[1].trim();
+      document.getElementById("gistIdInput").value = gistMatch[1].trim();
+      const detail = document.getElementById("cloudSyncStatusDetail");
+      if (detail) {
+        detail.style.color = "#065f46";
+        detail.innerText = "✅ Auto-filled both Token and Private Gist ID! Tap Save & Connect.";
+      }
+    }
   }
 
   function openCloudSyncModal() {
     const cfg = loadGistConfig();
+    document.getElementById("gistTokenInput").value = cfg.token || "";
     document.getElementById("gistIdInput").value = cfg.gistId || "";
     document.getElementById("gistAutoSyncCheckbox").checked = cfg.autoSync !== false;
 
     const detail = document.getElementById("cloudSyncStatusDetail");
     detail.style.color = "#475569";
-    if (!GIST_PROXY_URL) {
+    if (cfg.pendingOfflineSync) {
       detail.style.color = "#92400e";
-      detail.innerText = "Cloud sync is not configured for this deployment. See worker/README.md.";
-    } else if (!cfg.sessionToken) {
-      detail.innerText = "Connect GitHub securely to enable cloud sync. Your schedule remains available locally.";
-    } else if (!cfg.gistId) {
-      detail.innerText = "GitHub connected. Enter a shared private Gist ID or leave it blank to create one.";
-    } else if (cfg.pendingOfflineSync) {
+      detail.innerText = "📴 Offline changes saved locally — will upload automatically as soon as Wi-Fi or cellular reconnects.";
+    } else if (!navigator.onLine && cfg.token && cfg.gistId) {
       detail.style.color = "#92400e";
-      detail.innerText = "📴 Offline changes saved locally — will upload when connectivity returns.";
-    } else if (!navigator.onLine) {
-      detail.style.color = "#92400e";
-      detail.innerText = "📴 Currently offline. Changes remain saved locally.";
+      detail.innerText = "📴 Currently offline. Any edits will save locally and upload automatically when reconnected.";
     } else if (cfg.lastSyncedAt) {
       detail.innerText = `Last synced: ${new Date(cfg.lastSyncedAt).toLocaleString()}`;
+    } else if (cfg.token && cfg.gistId) {
+      detail.innerText = "Connected. Tap Pull or Push to sync immediately.";
     } else {
-      detail.innerText = "Connected. Save the Gist settings, then use Pull or Push to sync.";
+      detail.innerText = "Not connected yet. Data is currently stored locally on this device.";
     }
 
     document.getElementById("cloudSyncModal").classList.add("open");
@@ -271,45 +126,55 @@
   }
 
   async function saveCloudSyncSettings() {
+    const token = document.getElementById("gistTokenInput").value.trim();
     let gistId = document.getElementById("gistIdInput").value.trim();
     const autoSync = document.getElementById("gistAutoSyncCheckbox").checked;
 
-    if (!GIST_PROXY_URL) {
-      showStatus("Cloud sync service is not configured for this deployment.");
-      return;
-    }
-    const cfg = loadGistConfig();
-    if (!cfg.sessionToken) {
-      authenticateGitHub();
+    if (!token) {
+      saveGistConfig({ token: "", gistId: "", autoSync: false, lastSyncedAt: "", pendingOfflineSync: false });
+      closeCloudSyncModal();
+      showStatus("Cloud sync disconnected (Local mode).");
       return;
     }
 
     const detail = document.getElementById("cloudSyncStatusDetail");
     detail.style.color = "#475569";
-    detail.innerText = "Saving cloud sync settings...";
+    detail.innerText = "Connecting to GitHub...";
 
     try {
       if (!gistId) {
         const state = loadAppState();
-        const res = await gistProxyRequest("/api/gists", {
+        const res = await fetch("https://api.github.com/gists", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Accept": "application/vnd.github+json",
+            "Content-Type": "application/json"
+          },
           body: JSON.stringify({
             description: "Conductor Schedule PWA Sync Data",
             public: false,
             files: { [GIST_FILENAME]: { content: JSON.stringify(state, null, 2) } }
           })
         });
+
+        if (!res.ok) throw new Error(`GitHub API error (${res.status}). Check that your token has 'gist' permission.`);
+
         const data = await res.json();
         gistId = data.id;
         document.getElementById("gistIdInput").value = gistId;
-        saveGistConfig({ ...cfg, gistId, autoSync, lastSyncedAt: new Date().toISOString(), pendingOfflineSync: false });
+        saveGistConfig({ token, gistId, autoSync, lastSyncedAt: new Date().toISOString(), pendingOfflineSync: false });
         detail.style.color = "#065f46";
         detail.innerText = `✅ Created private Gist (${gistId}) and uploaded schedule!`;
         showStatus("☁️ Connected & created private sync Gist!");
       } else {
-        saveGistConfig({ ...cfg, gistId, autoSync });
-        await pullFromGitHubGist(false, false);
+        const existingCfg = loadGistConfig();
+        saveGistConfig({
+          token, gistId, autoSync,
+          lastSyncedAt: existingCfg.lastSyncedAt,
+          pendingOfflineSync: existingCfg.pendingOfflineSync
+        });
+        await pullFromGitHubGist(true, false);
       }
     } catch (err) {
       detail.style.color = "#991b1b";
@@ -318,42 +183,9 @@
     }
   }
 
-  async function disconnectCloudSync() {
-    const cfg = loadGistConfig();
-    if (cfg.sessionToken && GIST_PROXY_URL) {
-      try {
-        const response = await fetch(apiUrl("/auth/logout"), {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${cfg.sessionToken}`,
-            "Accept": "application/json"
-          }
-        });
-        if (!response.ok) throw new Error(`The server returned HTTP ${response.status}.`);
-      } catch (error) {
-        showStatus(`Could not revoke the server session: ${error.message}. It will expire automatically.`);
-      }
-    }
-
-    syncSessionToken = "";
-    try {
-      await ScheduleStorage.saveSessionToken("");
-    } catch (error) {
-      showStatus(`Could not clear the local cloud session: ${error.message}`);
-    }
-    saveGistConfig({
-      ...cfg,
-      sessionToken: "",
-      autoSync: false,
-      pendingOfflineSync: false
-    });
-    closeCloudSyncModal();
-    showStatus("GitHub disconnected. The schedule remains saved on this device.");
-  }
-
   function scheduleCloudPush() {
     const cfg = loadGistConfig();
-    if (!cfg.sessionToken || !cfg.gistId || !cfg.autoSync) return;
+    if (!cfg.token || !cfg.gistId || !cfg.autoSync) return;
 
     if (!navigator.onLine) {
       cfg.pendingOfflineSync = true;
@@ -362,33 +194,12 @@
       return;
     }
 
-    queuedCloudPush = true;
-    clearTimeout(cloudPushTimer);
-    cloudPushTimer = setTimeout(flushScheduledCloudPush, 2000);
-  }
-
-  async function flushScheduledCloudPush() {
-    clearTimeout(cloudPushTimer);
-    cloudPushTimer = null;
-    if (!queuedCloudPush) return;
-    if (!navigator.onLine) {
-      const cfg = loadGistConfig();
-      cfg.pendingOfflineSync = true;
-      saveGistConfig(cfg);
-      return;
-    }
-    if (isSyncingNow) return;
-    queuedCloudPush = false;
-    await pushToGitHubGist(true);
+    pushToGitHubGist(true);
   }
 
   async function pushToGitHubGist(silent = false, skipPreMerge = false) {
     const cfg = loadGistConfig();
-    if (!cfg.sessionToken || !cfg.gistId) return;
-    if (isSyncingNow) {
-      queuedCloudPush = true;
-      return;
-    }
+    if (!cfg.token || !cfg.gistId) return;
 
     const detail = document.getElementById("cloudSyncStatusDetail");
     if (!navigator.onLine) {
@@ -407,40 +218,52 @@
     let state = loadAppState();
 
     try {
-      if (!skipPreMerge) {
+      // Safe Merge-Before-Push: if offline edits were queued or pre-merge is enabled, fetch remote Gist first so other devices' edits aren't overwritten
+      if (cfg.pendingOfflineSync && !skipPreMerge) {
         updateCloudSyncPill("☁️ Merging...", "connected");
-        const preRes = await gistProxyRequest(`/api/gists/${encodeURIComponent(cfg.gistId)}`);
-        const preData = await preRes.json();
-        const preFile = preData.files && preData.files[GIST_FILENAME];
-        if (!preFile || !preFile.content) throw new Error("Schedule data was not found in the private Gist; push cancelled.");
-        const remoteState = JSON.parse(preFile.content);
-        if (!ScheduleStateSchema.validate(remoteState)) {
-          throw new Error("Remote schedule data is invalid; push cancelled to avoid overwriting it.");
+        const preRes = await fetch(`https://api.github.com/gists/${cfg.gistId}?t=${Date.now()}`, {
+          cache: "no-store",
+          headers: {
+            "Authorization": `Bearer ${cfg.token}`,
+            "Accept": "application/vnd.github+json"
+          }
+        });
+        if (preRes.ok) {
+          const preData = await preRes.json();
+          const preFile = preData.files && preData.files[GIST_FILENAME];
+          if (preFile && preFile.content) {
+            const remoteState = JSON.parse(preFile.content);
+            if (remoteState && Array.isArray(remoteState.roster)) {
+              const merged = mergeScheduleStates(state, remoteState);
+              snapshotPastDates(merged);
+              if (statesDiffer(state, merged)) {
+                merged.lastModified = new Date().toISOString();
+                localStorage.setItem("conductor_schedule_state", JSON.stringify(merged));
+                renderUI();
+              }
+              state = merged;
+            }
+          }
         }
-        const merged = mergeScheduleStates(state, remoteState);
-        snapshotPastDates(merged);
-        const localChanged = statesDiffer(state, merged);
-        const remoteChanged = statesDiffer(remoteState, merged);
-        if (localChanged) {
-          merged.lastModified = new Date().toISOString();
-          await replaceAppState(merged);
-        }
-        if (localChanged && remoteChanged) {
-          recordSyncHistory(`Merged local and cloud edits before pushing to Gist ${cfg.gistId.slice(0, 8)}. Newer per-field changes were retained.`);
-        }
-        state = merged;
         updateCloudSyncPill("☁️ Saving...", "connected");
       }
 
       const payloadStr = JSON.stringify({
         files: { [GIST_FILENAME]: { content: JSON.stringify(state, null, 2) } }
       });
-      const res = await gistProxyRequest(`/api/gists/${encodeURIComponent(cfg.gistId)}`, {
+      const res = await fetch(`https://api.github.com/gists/${cfg.gistId}`, {
         method: "PATCH",
+        cache: "no-store",
         keepalive: payloadStr.length < 60000,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Authorization": `Bearer ${cfg.token}`,
+          "Accept": "application/vnd.github+json",
+          "Content-Type": "application/json"
+        },
         body: payloadStr
       });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       const now = new Date();
       cfg.lastSyncedAt = now.toISOString();
@@ -457,21 +280,19 @@
       if (!navigator.onLine || err.name === "TypeError") {
         cfg.pendingOfflineSync = true;
         saveGistConfig(cfg);
-        showStatus("📴 Cloud sync unavailable — changes remain saved locally and will retry when connected.");
+        if (!silent) showStatus("📴 Offline Saved — will upload when reconnected.");
       } else {
         updateCloudSyncPill("☁️ Sync Error", "error");
-        if (detail) detail.innerText = `❌ Cloud push failed: ${err.message}`;
         if (!silent) alert("Cloud push failed: " + err.message);
       }
     } finally {
       isSyncingNow = false;
-      if (queuedCloudPush) cloudPushTimer = setTimeout(flushScheduledCloudPush, 500);
     }
   }
 
   async function pullFromGitHubGist(forceOverwrite = false, silent = false) {
     const cfg = loadGistConfig();
-    if (!cfg.sessionToken || !cfg.gistId || isSyncingNow) return;
+    if (!cfg.token || !cfg.gistId || isSyncingNow) return;
 
     if (!navigator.onLine) {
       updateCloudSyncPill();
@@ -485,25 +306,33 @@
     const detail = document.getElementById("cloudSyncStatusDetail");
 
     try {
-      const res = await gistProxyRequest(`/api/gists/${encodeURIComponent(cfg.gistId)}`);
+      const res = await fetch(`https://api.github.com/gists/${cfg.gistId}?t=${Date.now()}`, {
+        cache: "no-store",
+        headers: {
+          "Authorization": `Bearer ${cfg.token}`,
+          "Accept": "application/vnd.github+json"
+        }
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const fileObj = data.files && data.files[GIST_FILENAME];
       if (!fileObj || !fileObj.content) throw new Error("Sync file not found inside Gist.");
 
       const remoteState = JSON.parse(fileObj.content);
-      if (!ScheduleStateSchema.validate(remoteState)) throw new Error("Invalid schedule data in Gist.");
+      if (!remoteState || !Array.isArray(remoteState.roster)) throw new Error("Invalid schedule data in Gist.");
 
       const localState = loadAppState();
       const now = new Date();
 
       if (forceOverwrite) {
-        const normalizedRemote = ScheduleStateSchema.normalize(remoteState, createDefaultAppState());
-        ensureFieldTimestamps(normalizedRemote);
+        const normalizedRemote = ensureFieldTimestamps(remoteState);
         snapshotPastDates(normalizedRemote);
-        await replaceAppState(normalizedRemote);
+        localStorage.setItem("conductor_schedule_state", JSON.stringify(normalizedRemote));
         cfg.lastSyncedAt = now.toISOString();
         cfg.pendingOfflineSync = false;
         saveGistConfig(cfg);
+        renderUI();
         if (detail) {
           detail.style.color = "#065f46";
           detail.innerText = `✅ Synced latest schedule from cloud! (${now.toLocaleTimeString()})`;
@@ -517,12 +346,9 @@
 
         if (localChanged) {
           mergedState.lastModified = now.toISOString();
-          await replaceAppState(mergedState);
+          localStorage.setItem("conductor_schedule_state", JSON.stringify(mergedState));
+          renderUI();
           showStatus("☁️ Synced latest schedule from cloud!");
-        }
-
-        if (localChanged && remoteNeedsUpdate) {
-          recordSyncHistory(`Reconciled divergent local and cloud schedules for Gist ${cfg.gistId.slice(0, 8)} using field timestamps. Newer per-date values and core-field updates were retained.`);
         }
 
         if (remoteNeedsUpdate && cfg.autoSync) {
@@ -548,19 +374,16 @@
         if (!silent) showStatus("📴 Currently offline — using local schedule.");
       } else {
         updateCloudSyncPill("☁️ Sync Error", "error");
-        if (detail) detail.innerText = `❌ Cloud pull failed: ${err.message}`;
         if (!silent) alert("Cloud pull failed: " + err.message);
       }
     } finally {
       isSyncingNow = false;
-      if (queuedCloudPush) cloudPushTimer = setTimeout(flushScheduledCloudPush, 500);
     }
   }
 
   async function syncWithGitHubGist(silent = true, throttleMs = 0) {
     const cfg = loadGistConfig();
-    if (!appStateCache) return;
-    if (!cfg.sessionToken || !cfg.gistId || !cfg.autoSync) return;
+    if (!cfg.token || !cfg.gistId || !cfg.autoSync) return;
     if (!navigator.onLine) {
       updateCloudSyncPill();
       return;
@@ -571,8 +394,8 @@
 
   function manualPushToGist() {
     const cfg = loadGistConfig();
-    if (!cfg.sessionToken || !cfg.gistId) {
-      alert("Connect GitHub and enter a private Gist ID first.");
+    if (!cfg.token || !cfg.gistId) {
+      alert("Enter your GitHub Token and tap Save & Connect first.");
       return;
     }
     pushToGitHubGist(false);
@@ -580,39 +403,20 @@
 
   function manualPullFromGist() {
     const cfg = loadGistConfig();
-    if (!cfg.sessionToken || !cfg.gistId) {
-      alert("Connect GitHub and enter a private Gist ID first.");
+    if (!cfg.token || !cfg.gistId) {
+      alert("Enter your GitHub Token and Gist ID, then tap Save & Connect first.");
       return;
     }
-    if (confirm("Replace this device's schedule with the latest cloud schedule? This will overwrite local schedule data.")) {
-      pullFromGitHubGist(true, false);
-    }
+    pullFromGitHubGist(true, false);
   }
 
   /* --- AUTOMATIC & MANUAL PWA UPDATE HANDLERS --- */
-  let waitingServiceWorker = null;
-  let appUpdateReloadRequested = false;
-
-  function showAppUpdateAvailable(registration) {
-    if (!registration || !registration.waiting) return;
-    waitingServiceWorker = registration.waiting;
-    document.getElementById("appUpdateBanner").hidden = false;
-  }
-
-  function dismissAppUpdate() {
-    document.getElementById("appUpdateBanner").hidden = true;
-  }
-
-  function applyAppUpdate() {
-    if (!waitingServiceWorker && swRegistration) waitingServiceWorker = swRegistration.waiting;
-    if (!waitingServiceWorker) {
-      showStatus("The update is no longer waiting. Use Check for App Update to try again.");
-      dismissAppUpdate();
-      return;
+  function activateWaitingServiceWorker(registration) {
+    if (registration && registration.waiting) {
+      registration.waiting.postMessage({ action: 'skipWaiting' });
+      return true;
     }
-    appUpdateReloadRequested = true;
-    waitingServiceWorker.postMessage({ action: "skipWaiting" });
-    showStatus("Applying update…");
+    return false;
   }
 
   async function checkForServiceWorkerUpdate() {
@@ -625,15 +429,10 @@
       const reg = swRegistration || await navigator.serviceWorker.getRegistration();
       if (!reg) return;
       swRegistration = reg;
-      if (reg.waiting) {
-        showAppUpdateAvailable(reg);
-        return;
-      }
+      if (activateWaitingServiceWorker(reg)) return;
       await reg.update();
-      showAppUpdateAvailable(reg);
-    } catch (error) {
-      showStatus(`Could not check for app updates: ${error.message}`);
-    }
+      activateWaitingServiceWorker(reg);
+    } catch (err) {}
   }
 
   async function forceAppUpdate() {
@@ -643,18 +442,20 @@
     }
     showStatus("Checking for updates...");
     try {
-      if ('serviceWorker' in navigator) {
-        const reg = swRegistration || await navigator.serviceWorker.getRegistration();
-        if (!reg) throw new Error("The app service worker is not registered.");
-        swRegistration = reg;
-        await reg.update();
-        showAppUpdateAvailable(reg);
-        if (reg.waiting) showStatus("A new version is ready. Choose Reload to Update when convenient.");
-        else showStatus("The app is up to date.");
-      } else {
-        throw new Error("This browser does not support service worker updates.");
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
       }
-    } catch (error) {
-      showStatus(`Could not check for app updates: ${error.message}`);
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const reg of registrations) {
+          try { await reg.update(); } catch (e) {}
+          await reg.unregister();
+        }
+      }
+      showStatus("Reloading latest version...");
+      setTimeout(() => { window.location.reload(); }, 450);
+    } catch (err) {
+      window.location.reload();
     }
   }
