@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Conductor Schedule — User Manual (v48)</title>
+  <title>Conductor Schedule — User Manual (v49)</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -62,32 +62,50 @@
     <div class="top-bar">
       <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
         <h1>Conductor Schedule User Manual</h1>
-        <span class="badge">v48</span>
+        <span class="badge">v49</span>
       </div>
       <a class="back-btn" href="./index.html">&larr; Back to Schedule</a>
     </div>
 
-    <p>This guide covers how to manage the Field Service Conductor rotation, assignment statuses, cloud sync, and printable/PDF schedules across desktop and mobile devices.</p>
+    <p>This guide covers conductor assignments, sharing, backups, and optional cloud sync. The app can be used in a browser or installed on a supported device.</p>
 
-    <h2>1. Roster, Start Date &amp; Stats</h2>
+    <h2>1. Schedule Basics</h2>
     <ul>
-      <li><strong>Start #1 Date:</strong> Set the rotation anchor date (default <code>2026-11-14</code>) in the roster header to control where the rotation begins.</li>
-      <li><strong>Stats Panel:</strong> Click <strong>Stats</strong> to view last-served dates, days since last assignment, auto-skipped unavailability counts, and yearly totals. Statistics exclude dates prior to the rotation start date (<code>2026-11-14</code> unless changed).</li>
-      <li><strong>Unavailability &amp; Past Lock:</strong> Edit any conductor to add single dates, date ranges, or quick-toggle upcoming Saturdays. Past Saturdays are locked by default unless unlocked via the header toggle.</li>
+      <li><strong>Meeting dates:</strong> The rotation schedules the second, fourth, and fifth Saturday of each month. Months without a fifth Saturday have no fifth-Saturday assignment.</li>
+      <li><strong>Rotation:</strong> Conductors are assigned in roster order, beginning at the <strong>Start #1</strong> date. Cancelled meeting dates are skipped and do not advance the rotation.</li>
+      <li><strong>Calendar and Year List:</strong> Use the view buttons to switch between a monthly calendar and a selected-year schedule. Change the displayed month or year with the navigation controls.</li>
+      <li><strong>Automatic and manual assignments:</strong> A meeting uses the rotation unless an override is selected. Choose <strong>Auto</strong> to remove an override and return to the rotation. Use <strong>Trade Dates</strong> to swap two assignments.</li>
+      <li><strong>Cancel or restore a date:</strong> Use <strong>Cancel</strong> on a meeting date to record a cancellation and optional reason. Restore it to put it back in the rotation.</li>
     </ul>
 
-    <h2>2. Sharing, Assignment Status &amp; Trades</h2>
+    <h2>2. Roster, Availability &amp; Stats</h2>
     <ul>
-      <li><strong>Share All Schedules &amp; Individual Reminders:</strong> Send schedules via text, email, or the system share sheet. Sending or tagging an assignment records <code>Assignment sent [date]</code>.</li>
-      <li><strong>Cycling Assignment Status:</strong> Tap a status pill on a conductor card, calendar cell, or share modal to cycle through <code>Assignment sent [date]</code> &rarr; <code>Reminder sent [date]</code> &rarr; <code>Confirmed [date]</code> &rarr; <code>Requested Sub</code>.</li>
-      <li><strong>Trade Dates &amp; Undo:</strong> Use <strong>Trade Dates</strong> to swap two scheduled meeting dates cleanly, or click <strong>Undo</strong> to step back recent schedule changes.</li>
+      <li><strong>Add or edit a conductor:</strong> Use <strong>+ Add Conductor</strong> to add a name and optional contact details. Select a roster card's edit button to update details, change rotation order, or remove that conductor.</li>
+      <li><strong>Unavailable dates:</strong> In a conductor's edit screen, add a single date, a date range, or toggle upcoming meeting Saturdays. Unavailable conductors are skipped for that date without permanently changing the roster order.</li>
+      <li><strong>Past-date lock:</strong> Past Saturdays are locked by default to preserve historical assignments. The header toggle controls whether past dates are locked.</li>
+      <li><strong>Stats:</strong> Open <strong>Stats</strong> to review yearly assignment totals and last-served information.</li>
+      <li><strong>Undo:</strong> Use <strong>Undo</strong> after a schedule change to restore a recent state.</li>
     </ul>
 
-    <h2>3. Print / Save PDF, Calendar Export &amp; Cloud Sync</h2>
+    <h2>3. Sharing &amp; Follow-Ups</h2>
     <ul>
-      <li><strong>Print / Save PDF:</strong> Open <strong>Sync &amp; Tools &rarr; Print / Save PDF</strong> to choose a 1-, 3-, 6-, or 12-month range. Printed and PDF sheets display <strong>Date</strong>, <strong>Conductor</strong>, <strong>Time &amp; Location</strong>, and <strong>Assignment Status</strong> (including sent dates).</li>
-      <li><strong>Calendar (.ics) Export:</strong> Export individual conductor schedules, the current month, or the full selected year from the <strong>Export .ics</strong> menu or conductor cards.</li>
-      <li><strong>Cloud Sync &amp; Backups:</strong> Connect a GitHub Gist token in <strong>Cloud Sync</strong> to sync across Mac, iPhone, and iPad (offline edits automatically merge with remote changes before uploading), or export/restore JSON backups anytime.</li>
+      <li><strong>Share schedules:</strong> Use <strong>Share All Schedules</strong> or a roster card's message button to prepare a text or email schedule. Choose a timeframe and delivery option in the share window.</li>
+      <li><strong>Assignment statuses:</strong> Tap a status pill to cycle through <code>Assignment sent</code>, <code>Reminder sent</code>, <code>Confirmed</code>, and <code>Requested Sub</code>. Use <strong>Follow-Ups</strong> to step through upcoming assignments needing attention.</li>
+    </ul>
+
+    <h2>4. Meeting Details, Print &amp; Calendar Export</h2>
+    <ul>
+      <li><strong>Time and location:</strong> Open <strong>Sync &amp; Tools &rarr; Time &amp; Location</strong> to set defaults or custom details for a specific meeting date.</li>
+      <li><strong>Print / Save PDF:</strong> Open <strong>Sync &amp; Tools &rarr; Print / Save PDF</strong> to prepare a 1-, 3-, 6-, or 12-month sheet. Use the print, PDF, or Safari Print option available on your device.</li>
+      <li><strong>Calendar (.ics) export:</strong> Use <strong>Export .ics</strong> for the current month or selected year, or use a roster card's calendar button for an individual conductor's assignments.</li>
+    </ul>
+
+    <h2>5. Local Data, Cloud Sync &amp; Backups</h2>
+    <ul>
+      <li><strong>Local use and offline access:</strong> Schedule data is saved in this browser on this device. After the app has loaded and its files are cached, it can be used offline. Local changes are not shared to other devices unless cloud sync is configured.</li>
+      <li><strong>GitHub Gist sync:</strong> Open <strong>Sync &amp; Tools &rarr; Cloud Sync</strong> and follow the setup instructions to connect a private Gist. To connect another device, use <strong>Copy Sync Info</strong> there and enter the sync details on that device. Keep the GitHub token private; it is saved in this browser's local storage.</li>
+      <li><strong>Offline sync:</strong> Changes made offline remain on the device and are queued for upload when connectivity returns, if auto-sync is enabled. Check the cloud status pill for connection or sync status.</li>
+      <li><strong>Backup and restore:</strong> Use <strong>Sync &amp; Tools &rarr; Backup Data (JSON)</strong> to save a backup. Use <strong>Restore Backup (JSON)</strong> to load one. Keep backups somewhere safe, especially before changing devices.</li>
     </ul>
   </div>
 </body>
