@@ -4,37 +4,24 @@ The static app does not contain a GitHub secret. This Cloudflare Worker performs
 
 ## One-time setup
 
-1. Install and authenticate Wrangler with a Cloudflare account:
+1. Create a Cloudflare Workers KV namespace named `SESSIONS`. Put its ID in `worker/wrangler.toml`. Set `APP_URL` to the exact deployed app URL, including its repository path. The current app URL and namespace ID are already configured in this repository.
 
-   ```sh
-   npm install --global wrangler
-   npx wrangler login
-   ```
+2. Create a Cloudflare API token scoped only to this account, with:
+   - Account Settings: Read
+   - Workers Scripts: Edit
+   - Workers KV Storage: Edit
 
-2. Create the KV namespace and copy its returned ID into `worker/wrangler.toml`:
+   Save it in the GitHub repository as the Actions secret `CLOUDFLARE_API_TOKEN`. Also add the Cloudflare account ID as the Actions variable `CLOUDFLARE_ACCOUNT_ID`. Do not commit either value. The workflow at `.github/workflows/deploy-cloudflare-worker.yml` deploys changes from the `worker/` directory to the `main` branch.
 
-   ```sh
-   npx wrangler kv namespace create SESSIONS
-   ```
+3. After the first successful Worker deployment, create a GitHub OAuth App. Set its callback URL to the deployed Worker URL plus `/auth/callback`, for example `https://fs-conductors-gist-sync.<account>.workers.dev/auth/callback`. Use the app's public URL as its homepage. The Worker requests only the `gist` scope.
 
-3. Create a GitHub OAuth App. Set its callback URL to the Worker URL plus `/auth/callback`, for example `https://fs-conductors-gist-sync.<account>.workers.dev/auth/callback`. Use the app's public URL as its homepage. The Worker requests only the `gist` scope.
+4. Put the OAuth app's client ID in `worker/wrangler.toml` as `GITHUB_CLIENT_ID` and push the change to deploy it. In the Cloudflare Worker dashboard, add `GITHUB_CLIENT_SECRET` as a secret.
 
-4. In `worker/wrangler.toml`, set `APP_URL` to the exact deployed app URL (including its repository path if using GitHub Pages) and set `GITHUB_CLIENT_ID`.
-
-5. Add the OAuth client secret and a 32-byte encryption key as Worker secrets. Generate the encryption key locally; do not commit it:
-
-   ```sh
-   npx wrangler secret put GITHUB_CLIENT_SECRET
-   openssl rand -hex 32
-   npx wrangler secret put SESSION_ENCRYPTION_KEY
-   npx wrangler deploy
-   ```
-
-   Paste the generated 64-character hexadecimal value when Wrangler prompts for `SESSION_ENCRYPTION_KEY`.
+5. Generate a 32-byte encryption key locally with `openssl rand -hex 32` and add the resulting 64-character hexadecimal value as the Worker secret `SESSION_ENCRYPTION_KEY`. Never commit either Worker secret.
 
 6. Put the deployed Worker origin (no trailing slash) in `js/deployment-config.js` as `gistApiBaseUrl`, then publish the static app.
 
-The Worker URL is public configuration, not a secret. Never put `GITHUB_CLIENT_SECRET` in the static app or this repository. Do not commit populated secret values or Cloudflare credentials.
+The Worker URL and OAuth client ID are public configuration, not secrets. Never put `GITHUB_CLIENT_SECRET`, `SESSION_ENCRYPTION_KEY`, or `CLOUDFLARE_API_TOKEN` in the static app or repository.
 
 ## Syncing devices
 
