@@ -1,4 +1,4 @@
-const CACHE_NAME = 'conductor-schedule-v47';
+const CACHE_NAME = 'conductor-schedule-v48';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -11,9 +11,9 @@ const CORE_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return Promise.allSettled(
+      return Promise.all(
         CORE_ASSETS.map((url) =>
-          cache.add(new Request(url, { cache: 'reload' })).catch(() => null)
+          cache.add(new Request(url, { cache: 'reload' }))
         )
       );
     })
@@ -50,7 +50,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Network-first for HTML navigation & pages so v47 updates appear immediately
+  // Network-first for HTML navigation & pages so v48 updates appear immediately
   const isHtmlRequest =
     req.mode === 'navigate' ||
     (req.headers.get('accept') || '').includes('text/html') ||
@@ -88,4 +88,4 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
-// v47-release
+// v48-release
