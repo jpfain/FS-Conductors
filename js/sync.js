@@ -1,5 +1,7 @@
+  const GIST_PROXY_URL = (window.CONDUCTOR_CONFIG && window.CONDUCTOR_CONFIG.gistApiBaseUrl || "").replace(/\/+$/, "");
   const SYNC_HISTORY_KEY = "conductor_sync_history";
   let gistConfigCache = null;
+  let syncSessionToken = "";
   let cloudPushTimer = null;
   let queuedCloudPush = false;
 
@@ -7,7 +9,6 @@
     if (!gistConfigCache) {
       try {
         gistConfigCache = {
-          token: "",
           gistId: "",
           autoSync: true,
           lastSyncedAt: "",
@@ -15,16 +16,18 @@
           ...JSON.parse(localStorage.getItem(GIST_CONFIG_KEY) || "{}")
         };
       } catch (error) {
-        gistConfigCache = { token: "", gistId: "", autoSync: true, lastSyncedAt: "", pendingOfflineSync: false };
+        gistConfigCache = { gistId: "", autoSync: true, lastSyncedAt: "", pendingOfflineSync: false };
       }
+      delete gistConfigCache.token;
       delete gistConfigCache.sessionToken;
     }
-    return { ...gistConfigCache };
+    return { ...gistConfigCache, sessionToken: syncSessionToken };
   }
 
   function saveGistConfig(cfg) {
+    const hasSessionToken = Object.prototype.hasOwnProperty.call(cfg, "sessionToken");
+    if (hasSessionToken) syncSessionToken = cfg.sessionToken || "";
     gistConfigCache = {
-      token: cfg.token || "",
       gistId: cfg.gistId || "",
       autoSync: cfg.autoSync !== false,
       lastSyncedAt: cfg.lastSyncedAt || "",
@@ -35,23 +38,36 @@
     } catch (error) {
       showStatus(`⚠️ Cloud preferences could not be saved in this browser: ${error.message}`);
     }
+    if (hasSessionToken) {
+      ScheduleStorage.saveSessionToken(syncSessionToken).catch(error => {
+        showStatus(`❌ Cloud session could not be saved securely: ${error.message}`);
+      });
+    }
     updateCloudSyncPill();
   }
 
-  async function initializeSyncConfig() {
+  async function initializeSyncConfig(sessionToken) {
+    syncSessionToken = sessionToken || "";
     try {
-      await ScheduleStorage.clearLegacySyncSession();
-    } catch (error) {
-      showStatus(`⚠️ Previous cloud session could not be cleared from this browser: ${error.message}`);
-    }
-    try {
-      const oldConfig = JSON.parse(localStorage.getItem(GIST_CONFIG_KEY) || "{}");
-      if (oldConfig.sessionToken) {
-        delete oldConfig.sessionToken;
-        localStorage.setItem(GIST_CONFIG_KEY, JSON.stringify(oldConfig));
+      const raw = localStorage.getItem(GIST_CONFIG_KEY);
+      if (raw) {
+        try {
+          const oldConfig = JSON.parse(raw);
+          if (oldConfig.token) {
+            localStorage.setItem(GIST_CONFIG_KEY, JSON.stringify({
+              gistId: oldConfig.gistId || "",
+              autoSync: oldConfig.autoSync !== false,
+              lastSyncedAt: oldConfig.lastSyncedAt || "",
+              pendingOfflineSync: oldConfig.pendingOfflineSync === true
+            }));
+            showStatus("🔐 Legacy GitHub token removed from this browser. Reconnect using GitHub OAuth.");
+          }
+        } catch (error) {
+          showStatus(`⚠️ Existing cloud settings could not be read; local schedule remains available: ${error.message}`);
+        }
       }
     } catch (error) {
-      showStatus(`⚠️ Existing cloud settings could not be updated; local schedule remains available: ${error.message}`);
+      showStatus(`⚠️ Browser storage settings are unavailable; schedule remains local: ${error.message}`);
     }
     gistConfigCache = null;
     loadGistConfig();
@@ -93,30 +109,67 @@
     syncModalBodyLock();
   }
 
-  async function githubGistRequest(path, options = {}) {
+  function apiUrl(path) {
+    if (!GIST_PROXY_URL) {
+      throw new Error("Cloud sync is not configured for this deployment. Set gistApiBaseUrl in js/deployment-config.js.");
+    }
+    return `${GIST_PROXY_URL}${path}`;
+  }
+
+  async function gistProxyRequest(path, options = {}) {
     const cfg = loadGistConfig();
-    if (!cfg.token) throw new Error("Enter your GitHub Personal Access Token before syncing.");
+    if (!cfg.sessionToken) throw new Error("Connect your GitHub account before syncing.");
     const headers = new Headers(options.headers || {});
-    headers.set("Authorization", `Bearer ${cfg.token}`);
-    headers.set("Accept", "application/vnd.github+json");
-    headers.set("X-GitHub-Api-Version", "2022-11-28");
-    const response = await fetch(`https://api.github.com${path}`, {
+    headers.set("Authorization", `Bearer ${cfg.sessionToken}`);
+    headers.set("Accept", "application/json");
+    const response = await fetch(apiUrl(path), {
       ...options,
       cache: "no-store",
       headers
     });
     if (!response.ok) {
       if (response.status === 401) {
-        updateCloudSyncPill("☁️ Check GitHub Token", "error");
+        syncSessionToken = "";
+        gistConfigCache = { ...gistConfigCache, pendingOfflineSync: false };
+        ScheduleStorage.saveSessionToken("").catch(error => {
+          showStatus(`Cloud session cleanup failed: ${error.message}`);
+        });
+        updateCloudSyncPill("☁️ Reconnect Required", "error");
       }
       let detail = "";
       try {
         const body = await response.json();
-        detail = body.message || body.error || "";
+        detail = body.error || "";
       } catch (error) {}
-      throw new Error(detail || `GitHub API returned HTTP ${response.status}.`);
+      throw new Error(detail || `Cloud sync service returned HTTP ${response.status}.`);
     }
     return response;
+  }
+
+  function authenticateGitHub() {
+    if (!GIST_PROXY_URL) {
+      showStatus("Cloud sync service is not configured for this deployment.");
+      return;
+    }
+    window.location.assign(apiUrl("/auth/login"));
+  }
+
+  async function finishGitHubOAuth(ticket) {
+    if (!GIST_PROXY_URL) throw new Error("Cloud sync service is not configured for this deployment.");
+    const response = await fetch(apiUrl("/auth/exchange"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({ ticket })
+    });
+    const body = await response.json();
+    if (!response.ok || !body.sessionToken) {
+      throw new Error(body.error || `GitHub sign-in failed (HTTP ${response.status}).`);
+    }
+    syncSessionToken = body.sessionToken;
+    await ScheduleStorage.saveSessionToken(syncSessionToken);
+    const cfg = loadGistConfig();
+    saveGistConfig({ ...cfg, sessionToken: syncSessionToken });
+    showStatus(`🔐 Connected to GitHub as ${body.user}.`);
   }
 
   function updateCloudSyncPill(overrideText, stateClass) {
@@ -131,7 +184,7 @@
       return;
     }
 
-    if (cfg.token && cfg.gistId) {
+    if (cfg.sessionToken && cfg.gistId) {
       const syncedTitle = cfg.lastSyncedAt
         ? `Last synced: ${new Date(cfg.lastSyncedAt).toLocaleString()}`
         : "Connected to GitHub Gist";
@@ -154,10 +207,10 @@
         pill.title = syncedTitle;
       }
     } else {
-      pill.innerText = cfg.token ? "☁️ Cloud Ready" : "☁️ Local Only";
-      pill.title = cfg.token
-        ? "GitHub token saved; enter a private Gist ID to sync"
-        : "Enter a GitHub Personal Access Token to configure cloud sync";
+      pill.innerText = cfg.sessionToken ? "☁️ Cloud Ready" : "☁️ Local Only";
+      pill.title = cfg.sessionToken
+        ? "GitHub connected; enter a private Gist ID to sync"
+        : "Connect GitHub to configure cloud sync";
     }
   }
 
@@ -176,7 +229,7 @@
       const detail = document.getElementById("cloudSyncStatusDetail");
       if (detail) {
         detail.style.color = "#065f46";
-        detail.innerText = "📋 Copied the Gist ID. Enter your GitHub token separately on each device.";
+        detail.innerText = "📋 Copied the Gist ID. Sign in with GitHub on each device, then enter this ID.";
       }
       showStatus("📋 Copied private Gist ID.");
     }).catch(error => { showStatus(`Could not copy Gist ID: ${error.message}`); });
@@ -184,16 +237,18 @@
 
   function openCloudSyncModal() {
     const cfg = loadGistConfig();
-    document.getElementById("gistTokenInput").value = cfg.token || "";
     document.getElementById("gistIdInput").value = cfg.gistId || "";
     document.getElementById("gistAutoSyncCheckbox").checked = cfg.autoSync !== false;
 
     const detail = document.getElementById("cloudSyncStatusDetail");
     detail.style.color = "#475569";
-    if (!cfg.token) {
-      detail.innerText = "Enter a GitHub Personal Access Token with the gist scope to enable cloud sync. Your schedule remains available locally.";
+    if (!GIST_PROXY_URL) {
+      detail.style.color = "#92400e";
+      detail.innerText = "Cloud sync is not configured for this deployment. See worker/README.md.";
+    } else if (!cfg.sessionToken) {
+      detail.innerText = "Connect GitHub securely to enable cloud sync. Your schedule remains available locally.";
     } else if (!cfg.gistId) {
-      detail.innerText = "GitHub token saved. Enter a shared private Gist ID or leave it blank to create one.";
+      detail.innerText = "GitHub connected. Enter a shared private Gist ID or leave it blank to create one.";
     } else if (cfg.pendingOfflineSync) {
       detail.style.color = "#92400e";
       detail.innerText = "📴 Offline changes saved locally — will upload when connectivity returns.";
@@ -219,12 +274,13 @@
     let gistId = document.getElementById("gistIdInput").value.trim();
     const autoSync = document.getElementById("gistAutoSyncCheckbox").checked;
 
+    if (!GIST_PROXY_URL) {
+      showStatus("Cloud sync service is not configured for this deployment.");
+      return;
+    }
     const cfg = loadGistConfig();
-    const token = document.getElementById("gistTokenInput").value.trim();
-    if (!token) {
-      saveGistConfig({ ...cfg, token: "", autoSync: false, pendingOfflineSync: false });
-      closeCloudSyncModal();
-      showStatus("GitHub disconnected. The schedule remains saved on this device.");
+    if (!cfg.sessionToken) {
+      authenticateGitHub();
       return;
     }
 
@@ -235,8 +291,7 @@
     try {
       if (!gistId) {
         const state = loadAppState();
-        saveGistConfig({ ...cfg, token, gistId, autoSync });
-        const res = await githubGistRequest("/gists", {
+        const res = await gistProxyRequest("/api/gists", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -248,12 +303,12 @@
         const data = await res.json();
         gistId = data.id;
         document.getElementById("gistIdInput").value = gistId;
-        saveGistConfig({ ...cfg, token, gistId, autoSync, lastSyncedAt: new Date().toISOString(), pendingOfflineSync: false });
+        saveGistConfig({ ...cfg, gistId, autoSync, lastSyncedAt: new Date().toISOString(), pendingOfflineSync: false });
         detail.style.color = "#065f46";
         detail.innerText = `✅ Created private Gist (${gistId}) and uploaded schedule!`;
         showStatus("☁️ Connected & created private sync Gist!");
       } else {
-        saveGistConfig({ ...cfg, token, gistId, autoSync });
+        saveGistConfig({ ...cfg, gistId, autoSync });
         await pullFromGitHubGist(false, false);
       }
     } catch (err) {
@@ -265,9 +320,30 @@
 
   async function disconnectCloudSync() {
     const cfg = loadGistConfig();
+    if (cfg.sessionToken && GIST_PROXY_URL) {
+      try {
+        const response = await fetch(apiUrl("/auth/logout"), {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${cfg.sessionToken}`,
+            "Accept": "application/json"
+          }
+        });
+        if (!response.ok) throw new Error(`The server returned HTTP ${response.status}.`);
+      } catch (error) {
+        showStatus(`Could not revoke the server session: ${error.message}. It will expire automatically.`);
+      }
+    }
+
+    syncSessionToken = "";
+    try {
+      await ScheduleStorage.saveSessionToken("");
+    } catch (error) {
+      showStatus(`Could not clear the local cloud session: ${error.message}`);
+    }
     saveGistConfig({
       ...cfg,
-      token: "",
+      sessionToken: "",
       autoSync: false,
       pendingOfflineSync: false
     });
@@ -277,7 +353,7 @@
 
   function scheduleCloudPush() {
     const cfg = loadGistConfig();
-    if (!cfg.token || !cfg.gistId || !cfg.autoSync) return;
+    if (!cfg.sessionToken || !cfg.gistId || !cfg.autoSync) return;
 
     if (!navigator.onLine) {
       cfg.pendingOfflineSync = true;
@@ -308,7 +384,7 @@
 
   async function pushToGitHubGist(silent = false, skipPreMerge = false) {
     const cfg = loadGistConfig();
-    if (!cfg.token || !cfg.gistId) return;
+    if (!cfg.sessionToken || !cfg.gistId) return;
     if (isSyncingNow) {
       queuedCloudPush = true;
       return;
@@ -333,7 +409,7 @@
     try {
       if (!skipPreMerge) {
         updateCloudSyncPill("☁️ Merging...", "connected");
-        const preRes = await githubGistRequest(`/gists/${encodeURIComponent(cfg.gistId)}`);
+        const preRes = await gistProxyRequest(`/api/gists/${encodeURIComponent(cfg.gistId)}`);
         const preData = await preRes.json();
         const preFile = preData.files && preData.files[GIST_FILENAME];
         if (!preFile || !preFile.content) throw new Error("Schedule data was not found in the private Gist; push cancelled.");
@@ -359,7 +435,7 @@
       const payloadStr = JSON.stringify({
         files: { [GIST_FILENAME]: { content: JSON.stringify(state, null, 2) } }
       });
-      const res = await githubGistRequest(`/gists/${encodeURIComponent(cfg.gistId)}`, {
+      const res = await gistProxyRequest(`/api/gists/${encodeURIComponent(cfg.gistId)}`, {
         method: "PATCH",
         keepalive: payloadStr.length < 60000,
         headers: { "Content-Type": "application/json" },
@@ -395,7 +471,7 @@
 
   async function pullFromGitHubGist(forceOverwrite = false, silent = false) {
     const cfg = loadGistConfig();
-    if (!cfg.token || !cfg.gistId || isSyncingNow) return;
+    if (!cfg.sessionToken || !cfg.gistId || isSyncingNow) return;
 
     if (!navigator.onLine) {
       updateCloudSyncPill();
@@ -409,7 +485,7 @@
     const detail = document.getElementById("cloudSyncStatusDetail");
 
     try {
-      const res = await githubGistRequest(`/gists/${encodeURIComponent(cfg.gistId)}`);
+      const res = await gistProxyRequest(`/api/gists/${encodeURIComponent(cfg.gistId)}`);
       const data = await res.json();
       const fileObj = data.files && data.files[GIST_FILENAME];
       if (!fileObj || !fileObj.content) throw new Error("Sync file not found inside Gist.");
@@ -484,7 +560,7 @@
   async function syncWithGitHubGist(silent = true, throttleMs = 0) {
     const cfg = loadGistConfig();
     if (!appStateCache) return;
-    if (!cfg.token || !cfg.gistId || !cfg.autoSync) return;
+    if (!cfg.sessionToken || !cfg.gistId || !cfg.autoSync) return;
     if (!navigator.onLine) {
       updateCloudSyncPill();
       return;
@@ -495,8 +571,8 @@
 
   function manualPushToGist() {
     const cfg = loadGistConfig();
-    if (!cfg.token || !cfg.gistId) {
-      alert("Enter your GitHub Personal Access Token and a private Gist ID first.");
+    if (!cfg.sessionToken || !cfg.gistId) {
+      alert("Connect GitHub and enter a private Gist ID first.");
       return;
     }
     pushToGitHubGist(false);
@@ -504,8 +580,8 @@
 
   function manualPullFromGist() {
     const cfg = loadGistConfig();
-    if (!cfg.token || !cfg.gistId) {
-      alert("Enter your GitHub Personal Access Token and a private Gist ID first.");
+    if (!cfg.sessionToken || !cfg.gistId) {
+      alert("Connect GitHub and enter a private Gist ID first.");
       return;
     }
     if (confirm("Replace this device's schedule with the latest cloud schedule? This will overwrite local schedule data.")) {

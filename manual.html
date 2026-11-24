@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Conductor Schedule — User Manual (v54)</title>
+  <title>Conductor Schedule — User Manual (v53)</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -62,7 +62,7 @@
     <div class="top-bar">
       <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
         <h1>Conductor Schedule User Manual</h1>
-        <span class="badge">v54</span>
+        <span class="badge">v53</span>
       </div>
       <a class="back-btn" href="./index.html">&larr; Back to Schedule</a>
     </div>
@@ -103,7 +103,7 @@
     <h2>5. Local Data, Cloud Sync &amp; Backups</h2>
     <ul>
       <li><strong>Local use and offline access:</strong> Schedule data is saved in this browser on this device. After the app has loaded and its files are cached, it can be used offline. Local changes are not shared to other devices unless cloud sync is configured.</li>
-      <li><strong>GitHub Gist sync:</strong> Open <strong>Sync &amp; Tools &rarr; Cloud Sync</strong> and enter a GitHub Personal Access Token (classic) with only the <code>gist</code> scope. The token is stored in this browser's local storage and sent directly to GitHub, so use a dedicated token and enter it separately on each device. Leave the private Gist ID blank on the first device to create one, then share that ID with your other devices.</li>
+      <li><strong>GitHub Gist sync:</strong> After the sync service is configured, open <strong>Sync &amp; Tools &rarr; Cloud Sync</strong> and choose <strong>Connect with GitHub</strong>. Sign in separately on each device. Create a private Gist on the first device and share only its Gist ID with other devices. The app keeps the GitHub OAuth token on the sync server; the browser stores a revocable session credential in IndexedDB.</li>
       <li><strong>Offline sync:</strong> Changes made offline remain on the device and are queued for upload when connectivity returns, if auto-sync is enabled. Check the cloud status pill for connection or sync status.</li>
       <li><strong>Backup and restore:</strong> Use <strong>Sync &amp; Tools &rarr; Backup Data (JSON)</strong> to save a backup. Use <strong>Restore Backup (JSON)</strong> to load one. Keep backups somewhere safe, especially before changing devices. Schedule data is migrated from older browser storage to IndexedDB automatically. If saved data cannot be read, use the recovery-copy button before restoring a backup.</li>
       <li><strong>Sync history:</strong> Open <strong>Merge History</strong> in the Cloud Sync window to review recent reconciliations. Manual Pull asks for confirmation because it replaces the local schedule.</li>

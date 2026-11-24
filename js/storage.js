@@ -135,6 +135,13 @@
       localStorage.setItem(LEGACY_STATE_KEY, JSON.stringify(state));
     }
 
+    let sessionToken = "";
+    try {
+      if (database) sessionToken = (await readRecord("sync-session")) || "";
+    } catch (error) {
+      storageError = error.message;
+    }
+
     let persistedRecoveryRaw = "";
     try {
       persistedRecoveryRaw = localStorage.getItem(RECOVERY_KEY) || "";
@@ -144,22 +151,26 @@
 
     return {
       state,
+      sessionToken,
       recoveredRaw: recoveredRaw || persistedRecoveryRaw,
       storageError,
       usingIndexedDB: !!database
     };
   }
 
-  async function clearLegacySyncSession() {
-    if (!database) return;
-    await new Promise((resolve, reject) => {
-      const transaction = database.transaction(STORE_NAME, "readwrite");
-      transaction.objectStore(STORE_NAME).delete("sync-session");
-      transaction.oncomplete = resolve;
-      transaction.onerror = () => reject(transaction.error || new Error("Could not clear the previous cloud session."));
-      transaction.onabort = () => reject(transaction.error || new Error("Clearing the previous cloud session was aborted."));
-    });
+  async function saveSessionToken(token) {
+    if (!database) throw new Error("Encrypted cloud sessions are disabled because IndexedDB is unavailable.");
+    if (token) await writeRecord("sync-session", token);
+    else {
+      await new Promise((resolve, reject) => {
+        const transaction = database.transaction(STORE_NAME, "readwrite");
+        transaction.objectStore(STORE_NAME).delete("sync-session");
+        transaction.oncomplete = resolve;
+        transaction.onerror = () => reject(transaction.error || new Error("Could not clear the cloud session."));
+        transaction.onabort = () => reject(transaction.error || new Error("Clearing the cloud session was aborted."));
+      });
+    }
   }
 
-  global.ScheduleStorage = { open, persistSchedule, clearLegacySyncSession };
+  global.ScheduleStorage = { open, persistSchedule, saveSessionToken };
 })(globalThis);
