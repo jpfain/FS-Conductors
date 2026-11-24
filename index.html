@@ -22,7 +22,7 @@
   <header>
     <div class="title-group">
       <h1>Conductor Schedule</h1>
-      <span id="appVersionBadge" class="version-badge">v54</span>
+      <span id="appVersionBadge" class="version-badge">v55</span>
       <button type="button" id="cloudSyncPill" class="sync-pill" onclick="openCloudSyncModal()" title="Configure or check GitHub Gist Cloud Sync">☁️ Local Only</button>
       <span id="networkStatusPill" class="network-pill" role="status" aria-live="polite" hidden>📴 Offline — changes stay on this device</span>
     </div>
@@ -432,7 +432,14 @@
     </div>
 
     <div class="helper-box">
-      <strong>Secure cloud sync:</strong> Sign in to GitHub through the app's sync service. Your GitHub OAuth token stays on the server and is never placed in this page or browser storage. Sign in separately on each device.
+      <strong>GitHub Gist sync:</strong> Create a GitHub Personal Access Token (classic) with only the <code>gist</code> scope. The token is saved in this browser's local storage and sent directly to GitHub; use a dedicated token and do not share it. Enter the token separately on each device.
+    </div>
+
+    <div class="modal-field">
+      <div class="modal-field-header">
+        <label for="gistTokenInput">GitHub Personal Access Token (<code>gist</code> scope)</label>
+      </div>
+      <input type="password" id="gistTokenInput" autocomplete="off" placeholder="Paste your GitHub token">
     </div>
 
     <div class="modal-field">
@@ -459,8 +466,7 @@
       <div class="controls-group">
         <button type="button" class="outline" style="min-height: 36px;" onclick="disconnectCloudSync()">Disconnect</button>
         <button type="button" class="outline" style="min-height: 36px;" onclick="closeCloudSyncModal()">Close</button>
-        <button type="button" class="accent" style="min-height: 36px;" onclick="authenticateGitHub()">🔐 Connect with GitHub</button>
-        <button type="button" class="success" style="min-height: 36px;" onclick="saveCloudSyncSettings()">💾 Save Gist Settings</button>
+        <button type="button" class="success" style="min-height: 36px;" onclick="saveCloudSyncSettings()">💾 Save &amp; Connect</button>
       </div>
     </div>
   </div>
@@ -572,7 +578,6 @@
   <script src="./js/state-schema.js"></script>
   <script src="./js/schedule-domain.js"></script>
   <script src="./js/storage.js"></script>
-  <script src="./js/deployment-config.js"></script>
   <script src="./js/reminders-ui.js"></script>
   <script src="./js/sync.js"></script>
   <script src="./js/app.js"></script>

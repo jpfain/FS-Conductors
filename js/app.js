@@ -1568,7 +1568,7 @@
     if (!targetInfo || !targetInfo.conductorName || !targetInfo.dateKey) return;
     recordReminderSent(targetInfo.dateKey, targetInfo.conductorName, true, true);
     const cfg = loadGistConfig();
-    if (!cfg.sessionToken || !cfg.gistId || !cfg.autoSync) return;
+    if (!cfg.token || !cfg.gistId || !cfg.autoSync) return;
     if (!navigator.onLine) {
       cfg.pendingOfflineSync = true;
       saveGistConfig(cfg);
@@ -1942,7 +1942,7 @@
     const cfg = loadGistConfig();
     updateNetworkStatus();
     updateCloudSyncPill();
-    if (cfg.sessionToken && cfg.gistId && cfg.autoSync) {
+    if (cfg.token && cfg.gistId && cfg.autoSync) {
       if (cfg.pendingOfflineSync) showStatus("📶 Back online — uploading offline changes...");
       syncWithGitHubGist(true, 0);
     }
@@ -2020,29 +2020,12 @@
   window.addEventListener("DOMContentLoaded", async () => {
     window.scrollTo(0, 0);
     const params = new URLSearchParams(window.location.search);
-    const hashParams = new URLSearchParams(window.location.hash.slice(1));
-    let storageResult;
     try {
-      storageResult = await initializeAppStorage();
-      await initializeSyncConfig(storageResult.sessionToken);
+      await initializeAppStorage();
+      await initializeSyncConfig();
     } catch (error) {
       showStatus(`❌ App startup failed: ${error.message}`);
       return;
-    }
-
-    const oauthTicket = hashParams.get("oauth_ticket") || params.get("oauth_ticket");
-    if (oauthTicket) {
-      try {
-        await finishGitHubOAuth(oauthTicket);
-      } catch (error) {
-        showStatus(`❌ GitHub sign-in failed: ${error.message}`);
-      } finally {
-        params.delete("oauth_ticket");
-        hashParams.delete("oauth_ticket");
-        const query = params.toString();
-        const hash = hashParams.toString();
-        history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}${hash ? `#${hash}` : ""}`);
-      }
     }
 
     const printScope = params.get("print");
