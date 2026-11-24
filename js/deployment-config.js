@@ -1,3 +1,3 @@
 window.CONDUCTOR_CONFIG = Object.freeze({
-  gistApiBaseUrl: ""
+  gistApiBaseUrl: "https://fs-conductors-gist-sync.jpfain.workers.dev"
 });

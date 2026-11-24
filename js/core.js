@@ -1,4 +1,4 @@
-  const APP_VERSION = "v53";
+  const APP_VERSION = "v54";
   let currentDate = new Date();
   let currentViewMode = "calendar";
   const monthNames = [
