@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fs-conductors-v50-cache-1';
+const CACHE_NAME = 'fs-conductors-v50-cache-2';
 const CACHE_PREFIX = 'fs-conductors-';
 const ASSETS_TO_CACHE = [
   './',

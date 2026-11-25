@@ -4,154 +4,661 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#f1f5f9">
-  <title>Conductor Schedule — User Manual (v48)</title>
+  <meta name="description" content="How to manage the Conductor Schedule PWA: assignments, roster, reminders, exports, backups, and sync.">
+  <title>Conductor Schedule — User Manual (v50)</title>
   <style>
     :root {
+      color-scheme: light;
       --primary: #1e3a8a;
-      --secondary: #059669;
+      --primary-dark: #172554;
       --accent: #2563eb;
-      --danger: #dc2626;
+      --green: #047857;
+      --amber: #92400e;
+      --red: #b91c1c;
       --bg: #f1f5f9;
-      --card-bg: #ffffff;
+      --surface: #ffffff;
       --text: #0f172a;
       --muted: #475569;
       --border: #cbd5e1;
+      --soft-blue: #eff6ff;
+      --soft-green: #ecfdf5;
+      --soft-amber: #fffbeb;
     }
 
     * { box-sizing: border-box; }
 
+    html { scroll-behavior: smooth; }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background-color: var(--bg);
+      margin: 0;
+      padding: 0 18px calc(32px + env(safe-area-inset-bottom));
+      background: var(--bg);
       color: var(--text);
-      margin: 0 auto;
-      padding: calc(16px + env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom)) 16px;
-      max-width: 860px;
-      line-height: 1.55;
+      font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    a { color: #1d4ed8; }
+    a:focus-visible, summary:focus-visible {
+      outline: 3px solid #60a5fa;
+      outline-offset: 3px;
+      border-radius: 4px;
     }
 
     .top-bar {
       position: sticky;
       top: 0;
-      z-index: 50;
-      background: rgba(241, 245, 249, 0.94);
-      backdrop-filter: blur(8px);
-      padding: 10px 0;
-      margin-bottom: 14px;
-      border-bottom: 1px solid #e2e8f0;
+      z-index: 5;
+      margin: 0 -18px 24px;
+      padding: 12px max(18px, calc((100vw - 1200px) / 2));
+      border-bottom: 1px solid #dbe3ee;
+      background: rgb(241 245 249 / 94%);
+      backdrop-filter: blur(10px);
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 12px;
     }
 
-    .top-title { display: flex; align-items: center; gap: 8px; }
-    .top-title h1 { font-size: 1.25rem; margin: 0; color: var(--primary); }
+    .top-title { min-width: 0; }
+    .top-title h1 {
+      margin: 0;
+      color: var(--primary);
+      font-size: clamp(1.05rem, 3vw, 1.35rem);
+      line-height: 1.2;
+    }
+
+    .top-subtitle { margin: 3px 0 0; color: var(--muted); font-size: 0.8rem; }
 
     .version-badge {
-      background: #eff6ff;
-      color: var(--primary);
-      border: 1px solid #bfdbfe;
-      font-size: 0.75rem;
-      font-weight: 700;
+      display: inline-flex;
+      vertical-align: middle;
+      margin-left: 5px;
       padding: 2px 8px;
+      border: 1px solid #bfdbfe;
       border-radius: 999px;
+      background: var(--soft-blue);
+      color: var(--primary);
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.03em;
     }
 
     .back-btn {
+      flex: 0 0 auto;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      justify-content: center;
+      min-height: 42px;
+      padding: 8px 13px;
+      border-radius: 9px;
       background: var(--primary);
-      color: #ffffff;
+      color: #fff;
       text-decoration: none;
-      font-weight: 600;
-      font-size: 0.85rem;
-      padding: 8px 14px;
-      border-radius: 8px;
+      font-size: 0.88rem;
+      font-weight: 700;
     }
 
-    .card {
-      background: var(--card-bg);
+    .back-btn:hover { background: var(--primary-dark); }
+
+    .manual-shell {
+      display: grid;
+      grid-template-columns: 220px minmax(0, 1fr);
+      gap: 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+      align-items: start;
+    }
+
+    .contents {
+      position: sticky;
+      top: 92px;
+      padding: 16px;
       border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 18px 20px;
-      margin-bottom: 16px;
-      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+      border-radius: 14px;
+      background: var(--surface);
+      box-shadow: 0 3px 12px rgb(15 23 42 / 4%);
     }
 
-    .card h2 {
-      margin: 0 0 10px 0;
-      font-size: 1.1rem;
+    .contents ul {
+      display: grid;
+      gap: 3px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .contents a {
+      display: block;
+      padding: 6px 8px;
+      border-radius: 7px;
+      color: #334155;
+      font-size: 0.84rem;
+      line-height: 1.35;
+      text-decoration: none;
+    }
+
+    .contents a:hover { background: #f1f5f9; color: var(--primary); }
+
+    .contents-summary {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 40px;
+      cursor: pointer;
       color: var(--primary);
+      font-size: 0.9rem;
+      font-weight: 750;
+    }
+
+    .contents-summary span:last-child {
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 600;
+    }
+
+    @media (min-width: 761px) {
+      .contents-disclosure[open] > .contents-summary { display: none; }
+      .contents-disclosure:not([open]) > .contents-summary { display: flex; }
+    }
+
+    main { min-width: 0; }
+
+    .hero {
+      margin-bottom: 18px;
+      padding: clamp(20px, 4vw, 34px);
+      border: 1px solid #bfdbfe;
+      border-radius: 16px;
+      background: linear-gradient(130deg, #eff6ff, #fff 72%);
+      box-shadow: 0 4px 16px rgb(30 58 138 / 5%);
+    }
+
+    .eyebrow {
+      margin: 0 0 7px;
+      color: #1d4ed8;
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+    }
+
+    .hero h2 {
+      margin: 0;
+      color: var(--primary-dark);
+      font-size: clamp(1.5rem, 4vw, 2.15rem);
+      line-height: 1.18;
+    }
+
+    .hero > p {
+      max-width: 68ch;
+      margin: 12px 0 0;
+      color: #334155;
+    }
+
+    .hero-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+
+    .hero-links a {
+      display: inline-flex;
+      min-height: 40px;
+      align-items: center;
+      padding: 7px 12px;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      background: #fff;
+      font-size: 0.84rem;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .section-card {
+      scroll-margin-top: 84px;
+      margin-bottom: 16px;
+      padding: clamp(17px, 3vw, 24px);
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      background: var(--surface);
+      box-shadow: 0 3px 12px rgb(15 23 42 / 4%);
+    }
+
+    .section-card > h2 {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 9px;
+      margin: 0 0 12px;
+      color: var(--primary);
+      font-size: clamp(1.12rem, 2.5vw, 1.35rem);
+      line-height: 1.3;
     }
 
-    .new-pill {
-      background: #dcfce7;
-      color: #065f46;
-      border: 1px solid #86efac;
-      font-size: 0.7rem;
-      font-weight: 800;
-      text-transform: uppercase;
-      padding: 1px 7px;
-      border-radius: 999px;
+    h3 {
+      margin: 22px 0 6px;
+      color: #1e293b;
+      font-size: 1rem;
+      line-height: 1.35;
     }
 
-    ul, ol { margin: 8px 0 0 0; padding-left: 20px; }
-    li { margin-bottom: 6px; }
+    p { margin: 8px 0; }
+    ul, ol { margin: 8px 0 0; padding-left: 22px; }
+    li { margin: 0 0 7px; padding-left: 2px; }
+    strong { color: #172554; }
+
     code {
-      background: #f1f5f9;
-      border: 1px solid #e2e8f0;
       padding: 1px 5px;
-      border-radius: 4px;
-      font-size: 0.85em;
+      border: 1px solid #e2e8f0;
+      border-radius: 5px;
+      background: #f1f5f9;
+      color: #1e293b;
+      font: 0.88em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .step {
+      padding: 13px;
+      border: 1px solid #dbeafe;
+      border-radius: 10px;
+      background: #f8fbff;
+    }
+
+    .step-number {
+      display: inline-grid;
+      width: 25px;
+      height: 25px;
+      margin-right: 5px;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--primary);
+      color: white;
+      font-size: 0.78rem;
+      font-weight: 800;
+    }
+
+    .step p { margin: 7px 0 0; color: #334155; font-size: 0.9rem; }
+
+    .callout {
+      margin: 14px 0;
+      padding: 12px 14px;
+      border-left: 4px solid var(--accent);
+      border-radius: 0 9px 9px 0;
+      background: var(--soft-blue);
+      color: #1e3a8a;
+      font-size: 0.92rem;
+    }
+
+    .callout.success { border-color: var(--green); background: var(--soft-green); color: #065f46; }
+    .callout.warning { border-color: #d97706; background: var(--soft-amber); color: #78350f; }
+
+    details.guide-detail {
+      margin-top: 10px;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      background: #fbfdff;
+    }
+
+    details.guide-detail > summary {
+      cursor: pointer;
+      padding: 11px 13px;
+      color: var(--primary);
+      font-weight: 750;
+    }
+
+    details.guide-detail > div { padding: 0 14px 14px; }
+
+    .table-wrap {
+      overflow-x: auto;
+      margin: 12px 0;
+      border: 1px solid #e2e8f0;
+      border-radius: 9px;
+    }
+
+    table {
+      width: 100%;
+      min-width: 480px;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+
+    th, td { padding: 9px 11px; border-bottom: 1px solid #e2e8f0; text-align: left; vertical-align: top; }
+    th { background: #f8fafc; color: #334155; font-size: 0.82rem; }
+    tr:last-child td { border-bottom: 0; }
+
+    .footer-note {
+      margin: 20px 4px 0;
+      color: #64748b;
+      font-size: 0.82rem;
+      text-align: center;
+    }
+
+    @media (max-width: 760px) {
+      body { padding-right: 12px; padding-left: 12px; }
+      .top-bar { margin-right: -12px; margin-left: -12px; padding-right: 12px; padding-left: 12px; }
+      .manual-shell { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+      .contents { position: static; padding: 8px 12px; }
+      .contents-summary { display: flex; }
+      .contents-disclosure[open] > ul { margin-top: 6px; }
+      .contents ul { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 6px; }
+      .contents a { min-height: 38px; display: flex; align-items: center; }
+      .steps { grid-template-columns: 1fr; }
+      .section-card { scroll-margin-top: 76px; }
+    }
+
+    @media (max-width: 420px) {
+      .top-bar { align-items: flex-start; }
+      .top-subtitle { max-width: 22ch; }
+      .back-btn { min-height: 40px; padding: 7px 9px; font-size: 0.8rem; }
+      .contents ul { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media print {
+      body { max-width: none; padding: 0; background: #fff; font-size: 11pt; }
+      .top-bar { position: static; margin: 0 0 18px; padding: 0 0 10px; background: #fff; }
+      .back-btn, .contents, .hero-links { display: none; }
+      .manual-shell { display: block; max-width: none; }
+      .hero, .section-card { break-inside: avoid; box-shadow: none; }
+      details.guide-detail > div { display: block; }
+      details.guide-detail > summary { list-style: none; }
+      a { color: inherit; text-decoration: none; }
     }
   </style>
 </head>
 <body>
-  <div class="top-bar">
+  <header class="top-bar">
     <div class="top-title">
-      <h1>Conductor Schedule User Manual</h1>
-      <span class="version-badge">User Manual • v48</span>
+      <h1>Conductor Schedule <span class="version-badge">MANUAL • v50</span></h1>
+      <p class="top-subtitle">A practical guide to planning, sharing, and protecting your schedule.</p>
     </div>
     <a href="./index.html" class="back-btn" onclick="if (window.opener) { window.close(); return false; }">← Back to Schedule</a>
-  </div>
+  </header>
 
-  <div class="card">
-    <h2>👀 Upcoming Watchlist &amp; Follow-Ups <span class="new-pill">v48</span></h2>
-    <p>
-      Use the <strong><code>👀 Watchlist</code></strong> button in the toolbar to view upcoming meeting Saturdays within 7 days that are not yet confirmed, dates with sub requests, or assignments with scheduling conflicts.
-    </p>
-    <ul>
-      <li><strong>Follow-Ups Queue:</strong> Tap <strong><code>📬 Follow-Ups</code></strong> on the <em>Up Next</em> banner to jump straight into messaging upcoming conductors who still need confirmation.</li>
-    </ul>
-  </div>
+  <div class="manual-shell">
+    <nav class="contents" aria-label="Manual contents">
+      <details id="contentsDisclosure" class="contents-disclosure" open>
+        <summary class="contents-summary"><span>In this guide</span><span>9 topics</span></summary>
+        <ul>
+          <li><a href="#quick-start">Quick start</a></li>
+          <li><a href="#home-screen">Home screen &amp; calendar</a></li>
+          <li><a href="#rotation">Rotation &amp; assignments</a></li>
+          <li><a href="#roster">Conductor roster</a></li>
+          <li><a href="#messages">Reminders &amp; sharing</a></li>
+          <li><a href="#exports">Calendar &amp; PDF exports</a></li>
+          <li><a href="#backup">Backup &amp; undo</a></li>
+          <li><a href="#sync">Optional cloud sync</a></li>
+          <li><a href="#help">Troubleshooting</a></li>
+        </ul>
+      </details>
+    </nav>
 
-  <div class="card">
-    <h2>⚠️ Conflict-Aware Reassignment &amp; Trading <span class="new-pill">v48</span></h2>
-    <p>
-      When using <strong>Quick Replace</strong> or <strong>Trade Dates</strong>, the app checks whether a candidate is marked unavailable on that date, has a sub request, or is assigned on a nearby Saturday.
-    </p>
-  </div>
+    <main>
+      <section class="hero" aria-labelledby="manual-intro">
+        <p class="eyebrow">User guide · Current app release</p>
+        <h2 id="manual-intro">Keep the schedule clear, balanced, and easy to share.</h2>
+        <p>
+          Use this guide to set up your rotation, update assignments, track confirmations, and make backups.
+          The manual matches the v50 interface. The app saves changes in this browser automatically; cloud
+          sync is optional.
+        </p>
+        <div class="hero-links">
+          <a href="#quick-start">Set up in three steps</a>
+          <a href="#messages">Share a schedule</a>
+          <a href="#backup">Protect your data</a>
+        </div>
+      </section>
 
-  <div class="card">
-    <h2>🖨️ Print Live Preview &amp; Custom Board Note <span class="new-pill">v48</span></h2>
-    <p>
-      Open <strong><code>⚙️ Sync &amp; Tools ▾ → 🖨️ Print / Save PDF</code></strong> to preview your schedule sheet live, add an optional custom board note, and print or save as PDF across 1, 3, 6, or 12 months.
-    </p>
-  </div>
+      <section id="quick-start" class="section-card">
+        <h2>🚀 Quick start</h2>
+        <p>For a new or reset schedule, begin with these steps before sending assignments:</p>
+        <div class="steps">
+          <div class="step">
+            <span class="step-number">1</span><strong>Review the roster</strong>
+            <p>Add approved conductors, correct their names, and arrange them in rotation order.</p>
+          </div>
+          <div class="step">
+            <span class="step-number">2</span><strong>Set the rotation anchor</strong>
+            <p>In <strong>Approved Conductors</strong>, set <strong>Start #1</strong> to the meeting date that should begin with the first person in the roster.</p>
+          </div>
+          <div class="step">
+            <span class="step-number">3</span><strong>Check schedule details</strong>
+            <p>Confirm the next assignments, meeting time, and location, then add known unavailable dates before sharing.</p>
+          </div>
+        </div>
+        <div class="callout warning">
+          Changing the rotation start date or roster order can change future automatic assignments.
+          Past dates are protected by default; review the upcoming schedule after making either change.
+        </div>
+      </section>
 
-  <div class="card">
-    <h2>🔒 History Lock, Statuses, Cloud Sync &amp; .ics</h2>
-    <ul>
-      <li><strong>History Lock &amp; Statuses:</strong> Past dates remain locked by default so rotation changes never rewrite history, while reminder/confirmation tags cycle cleanly.</li>
-      <li><strong>GitHub Gist Cloud Sync:</strong> Store your GitHub token in Cloud Sync settings (never in a text file) and merge changes across Mac Chrome, iPhone 14, and iPad.</li>
-    </ul>
+      <section id="home-screen" class="section-card">
+        <h2>🗓️ Home screen and calendar</h2>
+        <ul>
+          <li><strong>Up Next</strong> shows the next active meeting date, assigned conductor, time, location, and any reminder status. Use <strong>Quick Replace</strong> to choose a different conductor for that date, or choose the automatic assignment to restore the rotation.</li>
+          <li><strong>Calendar / Year List</strong> switches between the month grid and a list of dates for the selected year. Use the year selector to change years; in Calendar view, use <strong>Prev</strong>, <strong>Next</strong>, or <strong>Today</strong> to move between months.</li>
+          <li>The schedule includes the second and fourth Saturday of each month, plus a fifth Saturday when one occurs. A canceled meeting is removed from active assignments.</li>
+          <li>Use the conductor dropdown in a calendar date cell to change that date’s assignment. Use the date controls to cancel or restore a meeting, or open its time/location override.</li>
+          <li>On a narrow screen, <strong>Schedule actions</strong> and <strong>Conductor list</strong> are collapsible to keep the calendar near the top.</li>
+        </ul>
+        <details class="guide-detail">
+          <summary>What does the assignment label mean?</summary>
+          <div>
+            <ul>
+              <li><strong>Auto</strong> means the conductor comes from the current roster rotation.</li>
+              <li><strong>Override</strong> means a conductor was selected specifically for that date.</li>
+              <li><strong>Reassigned</strong> means the automatic rotation skipped one or more conductors marked unavailable for that date.</li>
+              <li><strong>Locked</strong> indicates a past assignment protected from rotation changes. Use <strong>Past Locked</strong> in the roster panel to change the history-lock setting.</li>
+            </ul>
+          </div>
+        </details>
+      </section>
+
+      <section id="rotation" class="section-card">
+        <h2>🔁 Rotation and date assignments</h2>
+        <h3>Roster order and automatic assignments</h3>
+        <p>
+          The roster order defines who is next in the rotation. <strong>Start #1</strong> sets the anchor date for
+          the first roster position. If you change the order or anchor, inspect the displayed assignments before
+          sending an updated schedule.
+        </p>
+
+        <h3>Change one date without changing the rotation</h3>
+        <ol>
+          <li>In the calendar, use the conductor selector for the meeting date, or use <strong>Quick Replace</strong> for the Up Next date.</li>
+          <li>Select the replacement conductor. This creates a date-specific override; the rest of the rotation remains in place.</li>
+          <li>To undo the override, select the automatic option (shown as <strong>Auto (name)</strong> in Quick Replace).</li>
+        </ol>
+
+        <h3>Mark unavailable dates</h3>
+        <p>
+          Open a conductor’s edit button in the roster. Add a vacation date range, a single unavailable date, or
+          use the upcoming-Saturday checkboxes. Save the changes. If that conductor is due on a marked date, the
+          rotation skips them and uses the next available person, if one is available.
+        </p>
+
+        <h3>Cancel or restore a meeting</h3>
+        <p>
+          Use the date’s cancel control, select a preset reason or enter your own, then confirm. The rotation pauses
+          for that canceled meeting and resumes at the next scheduled meeting date. Use the restore control on
+          that date to put it back.
+        </p>
+
+        <h3>Meeting time and location</h3>
+        <p>
+          Choose <strong>Schedule actions → Sync &amp; Tools → Time &amp; Location</strong> to set defaults.
+          The same dialog lets you add a custom time or location to a specific upcoming date. Leave a per-date
+          field blank to use the default; remove a listed override to clear it.
+        </p>
+
+        <div class="callout">
+          <strong>Past Locked</strong> is enabled by default so normal roster and rotation edits do not rewrite
+          recorded past assignments. Unlocking past dates allows the live rotation to affect historical dates.
+        </div>
+      </section>
+
+      <section id="roster" class="section-card">
+        <h2>👥 Approved Conductors</h2>
+        <ul>
+          <li><strong>+ Add Conductor</strong> adds a name and optional mobile number and email. The new conductor is appended to the roster.</li>
+          <li>Use the roster’s <strong>Edit</strong> button to change a name or contact details, move the person earlier or later in rotation order, maintain unavailable dates, or remove them.</li>
+          <li>Each conductor’s message icon opens a personal schedule message. Their calendar icon downloads an individual <code>.ics</code> calendar file.</li>
+          <li><strong>Stats</strong> opens assignment counts, last-served information, and unavailable-date skips for the selected year.</li>
+          <li>Use <strong>Past Locked</strong> to toggle protection for historical assignments. Keep it enabled for normal use.</li>
+        </ul>
+        <div class="callout warning">
+          Removing a conductor also removes their saved contact and unavailable-date settings. Their name may
+          still appear in a past assignment that has been locked.
+        </div>
+      </section>
+
+      <section id="messages" class="section-card">
+        <h2>💬 Reminders, status, and sharing</h2>
+        <h3>Track assignment follow-up</h3>
+        <p>
+          Use the reminder pill beside a scheduled assignment to cycle its status. The sequence is
+          <strong>Assignment sent → Reminder sent → Confirmed → Requested Sub</strong>, then it cycles back to
+          Assignment sent. Use the small <strong>×</strong> on the pill to clear its tag. Statuses are associated
+          with both the date and the currently assigned conductor.
+        </p>
+        <p>
+          <strong>Send Reminder</strong> on Up Next opens a ready-to-review message for that conductor and date.
+          The message is not sent automatically; review it and use the phone’s or computer’s Messages, Email, or
+          share interface to send it.
+        </p>
+
+        <h3>Share one conductor’s schedule</h3>
+        <ol>
+          <li>Use the person’s message icon in the roster, or choose <strong>Send Reminder</strong> on Up Next.</li>
+          <li>Choose <strong>Short Text</strong> or <strong>Longer Email</strong>, then select the timeframe. The dates begin with the next scheduled date.</li>
+          <li>Review the recipient and edit the message if needed. You can copy it, open Messages or Email, or use the system share sheet.</li>
+        </ol>
+
+        <h3>Share all schedules</h3>
+        <p>
+          Choose <strong>Schedule actions → Share All Schedules</strong>. Select a timeframe and text or email
+          format. For group text, choose either a single group message or the one-by-one queue, which steps
+          through each conductor. Verify the recipients and message before sharing.
+        </p>
+
+        <details class="guide-detail">
+          <summary>Message templates and status updates</summary>
+          <div>
+            <ul>
+              <li>Edit the preview directly before sharing. <strong>Save as Default</strong> keeps the edited wording for future messages of that type; <strong>Reset Default</strong> restores the built-in wording.</li>
+              <li>Templates support tags such as <code>{firstName}</code>, <code>{fullName}</code>, <code>{dates}</code>, <code>{defaultTime}</code>, and <code>{defaultLocation}</code>. Group messages also support <code>{schedules}</code> and <code>{timeframe}</code>.</li>
+              <li>Messaging or sharing actions can update the assignment’s reminder tag. Check the pill after the external app opens and adjust the status if needed; opening another app does not guarantee that the message was sent.</li>
+              <li>A <strong>Requested Sub</strong> tag records a request; it does not automatically select a replacement. Use Quick Replace or the date selector to change the assignment.</li>
+            </ul>
+          </div>
+        </details>
+      </section>
+
+      <section id="exports" class="section-card">
+        <h2>📤 Calendar and PDF exports</h2>
+        <ul>
+          <li><strong>Export .ics → Current Month</strong> downloads active meeting dates for the displayed month. <strong>Full Selected Year</strong> exports the selected year.</li>
+          <li>The calendar icon beside an individual conductor downloads their personal <code>.ics</code> schedule. Import the file into a calendar app that supports iCalendar files.</li>
+          <li><strong>Sync &amp; Tools → Print / Save PDF</strong> creates a clean schedule sheet starting from the displayed month. Choose 1, 3, 6, or 12 months.</li>
+          <li>Use <strong>Print</strong> for a printer, <strong>Share / Save PDF</strong> where supported, or <strong>Safari Print</strong> on Safari devices. The browser’s print dialog may offer a “Save as PDF” destination.</li>
+        </ul>
+      </section>
+
+      <section id="backup" class="section-card">
+        <h2>💾 Save a backup and undo changes</h2>
+        <p>
+          The app automatically saves schedule changes in this browser’s local storage. That is convenient, but
+          it is not a substitute for a backup: clearing browser/site data or changing browsers/devices can remove
+          local-only data.
+        </p>
+        <ol>
+          <li>Choose <strong>Sync &amp; Tools → Backup Data (JSON)</strong> and keep the downloaded file somewhere safe.</li>
+          <li>To restore, choose <strong>Restore Backup (JSON)</strong> and select a backup file created by this app.</li>
+          <li>Use <strong>Undo</strong> to reverse a recent schedule change. The app keeps up to 15 undo steps while the app page is open; reloading the page clears that undo history.</li>
+        </ol>
+        <div class="callout warning">
+          A restore replaces the current schedule data with the selected backup. Export a fresh backup first if
+          you may need the current state.
+        </div>
+      </section>
+
+      <section id="sync" class="section-card">
+        <h2>☁️ Optional cloud sync with GitHub Gist</h2>
+        <p>
+          Cloud sync is optional. When it is not configured, your schedule remains in the current browser.
+          When configured, the app syncs schedule data between devices through a non-public GitHub Gist.
+        </p>
+        <ol>
+          <li>Create a GitHub personal access token with only the <code>gist</code> permission needed by the app.</li>
+          <li>Open <strong>Sync &amp; Tools → Cloud Sync</strong>, enter the token, and leave the Gist ID blank on the first device. Choose <strong>Save &amp; Connect</strong> to create the non-public Gist.</li>
+          <li>Use <strong>Copy Sync Info</strong> to transfer the token and Gist ID to your other devices. Enter the same credentials there and connect.</li>
+          <li>Keep <strong>Auto-Sync on Changes &amp; App Open</strong> enabled for automatic syncing, or use <strong>Pull</strong> and <strong>Push</strong> to sync manually.</li>
+        </ol>
+        <p>
+          Changes made offline are saved on the device and queued for upload when the connection returns. The
+          status pill in the app header shows whether the app is local-only, syncing, offline, or connected.
+        </p>
+        <div class="callout warning">
+          The GitHub token is stored in this browser’s local storage so the app can sync. Treat it like a
+          password: do not send it in an ordinary message or include it in a schedule backup. Anyone with the
+          token may have access to your Gists; revoke the token in GitHub if it is exposed. GitHub’s non-public
+          (“secret”) Gists are not encrypted or fully private: anyone who gets the Gist URL may be able to view
+          its schedule and contact data. Do not store information there that must remain confidential.
+        </div>
+        <details class="guide-detail">
+          <summary>Set up another device or disconnect sync</summary>
+          <div>
+            <p>On another device, enter the same token and Gist ID in Cloud Sync settings, then save and connect. If the device already has schedule data, make a JSON backup before connecting.</p>
+            <p>To disconnect this browser, clear the token field and save. This stops syncing from this device; it does not delete the GitHub Gist or disconnect other devices.</p>
+          </div>
+        </details>
+      </section>
+
+      <section id="help" class="section-card">
+        <h2>🛠️ Troubleshooting</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>What you see</th><th>What to check</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>A conductor changed in the future schedule</td>
+                <td>Check the roster order, Start #1 date, unavailable dates, and date-specific overrides. Past Locked protects past dates by default.</td>
+              </tr>
+              <tr>
+                <td>A date is missing</td>
+                <td>Check whether the meeting was canceled. The calendar schedules the second, fourth, and any fifth Saturday of each month.</td>
+              </tr>
+              <tr>
+                <td>Cloud status says Offline Saved</td>
+                <td>Reconnect to Wi-Fi or cellular data and reopen the app. Pending changes should sync when online; you can also open Cloud Sync and use Push.</td>
+              </tr>
+              <tr>
+                <td>A message has the wrong date, recipient, time, or location</td>
+                <td>Review the preview and recipient before sharing. Check the assignment, selected timeframe, and default or per-date time/location settings.</td>
+              </tr>
+              <tr>
+                <td>The app asks to recover unreadable saved data</td>
+                <td>Do not clear browser/site data or make more schedule changes. The app preserves a recovery copy in the same browser; keep the recovery key and seek help before attempting recovery.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          For an app update, connect to the internet and choose
+          <strong>Sync &amp; Tools → Check for App Update</strong>. Regular updates are also checked automatically
+          when the app is online.
+        </p>
+      </section>
+
+      <p class="footer-note">Conductor Schedule User Manual · v50</p>
+    </main>
   </div>
+  <script>
+    if (window.matchMedia("(max-width: 760px)").matches) {
+      document.getElementById("contentsDisclosure").open = false;
+    }
+  </script>
 </body>
 </html>
-<!-- v48-release -->
