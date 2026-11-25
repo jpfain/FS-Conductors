@@ -95,6 +95,12 @@
       border: 1px solid #bfdbfe;
     }
 
+    .roster-utility-btn {
+      min-height: 28px;
+      padding: 2px 9px;
+      font-size: 0.74rem;
+    }
+
     .sync-pill {
       background: #f8fafc;
       color: #475569;
@@ -352,6 +358,26 @@
       gap: 10px;
     }
 
+    .roster-list-summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 9px 10px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #ffffff;
+      color: #334155;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      list-style: none;
+    }
+
+    .roster-list-summary::-webkit-details-marker { display: none; }
+    .roster-list-summary::after { content: "Show"; color: var(--accent); }
+    .roster-list-details[open] > .roster-list-summary::after { content: "Hide"; }
+
     @media (max-width: 820px) {
       .roster-tags { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
@@ -563,6 +589,27 @@
       gap: 8px;
       flex-wrap: wrap;
     }
+
+    .home-actions-summary {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      min-height: 44px;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: #ffffff;
+      color: var(--text);
+      font-size: 0.84rem;
+      font-weight: 700;
+      list-style: none;
+      cursor: pointer;
+    }
+
+    .home-actions-summary::-webkit-details-marker { display: none; }
+    .home-actions-summary::after { content: "Show"; color: var(--accent); }
+    .home-actions-details[open] > .home-actions-summary::after { content: "Hide"; }
 
     .menu-backdrop {
       display: none;
@@ -1378,6 +1425,88 @@
       .modal-actions button { flex: 1 1 auto; }
       .dropdown-menu { left: 0; right: auto; }
       .unavail-range-grid { grid-template-columns: 1fr; }
+
+      .container > header .controls-group {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 100px;
+        width: 100%;
+      }
+
+      .container > header .view-toggle { width: 100%; }
+      .container > header .view-toggle button { flex: 1; min-height: 44px; padding: 7px 6px; }
+      .container > header #yearSelect { width: 100%; min-width: 0; min-height: 44px; }
+
+      .roster-header-actions { width: 100%; }
+      .roster-header-actions .anchor-control { flex: 1 1 180px; justify-content: space-between; }
+      .roster-header-actions .anchor-control input[type="date"] { min-height: 40px; }
+      .roster-header-actions #btnToggleAddConductor { min-height: 44px; padding: 7px 10px; }
+      #btnHistoryLock, #btnToggleStats { min-height: 40px; padding: 6px 9px; }
+
+      .roster-list-summary { min-height: 44px; margin-top: 10px; }
+      .roster-list-details[open] .roster-tags { margin-top: 10px; }
+      .tag-actions { gap: 8px; }
+      .tag-icon-btn { min-height: 44px; }
+
+      .home-actions-summary { display: flex; }
+      .home-actions-details:not([open]) { margin-bottom: 14px; }
+
+      .up-next-card { align-items: stretch; }
+      .up-next-info { flex: 1 1 100%; min-width: 0; }
+      .up-next-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+      }
+      .up-next-actions > button { min-height: 44px; padding: 8px 10px; white-space: normal; }
+      .quick-replace-box { grid-column: 1 / -1; width: 100%; }
+      .quick-replace-box select { flex: 1; max-width: none; min-height: 40px; }
+
+      .toolbar-left {
+        display: grid;
+        grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+        width: 100%;
+      }
+      .toolbar-right {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+      }
+      .toolbar-left button,
+      .toolbar-right > button,
+      .toolbar-right .dropdown,
+      .toolbar-right .dropdown > button {
+        width: 100%;
+        min-width: 0;
+        min-height: 44px;
+      }
+      .toolbar-left button,
+      .toolbar-right > button,
+      .toolbar-right .dropdown > button { padding: 7px 8px; white-space: normal; }
+
+      .nav-header { align-items: stretch; flex-direction: column; gap: 8px; }
+      .nav-header h2 { text-align: center; }
+      .nav-header .controls-group {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        width: 100%;
+      }
+      .nav-header .controls-group button { min-height: 44px; padding: 7px 6px; }
+    }
+
+    @media (max-width: 380px) {
+      .container > header .controls-group { grid-template-columns: 1fr; }
+      .toolbar-left { grid-template-columns: 1fr; }
+      .up-next-actions > button {
+        gap: 4px;
+        padding: 6px 4px;
+        font-size: 0.76rem;
+        white-space: nowrap;
+      }
+    }
+
+    @media (min-width: 641px) {
+      .home-actions-details[open] > .home-actions-summary { display: none; }
+      .home-actions-details:not([open]) > .home-actions-summary { display: flex; }
     }
   </style>
 </head>
@@ -1391,7 +1520,7 @@
   <header>
     <div class="title-group">
       <h1>Conductor Schedule</h1>
-      <span id="appVersionBadge" class="version-badge">v49</span>
+      <span id="appVersionBadge" class="version-badge">v50</span>
       <span id="cloudSyncPill" class="sync-pill" onclick="openCloudSyncModal()" title="Configure or check GitHub Gist Cloud Sync">☁️ Local Only</span>
     </div>
     <div class="controls-group">
@@ -1402,47 +1531,6 @@
       <select id="yearSelect" onchange="handleYearChange()" aria-label="Select Year"></select>
     </div>
   </header>
-
-  <!-- ROSTER MANAGEMENT PANEL -->
-  <div class="roster-card">
-    <div class="roster-header">
-      <div class="roster-title-wrap">
-        <span class="roster-title">Approved Conductors</span>
-        <span id="rosterCountBadge" class="roster-count">0</span>
-        <button type="button" id="btnHistoryLock" class="lock-pill-btn" onclick="toggleHistoryLock()" title="Locks past Saturdays so roster edits never alter historical records">🔒 Past Locked</button>
-        <button type="button" id="btnToggleStats" class="outline" style="min-height: 28px; padding: 2px 9px; font-size: 0.74rem;" onclick="toggleStatsPanel()">📊 Stats</button>
-      </div>
-      <div class="roster-header-actions">
-        <div class="anchor-control">
-          <label for="rotationStartDateInput">Start #1:</label>
-          <input type="date" id="rotationStartDateInput" value="2026-11-14" onchange="updateRotationStartDate(this.value)">
-        </div>
-        <button type="button" id="btnToggleAddConductor" class="accent" style="min-height: 34px; padding: 4px 12px; font-size: 0.82rem;" onclick="toggleAddConductorDrawer()">+ Add Conductor</button>
-      </div>
-    </div>
-
-    <!-- FAIRNESS & LAST-SERVED STATS DRAWER -->
-    <div id="statsPanel" class="stats-drawer"></div>
-
-    <!-- HIDDEN ENTRY FIELDS (REVEALED ON CLICK) -->
-    <div id="addConductorDrawer" class="add-conductor-drawer">
-      <div class="drawer-top-bar">
-        <span class="drawer-top-title">New Approved Conductor</span>
-        <button type="button" class="dropdown-close-btn" onclick="toggleAddConductorDrawer(false)">✕ Close</button>
-      </div>
-      <div class="drawer-inputs">
-        <input type="text" id="newConductorInput" class="roster-input" placeholder="Full name (required)..." onkeydown="if(event.key==='Enter') addConductor()">
-        <input type="tel" id="newConductorPhone" class="roster-contact-input" placeholder="Mobile # (optional)" onkeydown="if(event.key==='Enter') addConductor()">
-        <input type="email" id="newConductorEmail" class="roster-contact-input" placeholder="Email (optional)" onkeydown="if(event.key==='Enter') addConductor()">
-      </div>
-      <div class="drawer-actions">
-        <button type="button" class="outline" style="min-height: 34px;" onclick="toggleAddConductorDrawer(false)">Cancel</button>
-        <button type="button" class="success" style="min-height: 34px;" onclick="addConductor()">Save Conductor</button>
-      </div>
-    </div>
-
-    <div class="roster-tags" id="rosterContainer"></div>
-  </div>
 
   <!-- UP NEXT QUICK-ACTION BANNER -->
   <div id="upNextBanner" class="up-next-card" style="display: none;">
@@ -1465,57 +1553,60 @@
         <select id="quickReplaceSelect" onchange="applyQuickReplace(this.value)" aria-label="Quick Replace Conductor"></select>
         <button type="button" class="btn-link" onclick="toggleQuickReplace(false)">Done</button>
       </div>
-      <button type="button" id="btnOpenQuickReplace" class="outline" style="min-height: 34px; padding: 4px 10px; font-size: 0.82rem;" onclick="toggleQuickReplace()">🔄 Quick Replace</button>
-      <button type="button" class="success" style="min-height: 34px; padding: 4px 12px; font-size: 0.82rem;" onclick="remindUpNextConductor()">💬 Send Reminder</button>
+      <button type="button" id="btnOpenQuickReplace" class="outline" onclick="toggleQuickReplace()">🔄 Quick Replace</button>
+      <button type="button" class="success" onclick="remindUpNextConductor()">💬 Send Reminder</button>
     </div>
   </div>
 
-  <!-- ORGANIZED ACTION TOOLBAR -->
-  <div class="toolbar">
-    <div class="toolbar-left">
-      <button type="button" class="accent" onclick="openShareModal('all', null, 'text')">📢 Share All Schedules</button>
-      <button type="button" class="outline" onclick="openTradeModal()">⇄ Trade Dates</button>
-    </div>
-
-    <div class="toolbar-right">
-      <button type="button" id="btnUndo" class="outline" onclick="undoLastChange()" disabled title="Undo last schedule change">↩ Undo</button>
-
-      <!-- EXPORT CALENDAR DROPDOWN -->
-      <div class="dropdown">
-        <button type="button" class="outline" onclick="toggleDropdown('exportMenu', event)">📅 Export .ics ▾</button>
-        <div id="exportMenu" class="dropdown-menu">
-          <div class="dropdown-header">
-            <span>Export Calendar</span>
-            <button type="button" class="dropdown-close-btn" onclick="closeAllDropdowns()">✕ Close</button>
-          </div>
-          <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); exportMonthICS()">🗓️ Current Month (.ics)</button>
-          <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); exportMasterICS()">📅 Full Selected Year (.ics)</button>
-        </div>
+  <details id="homeActionsDetails" class="home-actions-details" open>
+    <summary class="home-actions-summary">Schedule actions</summary>
+    <!-- ORGANIZED ACTION TOOLBAR -->
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <button type="button" class="accent" onclick="openShareModal('all', null, 'text')">📢 Share All Schedules</button>
+        <button type="button" class="outline" onclick="openTradeModal()">⇄ Trade Dates</button>
       </div>
 
-      <!-- SYNC & TOOLS DROPDOWN -->
-      <div class="dropdown">
-        <button type="button" class="outline" onclick="toggleDropdown('toolsMenu', event)">⚙️ Sync &amp; Tools ▾</button>
-        <div id="toolsMenu" class="dropdown-menu">
-          <div class="dropdown-header">
-            <span>Sync &amp; Tools</span>
-            <button type="button" class="dropdown-close-btn" onclick="closeAllDropdowns()">✕ Close</button>
+      <div class="toolbar-right">
+        <button type="button" id="btnUndo" class="outline" onclick="undoLastChange()" disabled title="Undo last schedule change">↩ Undo</button>
+
+        <!-- EXPORT CALENDAR DROPDOWN -->
+        <div class="dropdown">
+          <button type="button" class="outline" onclick="toggleDropdown('exportMenu', event)">📅 Export .ics ▾</button>
+          <div id="exportMenu" class="dropdown-menu">
+            <div class="dropdown-header">
+              <span>Export Calendar</span>
+              <button type="button" class="dropdown-close-btn" onclick="closeAllDropdowns()">✕ Close</button>
+            </div>
+            <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); exportMonthICS()">🗓️ Current Month (.ics)</button>
+            <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); exportMasterICS()">📅 Full Selected Year (.ics)</button>
           </div>
-          <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); openTimeLocModal()">🕒 Time &amp; Location</button>
-          <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); openPrintModal()">🖨️ Print / Save PDF</button>
-          <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); openUserManual()">📖 User Manual</button>
-          <div class="dropdown-divider"></div>
-          <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); openCloudSyncModal()">☁️ Cloud Sync (GitHub Gist)</button>
-          <div class="dropdown-divider"></div>
-          <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); exportJSONBackup()">💾 Backup Data (JSON)</button>
-          <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); document.getElementById('importFileInput').click()">📂 Restore Backup (JSON)</button>
-          <div class="dropdown-divider"></div>
-          <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); forceAppUpdate()">🔄 Check for App Update</button>
         </div>
+
+        <!-- SYNC & TOOLS DROPDOWN -->
+        <div class="dropdown">
+          <button type="button" class="outline" onclick="toggleDropdown('toolsMenu', event)">⚙️ Sync &amp; Tools ▾</button>
+          <div id="toolsMenu" class="dropdown-menu">
+            <div class="dropdown-header">
+              <span>Sync &amp; Tools</span>
+              <button type="button" class="dropdown-close-btn" onclick="closeAllDropdowns()">✕ Close</button>
+            </div>
+            <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); openTimeLocModal()">🕒 Time &amp; Location</button>
+            <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); openPrintModal()">🖨️ Print / Save PDF</button>
+            <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); openUserManual()">📖 User Manual</button>
+            <div class="dropdown-divider"></div>
+            <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); openCloudSyncModal()">☁️ Cloud Sync (GitHub Gist)</button>
+            <div class="dropdown-divider"></div>
+            <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); exportJSONBackup()">💾 Backup Data (JSON)</button>
+            <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); document.getElementById('importFileInput').click()">📂 Restore Backup (JSON)</button>
+            <div class="dropdown-divider"></div>
+            <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); forceAppUpdate()">🔄 Check for App Update</button>
+          </div>
+        </div>
+        <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="importJSONBackup(event)">
       </div>
-      <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="importJSONBackup(event)">
     </div>
-  </div>
+  </details>
 
   <div id="statusMsg" class="status-banner"></div>
 
@@ -1546,6 +1637,50 @@
       </thead>
       <tbody id="scheduleTableBody"></tbody>
     </table>
+  </div>
+
+  <!-- ROSTER MANAGEMENT PANEL -->
+  <div class="roster-card">
+    <div class="roster-header">
+      <div class="roster-title-wrap">
+        <span class="roster-title">Approved Conductors</span>
+        <span id="rosterCountBadge" class="roster-count">0</span>
+        <button type="button" id="btnHistoryLock" class="lock-pill-btn" onclick="toggleHistoryLock()" title="Locks past Saturdays so roster edits never alter historical records">🔒 Past Locked</button>
+        <button type="button" id="btnToggleStats" class="outline roster-utility-btn" onclick="toggleStatsPanel()">📊 Stats</button>
+      </div>
+      <div class="roster-header-actions">
+        <div class="anchor-control">
+          <label for="rotationStartDateInput">Start #1:</label>
+          <input type="date" id="rotationStartDateInput" value="2026-11-14" onchange="updateRotationStartDate(this.value)">
+        </div>
+        <button type="button" id="btnToggleAddConductor" class="accent" onclick="toggleAddConductorDrawer()">+ Add Conductor</button>
+      </div>
+    </div>
+
+    <!-- FAIRNESS & LAST-SERVED STATS DRAWER -->
+    <div id="statsPanel" class="stats-drawer"></div>
+
+    <!-- HIDDEN ENTRY FIELDS (REVEALED ON CLICK) -->
+    <div id="addConductorDrawer" class="add-conductor-drawer">
+      <div class="drawer-top-bar">
+        <span class="drawer-top-title">New Approved Conductor</span>
+        <button type="button" class="dropdown-close-btn" onclick="toggleAddConductorDrawer(false)">✕ Close</button>
+      </div>
+      <div class="drawer-inputs">
+        <input type="text" id="newConductorInput" class="roster-input" placeholder="Full name (required)..." onkeydown="if(event.key==='Enter') addConductor()">
+        <input type="tel" id="newConductorPhone" class="roster-contact-input" placeholder="Mobile # (optional)" onkeydown="if(event.key==='Enter') addConductor()">
+        <input type="email" id="newConductorEmail" class="roster-contact-input" placeholder="Email (optional)" onkeydown="if(event.key==='Enter') addConductor()">
+      </div>
+      <div class="drawer-actions">
+        <button type="button" class="outline" style="min-height: 34px;" onclick="toggleAddConductorDrawer(false)">Cancel</button>
+        <button type="button" class="success" style="min-height: 34px;" onclick="addConductor()">Save Conductor</button>
+      </div>
+    </div>
+
+    <details id="rosterListDetails" class="roster-list-details" open>
+      <summary class="roster-list-summary">Conductor list</summary>
+      <div class="roster-tags" id="rosterContainer"></div>
+    </details>
   </div>
 </div>
 
@@ -1923,7 +2058,7 @@
 </div>
 
 <script>
-  const APP_VERSION = "v49";
+  const APP_VERSION = "v50";
   const APP_CACHE_PREFIX = "fs-conductors-";
   let currentDate = new Date();
   let currentViewMode = "calendar";
@@ -5664,6 +5799,10 @@
       parseInt(urlParams.get("m"), 10)
     );
   } else {
+    if (window.matchMedia("(max-width: 640px)").matches) {
+      document.getElementById("rosterListDetails").open = false;
+      document.getElementById("homeActionsDetails").open = false;
+    }
     renderUI();
     syncWithGitHubGist(true);
   }
