@@ -49,7 +49,7 @@
       top: 0;
       z-index: 5;
       margin: 0 -18px 24px;
-      padding: 12px max(18px, calc((100vw - 1200px) / 2));
+      padding: calc(12px + env(safe-area-inset-top)) max(18px, calc((100vw - 1200px) / 2));
       border-bottom: 1px solid #dbe3ee;
       background: rgb(241 245 249 / 94%);
       backdrop-filter: blur(10px);
