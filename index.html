@@ -1924,6 +1924,7 @@
 
 <script>
   const APP_VERSION = "v49";
+  const APP_CACHE_PREFIX = "fs-conductors-";
   let currentDate = new Date();
   let currentViewMode = "calendar";
   const monthNames = [
@@ -3619,19 +3620,21 @@
     try {
       if ('caches' in window) {
         const cacheNames = await caches.keys();
-        await Promise.all(cacheNames.map(name => caches.delete(name)));
+        await Promise.all(
+          cacheNames
+            .filter(name => name.startsWith(APP_CACHE_PREFIX))
+            .map(name => caches.delete(name))
+        );
       }
       if ('serviceWorker' in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        for (const reg of registrations) {
-          try { await reg.update(); } catch (e) {}
-          await reg.unregister();
-        }
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration) await registration.unregister();
       }
       showStatus("Reloading latest version...");
       setTimeout(() => { window.location.reload(); }, 450);
     } catch (err) {
-      window.location.reload();
+      console.error("App update failed:", err);
+      showStatus(`Could not complete app update: ${err.message}`);
     }
   }
 
@@ -3639,26 +3642,47 @@
   function loadAppState() {
     const saved = localStorage.getItem("conductor_schedule_state");
     if (saved) {
-      const parsed = JSON.parse(saved);
-      if (!parsed.templates) parsed.templates = { ...DEFAULT_TEMPLATES };
-      if (!parsed.rotationStartDate) parsed.rotationStartDate = DEFAULT_ANCHOR_DATE;
-      if (!parsed.defaultTime) parsed.defaultTime = DEFAULT_MEETING_TIME;
-      if (!parsed.defaultLocation) parsed.defaultLocation = DEFAULT_MEETING_LOCATION;
-      if (parsed.lockPastDates === undefined) parsed.lockPastDates = true;
-      if (!parsed.lockedHistory) parsed.lockedHistory = {};
-      if (!parsed.contacts) parsed.contacts = {};
-      if (!parsed.unavailability) parsed.unavailability = {};
-      if (!parsed.reminders) parsed.reminders = {};
-      if (!parsed.overrides) parsed.overrides = {};
-      if (!parsed.blackouts) parsed.blackouts = {};
-      if (!parsed.slotDetails) parsed.slotDetails = {};
-      if (!parsed.lastModified) parsed.lastModified = "1970-01-01T00:00:00.000Z";
-
-      ensureFieldTimestamps(parsed);
-      if (snapshotPastDates(parsed)) {
-        localStorage.setItem("conductor_schedule_state", JSON.stringify(parsed));
+      let parsed = null;
+      try {
+        parsed = JSON.parse(saved);
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) || !Array.isArray(parsed.roster)) {
+          throw new Error("Invalid saved schedule format.");
+        }
+      } catch (err) {
+        parsed = null;
+        const recoveryKey = `conductor_schedule_state_recovery_${Date.now()}`;
+        try {
+          localStorage.setItem(recoveryKey, saved);
+        } catch (storageErr) {
+          console.error("Could not preserve invalid schedule data:", storageErr);
+          alert("Saved schedule data could not be read, and a recovery copy could not be saved. Do not clear this site's browser data; contact support before continuing.");
+          throw storageErr;
+        }
+        console.error("Saved schedule data is invalid; a recovery copy was preserved.", err);
+        alert(`Saved schedule data could not be read. An untouched recovery copy is preserved in this browser as "${recoveryKey}". A new default schedule will be loaded; recover that copy before making changes if you need the previous schedule.`);
       }
-      return parsed;
+
+      if (parsed) {
+        if (!parsed.templates) parsed.templates = { ...DEFAULT_TEMPLATES };
+        if (!parsed.rotationStartDate) parsed.rotationStartDate = DEFAULT_ANCHOR_DATE;
+        if (!parsed.defaultTime) parsed.defaultTime = DEFAULT_MEETING_TIME;
+        if (!parsed.defaultLocation) parsed.defaultLocation = DEFAULT_MEETING_LOCATION;
+        if (parsed.lockPastDates === undefined) parsed.lockPastDates = true;
+        if (!parsed.lockedHistory) parsed.lockedHistory = {};
+        if (!parsed.contacts) parsed.contacts = {};
+        if (!parsed.unavailability) parsed.unavailability = {};
+        if (!parsed.reminders) parsed.reminders = {};
+        if (!parsed.overrides) parsed.overrides = {};
+        if (!parsed.blackouts) parsed.blackouts = {};
+        if (!parsed.slotDetails) parsed.slotDetails = {};
+        if (!parsed.lastModified) parsed.lastModified = "1970-01-01T00:00:00.000Z";
+
+        ensureFieldTimestamps(parsed);
+        if (snapshotPastDates(parsed)) {
+          localStorage.setItem("conductor_schedule_state", JSON.stringify(parsed));
+        }
+        return parsed;
+      }
     }
 
     const defaultRoster = ["Julian Ramirez", "Judy Fain", "Dow Stephens", "Martin Tavarez", "Stacy Jaffnson"];

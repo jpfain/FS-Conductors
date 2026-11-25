@@ -1,4 +1,5 @@
-const CACHE_NAME = 'fs-conductors-v49-cache-1';
+const CACHE_NAME = 'fs-conductors-v49-cache-2';
+const CACHE_PREFIX = 'fs-conductors-';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -19,7 +20,8 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(
-        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+        keys.filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
+          .map((key) => caches.delete(key))
       )
     )
   );
@@ -34,7 +36,15 @@ self.addEventListener('message', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
-  event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
-  );
+  event.respondWith((async () => {
+    const cached = await caches.match(event.request);
+    if (cached) return cached;
+
+    if (event.request.mode === 'navigate') {
+      const cachedNavigation = await caches.match(event.request, { ignoreSearch: true });
+      if (cachedNavigation) return cachedNavigation;
+    }
+
+    return fetch(event.request);
+  })());
 });
