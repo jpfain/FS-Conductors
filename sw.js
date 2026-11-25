@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fs-conductors-v48-cache-1';
+const CACHE_NAME = 'fs-conductors-v49-cache-1';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
