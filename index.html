@@ -113,6 +113,7 @@
       display: inline-flex;
       align-items: center;
       gap: 4px;
+      min-height: 28px;
     }
 
     .sync-pill.connected { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
@@ -135,6 +136,11 @@
     }
 
     button, select, input { min-height: 38px; }
+
+    :focus-visible {
+      outline: 3px solid #2563eb;
+      outline-offset: 2px;
+    }
 
     button {
       background-color: var(--primary);
@@ -502,6 +508,12 @@
       text-align: left;
       word-break: break-word;
       overflow-wrap: break-word;
+      background: transparent;
+      border: 0;
+      color: inherit;
+      font: inherit;
+      padding: 0;
+      cursor: pointer;
     }
 
     .reminder-sent-pill button {
@@ -515,6 +527,8 @@
       font-weight: 800;
       line-height: 1;
       cursor: pointer;
+      min-width: 28px;
+      min-height: 28px;
     }
 
     .reminder-sent-pill button:hover {
@@ -963,7 +977,17 @@
     .badge-standard { background: #e2e8f0; color: #475569; }
     .badge-locked { background: #e2e8f0; color: #334155; }
     .badge-reassigned { background: #e0e7ff; color: #3730a3; }
-    .badge-reminded { background: #dcfce7; color: #065f46; border: 1px solid #86efac; cursor: pointer; }
+    .badge-reminded {
+      display: inline-flex;
+      align-items: center;
+      background: #dcfce7;
+      color: #065f46;
+      border: 1px solid #86efac;
+      border-radius: 999px;
+      padding: 2px 7px;
+      font: inherit;
+      cursor: pointer;
+    }
     .badge-reminded.status-confirmed { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
     .badge-reminded.status-requested_sub,
     .badge-reminded.status-needs_sub { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
@@ -982,6 +1006,28 @@
     }
 
     .modal-backdrop.open { display: flex; }
+
+    @media (max-width: 640px) {
+      .modal-card button,
+      .modal-card select,
+      .modal-card input:not([type="checkbox"]),
+      .modal-card a {
+        min-height: 44px !important;
+      }
+
+      .reminder-sent-pill .pill-cycle-text,
+      .reminder-sent-pill button {
+        min-height: 44px !important;
+      }
+
+      .badge-reminded {
+        min-height: 44px !important;
+      }
+
+      .sync-pill {
+        min-height: 44px !important;
+      }
+    }
 
     #contactModal,
     #cancelModal,
@@ -1521,7 +1567,7 @@
     <div class="title-group">
       <h1>Conductor Schedule</h1>
       <span id="appVersionBadge" class="version-badge">v50</span>
-      <span id="cloudSyncPill" class="sync-pill" onclick="openCloudSyncModal()" title="Configure or check GitHub Gist Cloud Sync">☁️ Local Only</span>
+      <button type="button" id="cloudSyncPill" class="sync-pill" onclick="openCloudSyncModal()" title="Configure or check GitHub Gist Cloud Sync" aria-haspopup="dialog" aria-controls="cloudSyncModal">☁️ Local Only</button>
     </div>
     <div class="controls-group">
       <div class="view-toggle">
@@ -1608,7 +1654,7 @@
     </div>
   </details>
 
-  <div id="statusMsg" class="status-banner"></div>
+  <div id="statusMsg" class="status-banner" role="status" aria-live="polite" aria-atomic="true"></div>
 
   <!-- MONTHLY CALENDAR VIEW -->
   <div id="calendarViewSection">
@@ -2205,6 +2251,118 @@
   function syncModalBodyLock() {
     const anyModalOpen = document.querySelectorAll(".modal-backdrop.open").length > 0;
     document.body.classList.toggle("modal-open", anyModalOpen);
+  }
+
+  const modalReturnFocus = new WeakMap();
+
+  function configureModalAccessibility() {
+    document.querySelectorAll(".modal-backdrop").forEach(modal => {
+      const card = modal.querySelector(".modal-card");
+      const heading = card && card.querySelector("h3");
+      if (!card || !heading) return;
+
+      if (!heading.id) heading.id = `${modal.id}Title`;
+      card.setAttribute("role", "dialog");
+      card.setAttribute("aria-modal", "false");
+      card.setAttribute("aria-labelledby", heading.id);
+      card.tabIndex = -1;
+      modal.setAttribute("aria-hidden", "true");
+    });
+  }
+
+  function getTopmostModal() {
+    return [...document.querySelectorAll(".modal-backdrop.open")]
+      .reduce((topmost, modal) => {
+        const modalZIndex = Number.parseInt(getComputedStyle(modal).zIndex, 10) || 0;
+        const topmostZIndex = topmost
+          ? Number.parseInt(getComputedStyle(topmost).zIndex, 10) || 0
+          : -1;
+        return modalZIndex >= topmostZIndex ? modal : topmost;
+      }, null);
+  }
+
+  function syncAccessibleModalState() {
+    const topmostModal = getTopmostModal();
+    document.querySelectorAll(".modal-backdrop").forEach(modal => {
+      const isTopmost = modal === topmostModal;
+      modal.setAttribute("aria-hidden", String(!isTopmost));
+      const card = modal.querySelector(".modal-card");
+      if (card) card.setAttribute("aria-modal", String(isTopmost));
+    });
+  }
+
+  function focusModal(modal, preferredTargetId) {
+    const card = modal.querySelector(".modal-card");
+    const preferredTarget = preferredTargetId && document.getElementById(preferredTargetId);
+    const target = preferredTarget && modal.contains(preferredTarget)
+      ? preferredTarget
+      : card.querySelector("input:not([type='hidden']):not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), a[href]");
+    (target || card).focus({ preventScroll: true });
+  }
+
+  function openAccessibleModal(modalId, preferredTargetId) {
+    const modal = document.getElementById(modalId);
+    if (!modal.classList.contains("open")) {
+      const activeElement = document.activeElement;
+      modalReturnFocus.set(modal, {
+        element: activeElement,
+        id: activeElement.id,
+        ariaLabel: activeElement.getAttribute("aria-label")
+      });
+    }
+    modal.classList.add("open");
+    syncAccessibleModalState();
+    focusModal(modal, preferredTargetId);
+  }
+
+  function closeAccessibleModal(modalId) {
+    const modal = document.getElementById(modalId);
+    modal.classList.remove("open");
+    syncAccessibleModalState();
+
+    const focusSnapshot = modalReturnFocus.get(modal);
+    modalReturnFocus.delete(modal);
+    const topmostModal = getTopmostModal();
+    let previousFocus = focusSnapshot && focusSnapshot.element;
+    if ((!previousFocus || !previousFocus.isConnected) && focusSnapshot && focusSnapshot.id) {
+      previousFocus = document.getElementById(focusSnapshot.id);
+    }
+    if ((!previousFocus || !previousFocus.isConnected) && focusSnapshot && focusSnapshot.ariaLabel) {
+      previousFocus = [...document.querySelectorAll("[aria-label]")]
+        .find(element => element.getAttribute("aria-label") === focusSnapshot.ariaLabel);
+    }
+    const previousFocusIsAvailable = previousFocus &&
+      previousFocus.isConnected &&
+      !previousFocus.closest(".modal-backdrop[aria-hidden='true']");
+
+    if (previousFocusIsAvailable) {
+      previousFocus.focus({ preventScroll: true });
+    } else if (topmostModal) {
+      focusModal(topmostModal);
+    }
+  }
+
+  function trapModalFocus(event) {
+    if (event.key !== "Tab") return;
+    const modal = getTopmostModal();
+    if (!modal) return;
+
+    const focusable = [...modal.querySelectorAll(
+      "a[href], button:not([disabled]), input:not([disabled]):not([type='hidden']), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])"
+    )].filter(element => element.getClientRects().length > 0);
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+
+    if (!first) {
+      event.preventDefault();
+      modal.querySelector(".modal-card").focus();
+    } else if (event.shiftKey && (document.activeElement === first || !modal.contains(document.activeElement))) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && (document.activeElement === last || !modal.contains(document.activeElement))) {
+      event.preventDefault();
+      first.focus();
+    }
   }
 
   /* --- ONE-TAP UNDO STACK --- */
@@ -2805,12 +2963,12 @@
 
     loadSelectedSlotTimeLoc();
     renderCustomSlotOverridesList();
-    document.getElementById("timeLocModal").classList.add("open");
+    openAccessibleModal("timeLocModal", "defaultTimeInput");
     syncModalBodyLock();
   }
 
   function closeTimeLocModal() {
-    document.getElementById("timeLocModal").classList.remove("open");
+    closeAccessibleModal("timeLocModal");
     tempSlotDetails = {};
     syncModalBodyLock();
   }
@@ -2909,12 +3067,12 @@
       chip.classList.toggle("selected", idx === 0);
     });
 
-    document.getElementById("cancelModal").classList.add("open");
+    openAccessibleModal("cancelModal", "cancelReasonInput");
     syncModalBodyLock();
   }
 
   function closeCancelModal() {
-    document.getElementById("cancelModal").classList.remove("open");
+    closeAccessibleModal("cancelModal");
     pendingCancelDateKey = null;
     syncModalBodyLock();
   }
@@ -2947,12 +3105,12 @@
   /* --- BOARD-READY PRINT / SAVE PDF CONTROLLERS --- */
   function openPrintModal() {
     prepareSafariPrintLink();
-    document.getElementById("printModal").classList.add("open");
+    openAccessibleModal("printModal", "printScopeSelect");
     syncModalBodyLock();
   }
 
   function closePrintModal() {
-    document.getElementById("printModal").classList.remove("open");
+    closeAccessibleModal("printModal");
     syncModalBodyLock();
   }
 
@@ -3485,12 +3643,12 @@
       detail.innerText = "Not connected yet. Data is currently stored locally on this device.";
     }
 
-    document.getElementById("cloudSyncModal").classList.add("open");
+    openAccessibleModal("cloudSyncModal", "gistTokenInput");
     syncModalBodyLock();
   }
 
   function closeCloudSyncModal() {
-    document.getElementById("cloudSyncModal").classList.remove("open");
+    closeAccessibleModal("cloudSyncModal");
     syncModalBodyLock();
   }
 
@@ -4130,12 +4288,12 @@
     sel2.selectedIndex = diffIdx !== -1 ? diffIdx : 1;
 
     refreshTradePreview();
-    document.getElementById("tradeModal").classList.add("open");
+    openAccessibleModal("tradeModal", "tradeDate1Select");
     syncModalBodyLock();
   }
 
   function closeTradeModal() {
-    document.getElementById("tradeModal").classList.remove("open");
+    closeAccessibleModal("tradeModal");
     syncModalBodyLock();
   }
 
@@ -4304,7 +4462,7 @@
 
     renderUpcomingSaturdayCheckboxes(state);
     renderUnavailableDatesPills();
-    document.getElementById("contactModal").classList.add("open");
+    openAccessibleModal("contactModal", "editConductorName");
     syncModalBodyLock();
   }
 
@@ -4416,7 +4574,7 @@
   }
 
   function closeContactModal() {
-    document.getElementById("contactModal").classList.remove("open");
+    closeAccessibleModal("contactModal");
     editingRosterIndex = null;
     tempUnavailableDates = [];
     syncModalBodyLock();
@@ -4539,9 +4697,9 @@
 
       const statusClass = activeReminder && activeReminder.status !== "sent" ? ` status-${activeReminder.status}` : "";
       const reminderNoteHtml = activeReminder
-        ? `<div class="reminder-sent-pill${statusClass}" title="Tap to cycle status: Assignment sent → Reminder sent → Confirmed → Requested Sub" onclick="cycleReminderStatus('${escapeHtml(activeReminder.dateKey)}', event)">
-             <span class="pill-cycle-text">${escapeHtml(formatReminderStatusText(activeReminder, false))}</span>
-             <button type="button" title="Clear tag" aria-label="Clear tag" onclick="clearReminderTag('${escapeHtml(activeReminder.dateKey)}', event)">&times;</button>
+        ? `<div class="reminder-sent-pill${statusClass}">
+             <button type="button" class="pill-cycle-text" title="Cycle reminder status" aria-label="Cycle reminder status for ${escapeHtml(name)} on ${escapeHtml(activeReminder.dateKey)}" onclick="cycleReminderStatus('${escapeHtml(activeReminder.dateKey)}', event)">${escapeHtml(formatReminderStatusText(activeReminder, false))}</button>
+             <button type="button" title="Clear tag" aria-label="Clear reminder status for ${escapeHtml(name)}" onclick="clearReminderTag('${escapeHtml(activeReminder.dateKey)}', event)">&times;</button>
            </div>`
         : "";
 
@@ -4632,9 +4790,9 @@
     if (activeRem) {
       const statusClass = activeRem.status !== "sent" ? ` status-${activeRem.status}` : "";
       remWrap.innerHTML = `
-        <div class="reminder-sent-pill${statusClass}" style="margin-top: 2px;" title="Tap to cycle status: Assignment sent → Reminder sent → Confirmed → Requested Sub" onclick="cycleReminderStatus('${escapeHtml(nextSlot.dateKey)}', event)">
-          <span class="pill-cycle-text">${escapeHtml(formatReminderStatusText(activeRem, false))}</span>
-          <button type="button" title="Clear tag" aria-label="Clear tag" onclick="clearReminderTag('${escapeHtml(nextSlot.dateKey)}', event)">&times;</button>
+        <div class="reminder-sent-pill${statusClass}" style="margin-top: 2px;">
+          <button type="button" class="pill-cycle-text" title="Cycle reminder status" aria-label="Cycle reminder status for ${escapeHtml(nextSlot.conductor)} on ${escapeHtml(nextSlot.dateKey)}" onclick="cycleReminderStatus('${escapeHtml(nextSlot.dateKey)}', event)">${escapeHtml(formatReminderStatusText(activeRem, false))}</button>
+          <button type="button" title="Clear tag" aria-label="Clear reminder status for ${escapeHtml(nextSlot.conductor)}" onclick="clearReminderTag('${escapeHtml(nextSlot.dateKey)}', event)">&times;</button>
         </div>
       `;
     } else if (daysUntil >= 0 && daysUntil <= 4) {
@@ -4939,7 +5097,7 @@
         const remInfo = !blackoutReason ? getReminderForSlot(dateKey, conductor, state) : null;
         if (remInfo) {
           const stClass = remInfo.status !== "sent" ? ` status-${remInfo.status}` : "";
-          statusBadge += ` <span class="badge badge-reminded${stClass}" title="Tap to cycle status" onclick="cycleReminderStatus('${dateKey}', event)">${escapeHtml(formatReminderStatusText(remInfo, true))}</span>`;
+          statusBadge += ` <button type="button" class="badge badge-reminded${stClass}" title="Tap to cycle status" aria-label="Cycle reminder status for ${escapeHtml(conductor)} on ${escapeHtml(dateKey)}" onclick="cycleReminderStatus('${escapeHtml(dateKey)}', event)">${escapeHtml(formatReminderStatusText(remInfo, true))}</button>`;
         }
 
         const slotTL = !blackoutReason ? getSlotTimeLocation(state, dateKey) : null;
@@ -5232,7 +5390,7 @@
     document.getElementById("queueStepperRow").style.display = "none";
 
     setShareFormat(initialFormat);
-    document.getElementById("shareModal").classList.add("open");
+    openAccessibleModal("shareModal", "shareRecipientInput");
     syncModalBodyLock();
   }
 
@@ -5255,7 +5413,7 @@
   }
 
   function closeShareModal() {
-    document.getElementById("shareModal").classList.remove("open");
+    closeAccessibleModal("shareModal");
     syncModalBodyLock();
   }
 
@@ -5776,6 +5934,7 @@
 
   // Close modals, drawers, and dropdowns on Escape key
   window.addEventListener("keydown", (e) => {
+    trapModalFocus(e);
     if (e.key === "Escape") {
       closeAllDropdowns();
       if (document.getElementById("timeLocModal").classList.contains("open")) {
@@ -5798,6 +5957,7 @@
     }
   });
 
+  configureModalAccessibility();
   setupCrossTabSync();
 
   // Register Service Worker with Automatic Update Detection
