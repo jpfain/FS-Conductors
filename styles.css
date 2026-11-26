@@ -108,6 +108,31 @@
     .sync-pill.offline { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
     .sync-pill.error { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
 
+    .pwa-notice {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 0 0 12px;
+      padding: 10px 12px;
+      color: #1e3a8a;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 10px;
+      font-size: 0.84rem;
+      font-weight: 600;
+    }
+
+    .pwa-notice[hidden] { display: none; }
+
+    .cloud-sync-status {
+      white-space: pre-line;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #475569;
+      margin-bottom: 14px;
+    }
+
     .controls-group {
       display: flex;
       align-items: center;

@@ -1,9 +1,10 @@
-const CACHE_NAME = 'fs-conductors-v50-cache-3';
+const CACHE_NAME = 'fs-conductors-v50-cache-8';
 const CACHE_PREFIX = 'fs-conductors-';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './styles.css',
+  './js/storage.js',
   './js/app-core.js',
   './js/ui-modals.js',
   './js/cloud-sync.js',
@@ -20,7 +21,6 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS_TO_CACHE))
   );
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
@@ -42,16 +42,44 @@ self.addEventListener('message', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
-  event.respondWith((async () => {
-    const cached = await caches.match(event.request);
-    if (cached) return cached;
+  const request = event.request;
+  if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
 
-    if (event.request.mode === 'navigate') {
-      const cachedNavigation = await caches.match(event.request, { ignoreSearch: true });
-      if (cachedNavigation) return cachedNavigation;
-    }
+  if (request.mode === 'navigate') {
+    event.respondWith((async () => {
+      try {
+        const response = await fetch(request);
+        if (response.ok) {
+          const cache = await caches.open(CACHE_NAME);
+          await cache.put(request, response.clone()).catch((error) => {
+            console.warn('Navigation cache update failed:', request.url, error);
+          });
+        }
+        return response;
+      } catch (error) {
+        const cached = await caches.match(request, { ignoreSearch: true });
+        if (cached) return cached;
+        const fallback = await caches.match('./index.html');
+        if (fallback) return fallback;
+        throw error;
+      }
+    })());
+    return;
+  }
 
-    return fetch(event.request);
-  })());
+  if (request.destination === 'style' || request.destination === 'script' ||
+      /\.(?:css|js|png|svg|ico|json|webmanifest)$/.test(new URL(request.url).pathname)) {
+    const cachePromise = caches.open(CACHE_NAME);
+    const update = cachePromise.then((cache) => fetch(request).then(async (response) => {
+        if (response.ok) await cache.put(request, response.clone());
+        return response;
+      }));
+    event.waitUntil(update.catch((error) => {
+      console.warn('Static asset refresh failed:', request.url, error);
+    }));
+    event.respondWith(cachePromise.then(async (cache) => {
+      const cached = await cache.match(request);
+      return cached || update;
+    }));
+  }
 });

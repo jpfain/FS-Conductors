@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PWA Smoke Tests</title>
+  <style>
+    body { font: 16px system-ui, sans-serif; margin: 2rem auto; max-width: 720px; padding: 0 1rem; }
+    li { margin: 0.5rem 0; }
+    .pass { color: #065f46; }
+    .fail { color: #991b1b; }
+    #appFrame { border: 0; height: 1px; opacity: 0; position: absolute; width: 1px; }
+  </style>
+</head>
+<body>
+  <h1>PWA Smoke Tests</h1>
+  <p id="summary" role="status" aria-live="polite">Starting app and checking its offline assets…</p>
+  <ol id="results"></ol>
+  <iframe id="appFrame" src="../index.html?smoke-test"></iframe>
+  <script>
+    const results = document.getElementById("results");
+    let passed = 0;
+    let failed = 0;
+
+    function record(name, success, detail = "") {
+      const item = document.createElement("li");
+      item.className = success ? "pass" : "fail";
+      item.textContent = `${success ? "PASS" : "FAIL"} — ${name}${detail ? `: ${detail}` : ""}`;
+      results.appendChild(item);
+      if (success) passed += 1;
+      else failed += 1;
+    }
+
+    function waitFor(check, timeoutMs = 10000) {
+      const started = Date.now();
+      return new Promise((resolve, reject) => {
+        const poll = async () => {
+          try {
+            const result = await check();
+            if (result) return resolve(result);
+          } catch (error) {
+            if (Date.now() - started >= timeoutMs) return reject(error);
+          }
+          if (Date.now() - started >= timeoutMs) return reject(new Error("Timed out waiting for the app."));
+          setTimeout(poll, 100);
+        };
+        poll();
+      });
+    }
+
+    function openDatabase(frameWindow) {
+      return new Promise((resolve, reject) => {
+        const request = frameWindow.indexedDB.open("fs-conductors");
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    function readSchedule(database) {
+      return new Promise((resolve, reject) => {
+        const request = database.transaction("appData").objectStore("appData").get("schedule");
+        request.onsuccess = () => resolve(request.result && request.result.value);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    async function run() {
+      const frameWindow = document.getElementById("appFrame").contentWindow;
+      let appReady = false;
+      let database = null;
+      try {
+        database = await openDatabase(frameWindow);
+        await waitFor(async () => {
+          const state = await readSchedule(database);
+          return state && Array.isArray(state.roster) && frameWindow.document.querySelector("h1");
+        });
+        record("App initializes with a valid IndexedDB schedule", true);
+        appReady = true;
+      } catch (error) {
+        record("App initializes with a valid IndexedDB schedule", false, error.message);
+      }
+
+      if (appReady) {
+        record("Cloud sync status is accessible", frameWindow.document.getElementById("cloudSyncStatusDetail")?.getAttribute("aria-live") === "polite");
+        record(
+          "Install, update, and retry controls are wired",
+          typeof frameWindow.promptInstallApp === "function" &&
+            typeof frameWindow.installAppUpdate === "function" &&
+            typeof frameWindow.retryCloudSync === "function"
+        );
+
+        try {
+          const storedConfig = JSON.parse(frameWindow.localStorage.getItem("conductor_gist_config") || "{}");
+          record("GitHub token is not persisted", !Object.prototype.hasOwnProperty.call(storedConfig, "token"));
+        } catch (error) {
+          record("GitHub token is not persisted", false, error.message);
+        }
+      }
+
+      try {
+        const requiredAssets = ["index.html", "styles.css", "js/storage.js", "js/cloud-sync.js"];
+        const cachedAssets = await waitFor(async () => {
+          const cacheName = (await frameWindow.caches.keys())
+            .filter(name => name.startsWith("fs-conductors-v"))
+            .sort()
+            .pop();
+          if (!cacheName) return null;
+          const cache = await frameWindow.caches.open(cacheName);
+          const paths = (await cache.keys()).map(request => new URL(request.url).pathname);
+          return requiredAssets.every(asset => paths.some(path => path.endsWith(`/${asset}`))) ? paths : null;
+        });
+        const missingAssets = requiredAssets.filter(asset => !cachedAssets.some(path => path.endsWith(`/${asset}`)));
+        record("Core app assets are precached", missingAssets.length === 0, missingAssets.join(", "));
+      } catch (error) {
+        record("Core app assets are precached", false, error.message);
+      }
+      if (database) database.close();
+
+      document.getElementById("summary").textContent =
+        `${passed} passed, ${failed} failed. This smoke suite does not modify schedule data.`;
+    }
+
+    document.getElementById("appFrame").addEventListener("load", run, { once: true });
+  </script>
+</body>
+</html>

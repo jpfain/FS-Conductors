@@ -33,6 +33,21 @@
     </div>
   </header>
 
+  <div id="appUpdateBanner" class="pwa-notice" role="status" aria-live="polite" hidden>
+    <span>A new version is ready.</span>
+    <div class="controls-group">
+      <button type="button" class="success" onclick="installAppUpdate()">Update now</button>
+      <button type="button" class="outline" onclick="dismissAppUpdatePrompt()">Later</button>
+    </div>
+  </div>
+  <div id="installAppBanner" class="pwa-notice" role="status" aria-live="polite" hidden>
+    <span id="installAppMessage">Install Conductor Schedule for quick access.</span>
+    <div class="controls-group">
+      <button type="button" class="success" id="installAppButton" onclick="promptInstallApp()">Install app</button>
+      <button type="button" class="outline" onclick="dismissInstallPrompt()">Dismiss</button>
+    </div>
+  </div>
+
   <!-- UP NEXT QUICK-ACTION BANNER -->
   <div id="upNextBanner" class="up-next-card" style="display: none;">
     <div class="up-next-info">
@@ -428,7 +443,7 @@
       <strong>How to sync Mac, iPhone &amp; iPad automatically:</strong><br>
       1. On GitHub.com, go to <strong>Settings → Developer settings → Personal access tokens → Tokens (classic)</strong> and generate a token with only the <strong><code>gist</code></strong> checkbox selected.<br>
       2. Paste the token below and tap <strong>Save &amp; Connect</strong> (leave Gist ID blank on your first device to create one automatically).<br>
-      3. Tap <strong>📋 Copy Sync Info</strong> and paste it into either box on your other devices once.
+      3. Copy the Gist ID to your other devices and enter the token there separately. For safety, the app keeps the token in memory only; you will need to re-enter it after reloading the app.
     </div>
 
     <div class="modal-field">
@@ -450,11 +465,12 @@
       <input type="checkbox" id="gistAutoSyncCheckbox" checked style="width: 20px; height: 20px; min-height: auto; cursor: pointer;">
     </div>
 
-    <div id="cloudSyncStatusDetail" style="font-size: 0.82rem; font-weight: 600; color: #475569; margin-bottom: 14px;"></div>
+    <div id="cloudSyncStatusDetail" class="cloud-sync-status" role="status" aria-live="polite"></div>
 
     <div class="modal-actions-split">
       <div class="controls-group">
-        <button type="button" class="outline" style="min-height: 36px; font-size: 0.8rem;" onclick="copySyncCredentials()">📋 Copy Sync Info</button>
+        <button type="button" class="outline" style="min-height: 36px; font-size: 0.8rem;" onclick="copySyncCredentials()">📋 Copy Gist ID</button>
+        <button type="button" class="outline" style="min-height: 36px; font-size: 0.8rem;" onclick="retryCloudSync()">🔁 Retry Sync</button>
         <button type="button" class="outline" style="min-height: 36px; font-size: 0.8rem;" onclick="manualPullFromGist()">⬇️ Pull</button>
         <button type="button" class="outline" style="min-height: 36px; font-size: 0.8rem;" onclick="manualPushToGist()">⬆️ Push</button>
       </div>
@@ -558,6 +574,7 @@
   </div>
 </div>
 
+<script src="./js/storage.js"></script>
 <script src="./js/app-core.js"></script>
 <script src="./js/ui-modals.js"></script>
 <script src="./js/cloud-sync.js"></script>

@@ -591,23 +591,27 @@
       <section id="sync" class="section-card">
         <h2>☁️ Optional cloud sync with GitHub Gist</h2>
         <p>
-          Cloud sync is optional. When it is not configured, your schedule remains in the current browser.
+          Cloud sync is optional. When it is not configured, your schedule remains in this browser’s local
+          IndexedDB storage (with a browser-storage fallback if IndexedDB is unavailable).
           When configured, the app syncs schedule data between devices through a non-public GitHub Gist.
         </p>
         <ol>
           <li>Create a GitHub personal access token with only the <code>gist</code> permission needed by the app.</li>
           <li>Open <strong>Sync &amp; Tools → Cloud Sync</strong>, enter the token, and leave the Gist ID blank on the first device. Choose <strong>Save &amp; Connect</strong> to create the non-public Gist.</li>
-          <li>Use <strong>Copy Sync Info</strong> to transfer the token and Gist ID to your other devices. Enter the same credentials there and connect.</li>
+          <li>Use <strong>Copy Gist ID</strong> to transfer the Gist ID. Enter your GitHub token separately on each device. For safety, the app keeps the token in memory only, so re-enter it after reloading the app.</li>
           <li>Keep <strong>Auto-Sync on Changes &amp; App Open</strong> enabled for automatic syncing, or use <strong>Pull</strong> and <strong>Push</strong> to sync manually.</li>
         </ol>
         <p>
           Changes made offline are saved on the device and queued for upload when the connection returns. The
-          status pill in the app header shows whether the app is local-only, syncing, offline, or connected.
+          status pill in the app header shows whether the app is local-only, synced, offline, waiting to push,
+          or needs attention. Open Cloud Sync to see the last pull/push times, any merge notice or error, and
+          use <strong>Retry Sync</strong> to resume a pending operation.
         </p>
         <div class="callout warning">
-          The GitHub token is stored in this browser’s local storage so the app can sync. Treat it like a
-          password: do not send it in an ordinary message or include it in a schedule backup. Anyone with the
-          token may have access to your Gists; revoke the token in GitHub if it is exposed. GitHub’s non-public
+          The GitHub token is kept in page memory only and is cleared when you reload or close the app. You
+          must enter it again before syncing after a reload. Treat it like a password: do not send it in an
+          ordinary message or include it in a schedule backup. Anyone with the token may have access to your
+          Gists; revoke the token in GitHub if it is exposed. GitHub’s non-public
           (“secret”) Gists are not encrypted or fully private: anyone who gets the Gist URL may be able to view
           its schedule and contact data. Do not store information there that must remain confidential.
         </div>
@@ -652,9 +656,15 @@
           </table>
         </div>
         <p>
+          Existing schedules are migrated to IndexedDB automatically. Keep regular JSON backups and do not
+          clear browser/site data unless you intend to remove the locally stored schedule.
+        </p>
+        <p>
           For an app update, connect to the internet and choose
-          <strong>Sync &amp; Tools → Check for App Update</strong>. Regular updates are also checked automatically
-          when the app is online.
+          <strong>Sync &amp; Tools → Check for App Update</strong>. Updates are also checked automatically
+          when the app is online. A ready update appears as a banner; choose <strong>Update now</strong> when
+          convenient. The app will reload to activate it. To install, use the browser’s install prompt; on
+          iPhone or iPad, open the app in Safari, tap <strong>Share</strong>, then <strong>Add to Home Screen</strong>.
         </p>
       </section>
 

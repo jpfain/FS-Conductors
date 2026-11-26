@@ -1,5 +1,4 @@
   const APP_VERSION = "v50";
-  const APP_CACHE_PREFIX = "fs-conductors-";
   let currentDate = new Date();
   let currentViewMode = "calendar";
   const monthNames = [
@@ -13,6 +12,7 @@
   const GIST_FILENAME = "conductor-schedule-data.json";
   const GIST_CONFIG_KEY = "conductor_gist_config";
   const MAX_UNDO_STEPS = 15;
+  let appUpdateRequested = false;
 
   const ROSTER_ICONS = {
     prev: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>`,
@@ -492,8 +492,12 @@
     }
   }
 
-  function setScheduleStateFromCrossTab(state, mode = "merge", notifyUser = true) {
-    if (!state || !Array.isArray(state.roster)) return;
+  async function setScheduleStateFromCrossTab(state, mode = "merge", notifyUser = true) {
+    if (!state || !Array.isArray(state.roster)) {
+      console.error("Ignored an invalid schedule update from another tab.");
+      showStatus("Another tab sent an invalid schedule update.");
+      return;
+    }
 
     try {
       const incoming = ensureFieldTimestamps(JSON.parse(JSON.stringify(state)));
@@ -504,12 +508,13 @@
       if (!statesDiffer(local, nextState)) return;
 
       nextState.lastModified = new Date().toISOString();
-      localStorage.setItem("conductor_schedule_state", JSON.stringify(nextState));
+      await persistScheduleState(nextState);
+      publishScheduleState(nextState, "merge");
       renderUI();
       if (notifyUser) showStatus("Schedule updated by another open tab.");
     } catch (err) {
       console.error("Could not merge schedule update from another tab:", err);
-      showStatus("Another tab sent an invalid schedule update.");
+      showStatus(`Could not apply schedule update from another tab: ${err.message}`);
     }
   }
 
@@ -526,7 +531,17 @@
     }
 
     window.addEventListener("storage", (event) => {
-      if (event.key !== "conductor_schedule_state" || !event.newValue) return;
+      if (event.key === SCHEDULE_STATE_REVISION_KEY) {
+        readSharedScheduleState()
+          .then(state => setScheduleStateFromCrossTab(state, "merge"))
+          .catch(err => {
+            console.error("Could not read the schedule update from another tab:", err);
+            showStatus("Could not load a schedule update from another tab.");
+          });
+        return;
+      }
+
+      if (event.key !== SCHEDULE_STATE_STORAGE_KEY || !event.newValue) return;
       try {
         setScheduleStateFromCrossTab(JSON.parse(event.newValue), "merge");
       } catch (err) {

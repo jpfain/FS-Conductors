@@ -1,6 +1,8 @@
   /* --- UNIFIED STATE ARCHITECTURE --- */
   function loadAppState() {
-    const saved = localStorage.getItem("conductor_schedule_state");
+    const saved = cachedScheduleState
+      ? JSON.stringify(cachedScheduleState)
+      : getLocalStorageValue(SCHEDULE_STATE_STORAGE_KEY);
     if (saved) {
       let parsed = null;
       try {
@@ -11,10 +13,9 @@
       } catch (err) {
         parsed = null;
         const recoveryKey = `conductor_schedule_state_recovery_${Date.now()}`;
-        try {
-          localStorage.setItem(recoveryKey, saved);
-        } catch (storageErr) {
-          console.error("Could not preserve invalid schedule data:", storageErr);
+        if (!setLocalStorageValue(recoveryKey, saved)) {
+          const storageErr = new Error("The invalid saved schedule could not be preserved.");
+          reportStorageError("Could not preserve invalid schedule data.", storageErr);
           alert("Saved schedule data could not be read, and a recovery copy could not be saved. Do not clear this site's browser data; contact support before continuing.");
           throw storageErr;
         }
@@ -38,10 +39,14 @@
         if (!parsed.lastModified) parsed.lastModified = "1970-01-01T00:00:00.000Z";
 
         ensureFieldTimestamps(parsed);
-        if (snapshotPastDates(parsed)) {
-          localStorage.setItem("conductor_schedule_state", JSON.stringify(parsed));
+        const historyChanged = snapshotPastDates(parsed);
+        cacheScheduleState(parsed);
+        if (historyChanged && appStorageInitialized) {
+          persistScheduleState(parsed).catch((error) => {
+            showStatus(`Past schedule history could not be saved: ${error.message}`);
+          });
         }
-        return parsed;
+        return cloneScheduleState(parsed);
       }
     }
 
@@ -63,15 +68,17 @@
       lastModified: "1970-01-01T00:00:00.000Z"
     });
     snapshotPastDates(newState);
-    localStorage.setItem("conductor_schedule_state", JSON.stringify(newState));
-    return newState;
+    cacheScheduleState(newState);
+    return cloneScheduleState(newState);
   }
 
   function saveAppState(state, skipAutoPush = false) {
     ensureFieldTimestamps(state);
     snapshotPastDates(state);
     state.lastModified = new Date().toISOString();
-    localStorage.setItem("conductor_schedule_state", JSON.stringify(state));
+    persistScheduleState(state).catch((error) => {
+      showStatus(`Schedule changes could not be saved: ${error.message}`);
+    });
     publishScheduleState(state, "merge");
     renderUI();
     if (!skipAutoPush) {
