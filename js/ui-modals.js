@@ -232,8 +232,9 @@
   function prepareSafariPrintLink() {
     const scopeEl = document.getElementById("printScopeSelect");
     const scope = (scopeEl && scopeEl.value) || "3";
-    const y = currentDate.getFullYear();
-    const m = currentDate.getMonth();
+    const printDate = scope === "12" ? new Date() : currentDate;
+    const y = printDate.getFullYear();
+    const m = printDate.getMonth();
     const anchor = document.getElementById("safariPrintAnchor");
     if (anchor) {
       anchor.href = `./index.html?print=${encodeURIComponent(scope)}&y=${y}&m=${m}`;
@@ -385,7 +386,12 @@
   function executeBoardPrint() {
     const scopeEl = document.getElementById("printScopeSelect");
     const scope = (scopeEl && scopeEl.value) || "3";
-    document.getElementById("printSheetContainer").innerHTML = buildPrintSheetHTML(scope);
+    const printDate = scope === "12" ? new Date() : currentDate;
+    document.getElementById("printSheetContainer").innerHTML = buildPrintSheetHTML(
+      scope,
+      printDate.getFullYear(),
+      printDate.getMonth()
+    );
     closePrintModal();
     window.print();
   }
@@ -421,7 +427,8 @@
   }
 
   function generateBoardPDFBlob(scope) {
-    const data = getPrintMonthsData(scope, currentDate.getFullYear(), currentDate.getMonth());
+    const printDate = scope === "12" ? new Date() : currentDate;
+    const data = getPrintMonthsData(scope, printDate.getFullYear(), printDate.getMonth());
     const pageW = 612;
     const pageH = 792;
     const marginL = 54;

@@ -58,7 +58,9 @@
     const conductorSlots = getAllScheduleSlots(state).filter(s => s.conductor === conductorName);
     const upcoming = conductorSlots.filter(s => s.slotDate >= today);
 
-    if (rangeOption === "1") {
+    if (rangeOption === "6") {
+      return getNextTwelveMonthScheduleSlots(conductorSlots);
+    } else if (rangeOption === "1") {
       if (upcoming.length === 0) return [];
       const first = upcoming[0].slotDate;
       const cutoff = new Date(first.getFullYear(), first.getMonth() + 1, first.getDate() + 6);
@@ -90,7 +92,9 @@
     const globalUpcoming = allSlots.filter(s => s.slotDate >= today);
 
     let filteredSlots = [];
-    if (rangeOption === "1") {
+    if (rangeOption === "6") {
+      filteredSlots = getNextTwelveMonthScheduleSlots(allSlots);
+    } else if (rangeOption === "1") {
       if (globalUpcoming.length > 0) {
         const first = globalUpcoming[0].slotDate;
         const cutoff = new Date(first.getFullYear(), first.getMonth() + 1, first.getDate() + 6);
@@ -118,6 +122,13 @@
       const dates = filteredSlots.filter(s => s.conductor === name);
       return { name, dates };
     }).filter(entry => entry.dates.length > 0);
+  }
+
+  function getNextTwelveMonthScheduleSlots(slots) {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endMonth = new Date(now.getFullYear(), now.getMonth() + 12, 1);
+    return slots.filter(slot => slot.slotDate >= monthStart && slot.slotDate < endMonth);
   }
 
   /* --- SHARE, TEMPLATE & 1-BY-1 QUEUE CONTROLLERS --- */

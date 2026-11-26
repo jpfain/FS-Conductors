@@ -21,7 +21,7 @@
   <header>
     <div class="title-group">
       <h1>Conductor Schedule</h1>
-      <span id="appVersionBadge" class="version-badge">v51</span>
+      <span id="appVersionBadge" class="version-badge">v52</span>
       <button type="button" id="cloudSyncPill" class="sync-pill" onclick="openCloudSyncModal()" title="Configure or check GitHub Gist Cloud Sync" aria-haspopup="dialog" aria-controls="cloudSyncModal">☁️ Local Only</button>
     </div>
     <div class="controls-group">
@@ -306,7 +306,7 @@
         <option value="1">1 Month</option>
         <option value="3" selected>3 Months (Quarterly)</option>
         <option value="6">6 Months (Semi-Annual)</option>
-        <option value="12">12 Months (Full Year)</option>
+        <option value="12">Next 12 Months (Starting This Month)</option>
       </select>
     </div>
 
@@ -523,12 +523,13 @@
 
     <div class="modal-field">
       <div class="modal-field-header">
-        <label for="shareTimeframeSelect">Schedule Timeframe (Begins with Next Scheduled Date)</label>
+        <label for="shareTimeframeSelect">Schedule Timeframe (12-Month Option Starts This Month)</label>
       </div>
       <select id="shareTimeframeSelect" onchange="refreshShareModalPreview()">
         <option value="1">Next 1 Month</option>
         <option value="2" selected>Next 3 Months</option>
         <option value="3">Next 6 Months</option>
+        <option value="6">Next 12 Months (Starting This Month)</option>
         <option value="4">Rest of Selected Year (Upcoming Only)</option>
         <option value="5">Entire Selected Year (All Dates)</option>
       </select>
