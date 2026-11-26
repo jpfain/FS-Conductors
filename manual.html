@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#f1f5f9">
   <meta name="description" content="How to manage the Conductor Schedule PWA: assignments, roster, reminders, exports, backups, and sync.">
-  <title>Conductor Schedule — User Manual (v50)</title>
+  <title>Conductor Schedule — User Manual (v51)</title>
   <style>
     :root {
       color-scheme: light;
@@ -375,7 +375,7 @@
 <body>
   <header class="top-bar">
     <div class="top-title">
-      <h1>Conductor Schedule <span class="version-badge">MANUAL • v50</span></h1>
+      <h1>Conductor Schedule <span class="version-badge">MANUAL • v51</span></h1>
       <p class="top-subtitle">A practical guide to planning, sharing, and protecting your schedule.</p>
     </div>
     <a href="./index.html" class="back-btn" onclick="if (window.opener) { window.close(); return false; }">← Back to Schedule</a>
@@ -405,7 +405,7 @@
         <h2 id="manual-intro">Keep the schedule clear, balanced, and easy to share.</h2>
         <p>
           Use this guide to set up your rotation, update assignments, track confirmations, and make backups.
-          The manual matches the v50 interface. The app saves changes in this browser automatically; cloud
+          The manual matches the v51 interface. The app saves changes in this browser automatically; cloud
           sync is optional.
         </p>
         <div class="hero-links">
@@ -606,7 +606,7 @@
         <ol>
           <li>Create a GitHub personal access token with only the <code>gist</code> permission needed by the app.</li>
           <li>Open <strong>Sync &amp; Tools → Cloud Sync</strong>, enter the token, and leave the Gist ID blank on the first device. Choose <strong>Save &amp; Connect</strong> to create the non-public Gist.</li>
-          <li>Use <strong>Copy Gist ID</strong> to transfer the Gist ID. Enter your GitHub token separately on each device. For safety, the app keeps the token in memory only, so re-enter it after reloading the app.</li>
+          <li>Use <strong>Copy Gist ID</strong> to transfer the Gist ID. Enter your GitHub token separately on each device. It is saved in that browser so it survives reloads; it is not shared with other devices.</li>
           <li>Keep <strong>Auto-Sync on Changes &amp; App Open</strong> enabled for automatic syncing, or use <strong>Pull</strong> and <strong>Push</strong> to sync manually.</li>
         </ol>
         <p>
@@ -616,9 +616,11 @@
           use <strong>Retry Sync</strong> to resume a pending operation.
         </p>
         <div class="callout warning">
-          The GitHub token is kept in page memory only and is cleared when you reload or close the app. You
-          must enter it again before syncing after a reload. Treat it like a password: do not send it in an
-          ordinary message or include it in a schedule backup. Anyone with the token may have access to your
+          The GitHub token is stored in this browser’s local storage and survives reloads and reopening the app.
+          It is not encrypted, and scripts running on this site or anyone with access to this browser profile
+          may be able to read it. Avoid saving it on shared devices or profiles. Clear the token and save in
+          Cloud Sync to remove it from this browser. Treat it like a password: do not send it in an ordinary
+          message or include it in a schedule backup. Anyone with the token may have access to your
           Gists; revoke the token in GitHub if it is exposed. GitHub’s non-public
           (“secret”) Gists are not encrypted or fully private: anyone who gets the Gist URL may be able to view
           its schedule and contact data. Do not store information there that must remain confidential.
@@ -627,7 +629,7 @@
           <summary>Set up another device or disconnect sync</summary>
           <div>
             <p>On another device, enter the same token and Gist ID in Cloud Sync settings, then save and connect. If the device already has schedule data, make a JSON backup before connecting.</p>
-            <p>To disconnect this browser, clear the token field and save. This stops syncing from this device; it does not delete the GitHub Gist or disconnect other devices.</p>
+            <p>To disconnect this browser, clear the token field and save. This removes its saved token and Gist ID; it does not delete the GitHub Gist or disconnect other devices.</p>
           </div>
         </details>
       </section>
@@ -676,7 +678,7 @@
         </p>
       </section>
 
-      <p class="footer-note">Conductor Schedule User Manual · v50</p>
+      <p class="footer-note">Conductor Schedule User Manual · v51</p>
     </main>
   </div>
   <script>

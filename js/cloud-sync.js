@@ -1,5 +1,4 @@
   /* --- GITHUB GIST CLOUD SYNC --- */
-  let sessionGitHubToken = "";
 
   function loadGistConfig() {
     const defaults = {
@@ -14,32 +13,28 @@
       pendingPush: false
     };
     const raw = getLocalStorageValue(GIST_CONFIG_KEY);
-    if (!raw) return { ...defaults, token: sessionGitHubToken };
+    if (!raw) return { ...defaults, token: "" };
 
     let stored;
     try {
       stored = { ...defaults, ...JSON.parse(raw) };
     } catch (error) {
       reportStorageError("Saved cloud sync settings are invalid.", error);
-      return { ...defaults, token: sessionGitHubToken };
+      return { ...defaults, token: "" };
     }
 
-    if (Object.prototype.hasOwnProperty.call(stored, "token")) {
-      if (typeof stored.token === "string") sessionGitHubToken = stored.token;
-      delete stored.token;
-      if (!setLocalStorageValue(GIST_CONFIG_KEY, JSON.stringify(stored))) {
-        showStatus("The previously saved GitHub token may remain in browser storage. Export a schedule backup before clearing this site's stored data.");
-      }
-    }
-    return { ...stored, token: sessionGitHubToken };
+    if (typeof stored.token !== "string") stored.token = "";
+    return stored;
   }
 
   function saveGistConfig(cfg) {
-    if (typeof cfg.token === "string") sessionGitHubToken = cfg.token;
     const storedConfig = { ...cfg };
-    delete storedConfig.token;
-    setLocalStorageValue(GIST_CONFIG_KEY, JSON.stringify(storedConfig));
+    if (typeof storedConfig.token !== "string" || !storedConfig.token) {
+      delete storedConfig.token;
+    }
+    const saved = setLocalStorageValue(GIST_CONFIG_KEY, JSON.stringify(storedConfig));
     updateCloudSyncPill();
+    return saved;
   }
 
   function updateCloudSyncPill(overrideText, stateClass) {
@@ -155,7 +150,7 @@
       statusLines.unshift("📴 Currently offline. Edits are saved locally.");
     } else if (!cfg.token && cfg.gistId) {
       detail.style.color = "#92400e";
-      statusLines.unshift("Enter your GitHub token to sync. For safety, it is cleared when you reload the app.");
+      statusLines.unshift("Enter your GitHub token to sync.");
     } else if (cfg.lastSyncedAt) {
       statusLines.unshift(`Last synced: ${new Date(cfg.lastSyncedAt).toLocaleString()}`);
     } else if (cfg.token && cfg.gistId) {
@@ -180,13 +175,15 @@
     const autoSync = document.getElementById("gistAutoSyncCheckbox").checked;
 
     if (!token) {
-      saveGistConfig({
+      const saved = saveGistConfig({
         token: "", gistId: "", autoSync: false, lastSyncedAt: "",
         lastPullAt: "", lastPushAt: "", lastSyncError: "",
         lastSyncConflictAt: "", pendingOfflineSync: false, pendingPush: false
       });
       closeCloudSyncModal();
-      showStatus("Cloud sync disconnected (Local mode).");
+      showStatus(saved
+        ? "Cloud sync disconnected (Local mode)."
+        : "Cloud sync was disabled for this session, but the saved token could not be removed from browser storage.");
       return;
     }
 
@@ -195,6 +192,18 @@
     detail.innerText = "Connecting to GitHub...";
 
     try {
+      const existingCfg = loadGistConfig();
+      const configToSave = {
+        ...existingCfg,
+        token,
+        gistId,
+        autoSync,
+        lastSyncError: ""
+      };
+      if (!saveGistConfig(configToSave)) {
+        throw new Error("Cloud sync settings could not be saved in this browser.");
+      }
+
       if (!gistId) {
         const state = loadAppState();
         const res = await fetch("https://api.github.com/gists", {
@@ -217,29 +226,21 @@
         gistId = data.id;
         document.getElementById("gistIdInput").value = gistId;
         const now = new Date().toISOString();
-        saveGistConfig({
-          token, gistId, autoSync,
+        if (!saveGistConfig({
+          ...configToSave,
+          gistId,
           lastSyncedAt: now,
           lastPushAt: now,
           lastSyncError: "",
           pendingOfflineSync: false,
           pendingPush: false
-        });
+        })) {
+          throw new Error("The new Gist was created, but its ID could not be saved in this browser.");
+        }
         detail.style.color = "#065f46";
         detail.innerText = `✅ Created private Gist (${gistId}) and uploaded schedule!`;
         showStatus("☁️ Connected & created private sync Gist!");
       } else {
-        const existingCfg = loadGistConfig();
-        saveGistConfig({
-          token, gistId, autoSync,
-          lastSyncedAt: existingCfg.lastSyncedAt,
-          lastPullAt: existingCfg.lastPullAt,
-          lastPushAt: existingCfg.lastPushAt,
-          lastSyncConflictAt: existingCfg.lastSyncConflictAt,
-          lastSyncError: "",
-          pendingOfflineSync: existingCfg.pendingOfflineSync,
-          pendingPush: existingCfg.pendingPush
-        });
         await pullFromGitHubGist(true, false);
       }
     } catch (err) {

@@ -88,11 +88,29 @@
             typeof frameWindow.retryCloudSync === "function"
         );
 
+        const configKey = "conductor_gist_config";
+        const originalConfig = frameWindow.localStorage.getItem(configKey);
+        const testToken = "smoke-test-token-not-a-real-credential";
         try {
-          const storedConfig = JSON.parse(frameWindow.localStorage.getItem("conductor_gist_config") || "{}");
-          record("GitHub token is not persisted", !Object.prototype.hasOwnProperty.call(storedConfig, "token"));
+          frameWindow.saveGistConfig({ token: testToken, gistId: "smoke-test-gist", autoSync: false });
+          const storedConfig = JSON.parse(frameWindow.localStorage.getItem(configKey) || "{}");
+          record(
+            "GitHub token persists in this browser",
+            storedConfig.token === testToken && frameWindow.loadGistConfig().token === testToken
+          );
+
+          frameWindow.saveGistConfig({ token: "", gistId: "", autoSync: false });
+          const disconnectedConfig = JSON.parse(frameWindow.localStorage.getItem(configKey) || "{}");
+          record(
+            "Local mode removes the saved GitHub token",
+            !Object.prototype.hasOwnProperty.call(disconnectedConfig, "token")
+          );
         } catch (error) {
-          record("GitHub token is not persisted", false, error.message);
+          record("GitHub token persistence and Local-mode clearing", false, error.message);
+        } finally {
+          if (originalConfig === null) frameWindow.localStorage.removeItem(configKey);
+          else frameWindow.localStorage.setItem(configKey, originalConfig);
+          frameWindow.updateCloudSyncPill();
         }
       }
 

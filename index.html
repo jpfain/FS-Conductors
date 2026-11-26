@@ -21,7 +21,7 @@
   <header>
     <div class="title-group">
       <h1>Conductor Schedule</h1>
-      <span id="appVersionBadge" class="version-badge">v50</span>
+      <span id="appVersionBadge" class="version-badge">v51</span>
       <button type="button" id="cloudSyncPill" class="sync-pill" onclick="openCloudSyncModal()" title="Configure or check GitHub Gist Cloud Sync" aria-haspopup="dialog" aria-controls="cloudSyncModal">☁️ Local Only</button>
     </div>
     <div class="controls-group">
@@ -436,7 +436,9 @@
       <strong>How to sync Mac, iPhone &amp; iPad automatically:</strong><br>
       1. On GitHub.com, go to <strong>Settings → Developer settings → Personal access tokens → Tokens (classic)</strong> and generate a token with only the <strong><code>gist</code></strong> checkbox selected.<br>
       2. Paste the token below and tap <strong>Save &amp; Connect</strong> (leave Gist ID blank on your first device to create one automatically).<br>
-      3. Copy the Gist ID to your other devices and enter the token there separately. For safety, the app keeps the token in memory only; you will need to re-enter it after reloading the app.
+      3. Copy the Gist ID to your other devices and enter the token separately on each one. The token is saved in this browser so it survives reloads; it is not shared with other devices.
+      <br><strong>Security:</strong> The token is stored in this browser's local storage, which is not encrypted. Avoid saving it on shared devices or browser profiles.
+      <br>Clearing the token and saving switches this browser to Local mode and removes its saved token and Gist ID. It does not delete the Gist or disconnect other devices.
     </div>
 
     <div class="modal-field">
