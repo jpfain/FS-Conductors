@@ -1,7 +1,7 @@
 const SCHEDULE_STATE_STORAGE_KEY = "conductor_schedule_state";
 const SCHEDULE_STATE_REVISION_KEY = "conductor_schedule_revision";
 const APP_DATABASE_NAME = "fs-conductors";
-const APP_DATABASE_VERSION = 1;
+const APP_DATABASE_VERSION = 2;
 const APP_DATA_STORE = "appData";
 const APP_SETTINGS_CACHE = new Map();
 
