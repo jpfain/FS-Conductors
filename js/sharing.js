@@ -201,13 +201,23 @@
       }
     } else {
       editBtn.style.display = "none";
-      const list = state.roster
-        .map(name => {
+      const rangeOption = document.getElementById("shareTimeframeSelect").value;
+      const list = getAllConductorsGroupedSchedules(rangeOption, state)
+        .map(({ name }) => {
           const contact = (state.contacts && state.contacts[name]) || {};
           return isText ? (contact.phone || "") : (contact.email || "");
         })
         .map(v => v.trim())
-        .filter(Boolean);
+        .filter(Boolean)
+        .filter((value, index, values) => {
+          const normalized = isText ? value.replace(/[^\d+]/g, "") : value.toLowerCase();
+          return values.findIndex(candidate => {
+            const normalizedCandidate = isText
+              ? candidate.replace(/[^\d+]/g, "")
+              : candidate.toLowerCase();
+            return normalizedCandidate === normalized;
+          }) === index;
+        });
 
       inputEl.value = list.join(", ");
       inputEl.placeholder = isText
@@ -496,6 +506,10 @@
     const text = document.getElementById("shareMessageTextarea").value;
     const rawRecipients = document.getElementById("shareRecipientInput").value;
     const phones = rawRecipients.split(",").map(p => p.replace(/[^\d+]/g, "")).filter(Boolean);
+    if (phones.length === 0) {
+      showStatus("No mobile numbers found. Add or enter at least one recipient.");
+      return;
+    }
 
     const state = loadAppState();
     const targetInfo = getShareTargetSlotInfo(state);
@@ -527,6 +541,10 @@
     const subject = document.getElementById("shareEmailSubject").value || "FS Conductor Schedule";
     const rawRecipients = document.getElementById("shareRecipientInput").value;
     const emails = rawRecipients.split(",").map(e => e.trim()).filter(Boolean);
+    if (emails.length === 0) {
+      showStatus("No email addresses found. Add or enter at least one recipient.");
+      return;
+    }
 
     const state = loadAppState();
     const targetInfo = getShareTargetSlotInfo(state);
