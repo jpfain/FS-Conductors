@@ -2143,6 +2143,8 @@
   let lastAutoCloudPull = 0;
   let isSyncingNow = false;
   let allowRosterShrinkOnce = false;
+  let crossTabChannel = null;
+  const crossTabInstanceId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
   function escapeHtml(str) {
     return String(str || "")
@@ -2422,6 +2424,63 @@
       slotDetails: s.slotDetails || {}
     });
     return stripMeta(a) !== stripMeta(b);
+  }
+
+  function publishScheduleState(state, mode = "merge") {
+    if (!crossTabChannel) return;
+    try {
+      crossTabChannel.postMessage({
+        type: "conductor-schedule-update",
+        senderId: crossTabInstanceId,
+        mode,
+        state
+      });
+    } catch (err) {
+      console.error("Could not notify other app tabs:", err);
+    }
+  }
+
+  function setScheduleStateFromCrossTab(state, mode = "merge", notifyUser = true) {
+    if (!state || !Array.isArray(state.roster)) return;
+
+    try {
+      const incoming = ensureFieldTimestamps(JSON.parse(JSON.stringify(state)));
+      const local = loadAppState();
+      let nextState = mode === "replace" ? incoming : mergeScheduleStates(local, incoming);
+      snapshotPastDates(nextState);
+
+      if (!statesDiffer(local, nextState)) return;
+
+      nextState.lastModified = new Date().toISOString();
+      localStorage.setItem("conductor_schedule_state", JSON.stringify(nextState));
+      renderUI();
+      if (notifyUser) showStatus("Schedule updated by another open tab.");
+    } catch (err) {
+      console.error("Could not merge schedule update from another tab:", err);
+      showStatus("Another tab sent an invalid schedule update.");
+    }
+  }
+
+  function setupCrossTabSync() {
+    if ("BroadcastChannel" in window) {
+      crossTabChannel = new BroadcastChannel("fs-conductors-schedule");
+      crossTabChannel.addEventListener("message", (event) => {
+        const message = event.data;
+        if (!message ||
+            message.type !== "conductor-schedule-update" ||
+            message.senderId === crossTabInstanceId) return;
+        setScheduleStateFromCrossTab(message.state, message.mode || "merge");
+      });
+    }
+
+    window.addEventListener("storage", (event) => {
+      if (event.key !== "conductor_schedule_state" || !event.newValue) return;
+      try {
+        setScheduleStateFromCrossTab(JSON.parse(event.newValue), "merge");
+      } catch (err) {
+        console.error("Could not read schedule update from another tab:", err);
+      }
+    });
   }
 
   /* --- PAST-DATE HISTORY LOCK ENGINE --- */
@@ -3847,6 +3906,7 @@
     snapshotPastDates(state);
     state.lastModified = new Date().toISOString();
     localStorage.setItem("conductor_schedule_state", JSON.stringify(state));
+    publishScheduleState(state, "merge");
     renderUI();
     if (!skipAutoPush) {
       scheduleCloudPush();
@@ -5737,6 +5797,8 @@
       }
     }
   });
+
+  setupCrossTabSync();
 
   // Register Service Worker with Automatic Update Detection
   if ('serviceWorker' in navigator) {
