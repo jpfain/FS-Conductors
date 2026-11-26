@@ -83,9 +83,8 @@
       if (appReady) {
         record("Cloud sync status is accessible", frameWindow.document.getElementById("cloudSyncStatusDetail")?.getAttribute("aria-live") === "polite");
         record(
-          "Install, update, and retry controls are wired",
-          typeof frameWindow.promptInstallApp === "function" &&
-            typeof frameWindow.installAppUpdate === "function" &&
+          "Update and retry controls are wired",
+          typeof frameWindow.installAppUpdate === "function" &&
             typeof frameWindow.retryCloudSync === "function"
         );
 

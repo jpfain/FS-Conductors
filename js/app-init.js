@@ -68,59 +68,6 @@
 
   configureModalAccessibility();
 
-  let deferredInstallPrompt = null;
-  const installBanner = document.getElementById("installAppBanner");
-  const installMessage = document.getElementById("installAppMessage");
-  const installButton = document.getElementById("installAppButton");
-  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) ||
-    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  const isStandalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
-
-  function showInstallPrompt() {
-    if (!isStandalone && installBanner && (deferredInstallPrompt || isIOS)) {
-      installBanner.hidden = false;
-      if (isIOS) {
-        installMessage.innerText = "In Safari, tap Share, then Add to Home Screen.";
-        installButton.innerText = "How to install";
-      }
-    }
-  }
-
-  function dismissInstallPrompt() {
-    if (installBanner) installBanner.hidden = true;
-  }
-
-  async function promptInstallApp() {
-    if (!deferredInstallPrompt) {
-      if (isIOS) alert("In Safari, tap the Share button, then choose “Add to Home Screen.”");
-      return;
-    }
-    try {
-      deferredInstallPrompt.prompt();
-      const choice = await deferredInstallPrompt.userChoice;
-      deferredInstallPrompt = null;
-      dismissInstallPrompt();
-      if (choice.outcome === "accepted") showStatus("Conductor Schedule was added to your home screen.");
-    } catch (error) {
-      deferredInstallPrompt = null;
-      dismissInstallPrompt();
-      console.error("Could not start app installation:", error);
-      showStatus(`Could not start app installation: ${error.message}`);
-    }
-  }
-
-  window.addEventListener("beforeinstallprompt", (event) => {
-    event.preventDefault();
-    deferredInstallPrompt = event;
-    showInstallPrompt();
-  });
-  window.addEventListener("appinstalled", () => {
-    deferredInstallPrompt = null;
-    dismissInstallPrompt();
-    showStatus("Conductor Schedule was installed.");
-  });
-  showInstallPrompt();
-
   // Register the service worker and wait for user confirmation before activating updates.
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
