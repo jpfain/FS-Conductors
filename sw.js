@@ -1,8 +1,15 @@
-const CACHE_NAME = 'fs-conductors-v50-cache-2';
+const CACHE_NAME = 'fs-conductors-v50-cache-3';
 const CACHE_PREFIX = 'fs-conductors-';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
+  './styles.css',
+  './js/app-core.js',
+  './js/ui-modals.js',
+  './js/cloud-sync.js',
+  './js/schedule.js',
+  './js/sharing.js',
+  './js/app-init.js',
   './manual.html',
   './manifest.json',
   './icon-192.png',
