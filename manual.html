@@ -157,6 +157,72 @@
       font-weight: 600;
     }
 
+    .manual-search {
+      margin-bottom: 16px;
+      padding: 16px;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      background: var(--surface);
+      box-shadow: 0 3px 12px rgb(15 23 42 / 4%);
+    }
+
+    .manual-search label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--primary);
+      font-weight: 750;
+    }
+
+    .manual-search-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .manual-search input {
+      flex: 1;
+      min-width: 0;
+      min-height: 42px;
+      padding: 8px 11px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+    }
+
+    .manual-search input:focus-visible,
+    .manual-search button:focus-visible,
+    .manual-search-results a:focus-visible {
+      outline: 3px solid #60a5fa;
+      outline-offset: 2px;
+    }
+
+    .manual-search button {
+      min-height: 42px;
+      padding: 7px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .manual-search-results { margin-top: 10px; }
+    .manual-search-results p { margin: 0 0 7px; color: var(--muted); font-size: 0.88rem; }
+    .manual-search-results ol { display: grid; gap: 6px; margin: 0; padding-left: 22px; }
+    .manual-search-results li { margin: 0; padding-left: 2px; }
+    .manual-search-results a { font-weight: 700; }
+    .manual-search-results span { display: block; color: #475569; font-size: 0.84rem; font-weight: 400; }
+    .manual-search-hit {
+      scroll-margin-top: 92px;
+      border-radius: 4px;
+      background: #fffbeb;
+      outline: 2px solid #f59e0b;
+      outline-offset: 3px;
+    }
+
     @media (min-width: 761px) {
       .contents-disclosure[open] > .contents-summary { display: none; }
       .contents-disclosure:not([open]) > .contents-summary { display: flex; }
@@ -351,6 +417,7 @@
       .contents a { min-height: 38px; display: flex; align-items: center; }
       .steps { grid-template-columns: 1fr; }
       .section-card { scroll-margin-top: 76px; }
+      .manual-search-hit { scroll-margin-top: 76px; }
     }
 
     @media (max-width: 420px) {
@@ -400,6 +467,18 @@
     </nav>
 
     <main>
+      <section class="manual-search" aria-labelledby="manual-search-label">
+        <label id="manual-search-label" for="manualSearchInput">Search this manual</label>
+        <div class="manual-search-controls">
+          <input id="manualSearchInput" type="search" placeholder="Enter a word or phrase" autocomplete="off">
+          <button id="clearManualSearch" type="button" hidden>Clear</button>
+        </div>
+        <div id="manualSearchResults" class="manual-search-results" hidden>
+          <p id="manualSearchStatus" role="status" aria-live="polite"></p>
+          <ol id="manualSearchResultList"></ol>
+        </div>
+      </section>
+
       <section class="hero" aria-labelledby="manual-intro">
         <p class="eyebrow">User guide · Current app release</p>
         <h2 id="manual-intro">Keep the schedule clear, balanced, and easy to share.</h2>
@@ -689,6 +768,78 @@
     if (window.matchMedia("(max-width: 760px)").matches) {
       document.getElementById("contentsDisclosure").open = false;
     }
+
+    const manualSearchInput = document.getElementById("manualSearchInput");
+    const clearManualSearch = document.getElementById("clearManualSearch");
+    const manualSearchResults = document.getElementById("manualSearchResults");
+    const manualSearchStatus = document.getElementById("manualSearchStatus");
+    const manualSearchResultList = document.getElementById("manualSearchResultList");
+    const manualSearchTargets = document.querySelectorAll(
+      "main .hero h2, main .hero p, main .section-card h2, main .section-card h3, " +
+      "main .section-card p, main .section-card li, main .section-card summary, main .section-card td"
+    );
+    let activeSearchMatches = [];
+    let nextSearchTargetId = 0;
+
+    function normalizeSearchText(text) {
+      return text.replace(/\s+/g, " ").trim().toLowerCase();
+    }
+
+    function updateManualSearch() {
+      activeSearchMatches.forEach((target) => target.classList.remove("manual-search-hit"));
+      activeSearchMatches = [];
+      manualSearchResultList.replaceChildren();
+
+      const query = normalizeSearchText(manualSearchInput.value);
+      clearManualSearch.hidden = query.length === 0;
+      manualSearchResults.hidden = query.length === 0;
+      if (!query) return;
+
+      const matches = Array.from(manualSearchTargets).filter((target) =>
+        normalizeSearchText(target.textContent).includes(query)
+      );
+
+      if (matches.length === 0) {
+        manualSearchStatus.textContent = "No matches found. Try another word or phrase.";
+        return;
+      }
+
+      const topics = new Set();
+      matches.forEach((target) => {
+        target.classList.add("manual-search-hit");
+        activeSearchMatches.push(target);
+
+        const section = target.closest(".section-card");
+        const heading = section
+          ? section.querySelector("h2").textContent.trim()
+          : "Introduction";
+        topics.add(heading);
+
+        if (!target.id) {
+          nextSearchTargetId += 1;
+          target.id = `manual-search-hit-${nextSearchTargetId}`;
+        }
+
+        const item = document.createElement("li");
+        const link = document.createElement("a");
+        const excerpt = document.createElement("span");
+        link.href = `#${target.id}`;
+        link.textContent = heading;
+        excerpt.textContent = target.textContent.replace(/\s+/g, " ").trim();
+        item.append(link, excerpt);
+        manualSearchResultList.append(item);
+      });
+
+      manualSearchStatus.textContent =
+        `${matches.length} matching passages in ${topics.size} ${topics.size === 1 ? "topic" : "topics"}.`;
+    }
+
+    manualSearchInput.addEventListener("input", updateManualSearch);
+    clearManualSearch.addEventListener("click", () => {
+      manualSearchInput.value = "";
+      updateManualSearch();
+      manualSearchInput.focus();
+    });
   </script>
 </body>
 </html>
