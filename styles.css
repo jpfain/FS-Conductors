@@ -178,6 +178,17 @@
     button.outline:hover { background: #f8fafc; }
     button.active { background-color: var(--primary); color: white; border-color: var(--primary); }
 
+    .manual-pill-btn {
+      min-height: 32px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: #f8fafc;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+    }
+
+    .manual-pill-btn:hover { background: #eef2ff; color: #3730a3; }
+
     .view-toggle {
       display: flex;
       background: #e2e8f0;

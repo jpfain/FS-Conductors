@@ -74,23 +74,11 @@
       <div class="toolbar-left">
         <button type="button" class="accent" onclick="openShareModal('all', null, 'text')">📢 Send Conductor Schedules</button>
         <button type="button" class="outline" onclick="openTradeModal()">⇄ Trade Dates</button>
+        <button type="button" class="manual-pill-btn" onclick="openUserManual()">📖 User Manual</button>
       </div>
 
       <div class="toolbar-right">
         <button type="button" id="btnUndo" class="outline" onclick="undoLastChange()" disabled title="Undo last schedule change">↩ Undo</button>
-
-        <!-- EXPORT CALENDAR DROPDOWN -->
-        <div class="dropdown">
-          <button type="button" class="outline" onclick="toggleDropdown('exportMenu', event)">📅 Export .ics ▾</button>
-          <div id="exportMenu" class="dropdown-menu">
-            <div class="dropdown-header">
-              <span>Export Calendar</span>
-              <button type="button" class="dropdown-close-btn" onclick="closeAllDropdowns()">✕ Close</button>
-            </div>
-            <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); exportMonthICS()">🗓️ Current Month (.ics)</button>
-            <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); exportMasterICS()">📅 Full Selected Year (.ics)</button>
-          </div>
-        </div>
 
         <!-- SYNC & TOOLS DROPDOWN -->
         <div class="dropdown">
@@ -102,7 +90,9 @@
             </div>
             <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); openTimeLocModal()">🕒 Time &amp; Location</button>
             <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); openPrintModal()">🖨️ Print / Save PDF</button>
-            <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); openUserManual()">📖 User Manual</button>
+            <div class="dropdown-divider"></div>
+            <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); exportMonthICS()">📅 Export Current Month (.ics)</button>
+            <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); exportMasterICS()">📅 Export Full Selected Year (.ics)</button>
             <div class="dropdown-divider"></div>
             <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); openCloudSyncModal()">☁️ Cloud Sync (GitHub Gist)</button>
             <div class="dropdown-divider"></div>
