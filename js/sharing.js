@@ -1,3 +1,5 @@
+  const MAX_EXTERNAL_MESSAGE_URI_LENGTH = 1800;
+
   /* --- SCHEDULE FILTERING & TEMPLATE HELPERS --- */
   function getAllScheduleSlots(state) {
     const today = new Date();
@@ -159,6 +161,7 @@
     hintEl.innerText = deliveryMode === "queue"
       ? "Dynamic tags: {firstName}, {fullName}, {dates}, {defaultTime}, {defaultLocation}"
       : "Dynamic tags: {schedules}, {timeframe}, {defaultTime}, {defaultLocation}";
+    document.getElementById("queueActionHint").style.display = deliveryMode === "queue" ? "block" : "none";
 
     refreshShareModalPreview();
   }
@@ -260,6 +263,7 @@
     document.getElementById("btnQueueModeGroup").className = "active";
     document.getElementById("btnQueueModeQueue").className = "outline";
     document.getElementById("queueStepperRow").style.display = "none";
+    document.getElementById("queueActionHint").style.display = "none";
 
     setShareFormat(initialFormat);
     openAccessibleModal("shareModal", "shareRecipientInput");
@@ -364,9 +368,7 @@
 
         activeShareContext.lastRenderedDates = dateList;
         progressEl.innerText = `Brother ${idx + 1} of ${grouped.length}: ${item.name}`;
-        smsBtn.innerText = idx + 1 < grouped.length
-          ? `💬 Text ${firstName} (${idx + 1}/${grouped.length}) & Next`
-          : `💬 Text ${firstName} (${idx + 1}/${grouped.length})`;
+        smsBtn.innerText = `💬 Text ${firstName} (${idx + 1}/${grouped.length})`;
 
         const template = (state.templates && state.templates.individualText) || DEFAULT_TEMPLATES.individualText;
         textarea.value = template
@@ -389,7 +391,7 @@
 
       activeShareContext.lastRenderedSchedules = scheduleBlocks;
       subjectInput.value = `Updated FS Conductor Schedule (${timeframeLabel})`;
-      smsBtn.innerText = "💬 Open in Messages";
+      smsBtn.innerText = "💬 Send Group Text";
       scopeLabel.innerText = activeShareContext.format === "text" ? "Group Text Template:" : "Longer Email Template:";
 
       const template = (state.templates && state.templates[templateKey]) || DEFAULT_TEMPLATES[templateKey];
@@ -459,20 +461,6 @@
     showStatus("Template reset to original default.");
   }
 
-  async function flushReminderToCloud(targetInfo) {
-    if (!targetInfo || !targetInfo.conductorName || !targetInfo.dateKey) return;
-    recordReminderSent(targetInfo.dateKey, targetInfo.conductorName, true, true);
-    const cfg = loadGistConfig();
-    if (!cfg.token || !cfg.gistId || !cfg.autoSync) return;
-    if (!navigator.onLine) {
-      cfg.pendingOfflineSync = true;
-      saveGistConfig(cfg);
-      return;
-    }
-    showStatus(`☁️ Syncing ${targetInfo.conductorName} to cloud...`);
-    await pushToGitHubGist(true);
-  }
-
   async function shareModalMessage() {
     const text = document.getElementById("shareMessageTextarea").value;
     const title = activeShareContext.format === "email"
@@ -481,92 +469,137 @@
           ? `FS Conductor Schedule - ${activeShareContext.conductorName}`
           : "FS Conductor Schedule - All Conductors");
 
-    const state = loadAppState();
-    const targetInfo = getShareTargetSlotInfo(state);
+    if (!navigator.share) {
+      await copyModalMessage("Copied. Paste the message into your chosen app and add recipients.");
+      return;
+    }
 
+    try {
+      await navigator.share({ title, text });
+      showStatus("Share sheet closed. If you sent the schedule, tap Tag Sent Today to record it.");
+    } catch (err) {
+      if (err && err.name === "AbortError") {
+        showStatus("Sharing cancelled.");
+      } else {
+        console.error("Web Share error:", err);
+        showStatus(`Could not open the share sheet: ${err.message || "Unknown error"}`);
+      }
+    }
+  }
+
+  function isAppleMobileDevice() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  }
+
+  function buildSmsLink(phones, text) {
+    const body = encodeURIComponent(text);
+    if (phones.length === 1) return `sms:${phones[0]}?body=${body}`;
+    return `sms://open?addresses=${phones.map(encodeURIComponent).join(",")}&body=${body}`;
+  }
+
+  async function shareTextWithFallback(text, title, successMessage, fallbackMessage) {
     if (navigator.share) {
       try {
         await navigator.share({ title, text });
-        await flushReminderToCloud(targetInfo);
-        showStatus("Schedule shared & reminder synced!");
-        if (isQueueActive() && activeShareContext.queueIndex + 1 < activeShareContext.queueItems.length) {
-          stepQueue(1);
-        } else {
-          closeShareModal();
-        }
+        showStatus(successMessage);
       } catch (err) {
-        if (err.name !== "AbortError") console.error("Web Share error:", err);
+        if (err && err.name === "AbortError") {
+          showStatus("Sharing cancelled.");
+        } else {
+          console.error("Web Share error:", err);
+          showStatus(`Could not open the share sheet: ${err.message || "Unknown error"}`);
+        }
       }
-    } else {
-      copyModalMessage();
+      return;
     }
+
+    await copyModalMessage(fallbackMessage);
   }
 
   async function smsModalMessage() {
     const text = document.getElementById("shareMessageTextarea").value;
     const rawRecipients = document.getElementById("shareRecipientInput").value;
-    const phones = rawRecipients.split(",").map(p => p.replace(/[^\d+]/g, "")).filter(Boolean);
+    const phones = [...new Set(rawRecipients.split(/[,;\n]+/).map(p => p.replace(/[^\d+]/g, "")).filter(Boolean))];
     if (phones.length === 0) {
       showStatus("No mobile numbers found. Add or enter at least one recipient.");
       return;
     }
 
-    const state = loadAppState();
-    const targetInfo = getShareTargetSlotInfo(state);
-    await flushReminderToCloud(targetInfo);
+    const title = activeShareContext.mode === "single"
+      ? `FS Conductor Schedule - ${activeShareContext.conductorName}`
+      : "FS Conductor Schedule - All Conductors";
+    const groupSmsUnsupported = phones.length > 1 && !isAppleMobileDevice();
+    const smsLink = groupSmsUnsupported ? "" : buildSmsLink(phones, text);
 
-    if (phones.length === 1) {
-      window.location.href = `sms:${phones[0]}?&body=${encodeURIComponent(text)}`;
-    } else if (phones.length > 1) {
-      window.location.href = `sms://open?addresses=${phones.join(",")}&body=${encodeURIComponent(text)}`;
-    } else {
-      window.location.href = `sms:?&body=${encodeURIComponent(text)}`;
+    if (groupSmsUnsupported || smsLink.length > MAX_EXTERNAL_MESSAGE_URI_LENGTH) {
+      const reason = groupSmsUnsupported
+        ? "This browser cannot reliably prefill multiple text recipients."
+        : "This message is too long to open reliably in a text app.";
+      await shareTextWithFallback(
+        text,
+        title,
+        `${reason} The share sheet closed; recipients were not prefilled. Check the To field before sending.`,
+        `${reason} The message was copied. Open Messages, add recipients from the To field, and paste it.`
+      );
+      return;
     }
 
-    if (isQueueActive() && activeShareContext.queueItems.length > 0) {
-      const currentIdx = activeShareContext.queueIndex;
-      const total = activeShareContext.queueItems.length;
-      const sentName = activeShareContext.queueItems[currentIdx].name;
-      showStatus(`Opened Messages & synced ${sentName} (${currentIdx + 1}/${total})`);
-      if (currentIdx + 1 < total) setTimeout(() => stepQueue(1), 400);
-    } else if (targetInfo.conductorName) {
-      showStatus(`Opened Messages & synced ${targetInfo.conductorName} (${formatShortDate(getTodayLocalKey())})`);
-    } else {
-      showStatus("Opened in Messages app!");
-    }
+    window.location.href = smsLink;
+    showStatus("Opening Messages. Sending is not confirmed; return here to mark it sent if appropriate.");
+  }
+
+  function parseEmailRecipients(rawRecipients) {
+    return rawRecipients.split(/[,;\n]+/).map(email => email.trim()).filter(Boolean);
   }
 
   async function emailModalMessage() {
     const text = document.getElementById("shareMessageTextarea").value;
     const subject = document.getElementById("shareEmailSubject").value || "FS Conductor Schedule";
     const rawRecipients = document.getElementById("shareRecipientInput").value;
-    const emails = rawRecipients.split(",").map(e => e.trim()).filter(Boolean);
+    const emails = parseEmailRecipients(rawRecipients);
     if (emails.length === 0) {
       showStatus("No email addresses found. Add or enter at least one recipient.");
       return;
     }
-
-    const state = loadAppState();
-    const targetInfo = getShareTargetSlotInfo(state);
-    await flushReminderToCloud(targetInfo);
-
-    const toParam = emails.map(e => encodeURIComponent(e)).join(",");
-    window.location.href = `mailto:${toParam}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
-    showStatus(targetInfo.conductorName ? `Opened Email & synced ${targetInfo.conductorName}!` : "Opened in Email app!");
-  }
-
-  function copyModalMessage() {
-    const text = document.getElementById("shareMessageTextarea").value;
-    const state = loadAppState();
-    const targetInfo = getShareTargetSlotInfo(state);
-    if (targetInfo.conductorName && targetInfo.dateKey) {
-      recordReminderSent(targetInfo.dateKey, targetInfo.conductorName, true);
+    if (emails.some(email => !/^[^\s@,;]+@[^\s@,;]+$/.test(email))) {
+      showStatus("Check the email addresses. Separate valid addresses with commas or semicolons.");
+      return;
     }
 
-    navigator.clipboard.writeText(text).then(() => {
-      showStatus(targetInfo.conductorName ? `Copied & tagged ${targetInfo.conductorName}!` : "Copied to clipboard!");
+    const toParam = emails.map(e => encodeURIComponent(e).replace(/%40/gi, "@")).join(",");
+    const mailtoLink = `mailto:${toParam}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
+    if (mailtoLink.length > MAX_EXTERNAL_MESSAGE_URI_LENGTH) {
+      await shareTextWithFallback(
+        text,
+        subject,
+        "Share sheet closed. Recipients were not prefilled; check the To field before sending.",
+        "Email link too long. The message was copied; open Email, add recipients from the To field, and paste it."
+      );
+      return;
+    }
+
+    window.location.href = mailtoLink;
+    showStatus("Opening Email. Sending is not confirmed; return here to mark it sent if appropriate.");
+  }
+
+  async function copyModalMessage(statusMessage = "Copied to clipboard!") {
+    const text = document.getElementById("shareMessageTextarea").value;
+    if (!navigator.clipboard || !navigator.clipboard.writeText) {
+      showStatus("Clipboard access is unavailable. Select and copy the message manually.");
+      alert(text);
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(text);
+      showStatus(statusMessage);
       alert("Copied to clipboard! You can now paste (Cmd + V / Tap Paste) into Messages or Email.");
-    }).catch(() => { alert(text); });
+    } catch (err) {
+      console.error("Clipboard copy failed:", err);
+      showStatus("Could not copy the message. Select and copy it manually.");
+      alert(text);
+    }
   }
 
   /* --- .ICS & BACKUP HANDLERS --- */

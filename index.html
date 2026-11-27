@@ -21,7 +21,7 @@
   <header>
     <div class="title-group">
       <h1>Conductor Schedule</h1>
-      <span id="appVersionBadge" class="version-badge">v53</span>
+      <span id="appVersionBadge" class="version-badge">v54</span>
       <button type="button" id="cloudSyncPill" class="sync-pill" onclick="openCloudSyncModal()" title="Configure or check GitHub Gist Cloud Sync" aria-haspopup="dialog" aria-controls="cloudSyncModal">☁️ Local Only</button>
     </div>
     <div class="controls-group">
@@ -513,6 +513,7 @@
           <button type="button" class="outline" style="min-height: 30px; padding: 2px 10px; font-size: 0.78rem;" onclick="stepQueue(1)">Next ▶</button>
         </div>
       </div>
+      <p id="queueActionHint" class="placeholder-hint" style="display: none;">After sending, return here, mark it sent if appropriate, then tap Next.</p>
     </div>
 
     <div class="modal-field">
@@ -563,7 +564,7 @@
 
     <div class="modal-actions">
       <button type="button" class="outline" onclick="closeShareModal()">← Back</button>
-      <button type="button" id="btnMarkReminderSent" class="outline" style="display: none;" onclick="manualMarkReminderSent()">✓ Tag Sent Today</button>
+      <button type="button" id="btnMarkReminderSent" class="outline" style="display: none;" onclick="manualMarkReminderSent()">✓ Mark Sent</button>
       <button type="button" class="outline" onclick="copyModalMessage()">📋 Copy</button>
       <button type="button" id="btnActionSms" class="secondary" onclick="smsModalMessage()">💬 Open in Messages</button>
       <button type="button" id="btnActionEmail" class="secondary" style="display: none;" onclick="emailModalMessage()">✉️ Open in Email</button>

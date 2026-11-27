@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#f1f5f9">
   <meta name="description" content="How to manage the Conductor Schedule PWA: assignments, roster, reminders, exports, backups, and sync.">
-  <title>Conductor Schedule — User Manual (v53)</title>
+  <title>Conductor Schedule — User Manual (v54)</title>
   <style>
     :root {
       color-scheme: light;
@@ -375,7 +375,7 @@
 <body>
   <header class="top-bar">
     <div class="top-title">
-      <h1>Conductor Schedule <span class="version-badge">MANUAL • v53</span></h1>
+      <h1>Conductor Schedule <span class="version-badge">MANUAL • v54</span></h1>
       <p class="top-subtitle">A practical guide to planning, sharing, and protecting your schedule.</p>
     </div>
     <a href="./index.html" class="back-btn" onclick="if (window.opener) { window.close(); return false; }">← Back to Schedule</a>
@@ -405,7 +405,7 @@
         <h2 id="manual-intro">Keep the schedule clear, balanced, and easy to share.</h2>
         <p>
           Use this guide to set up your rotation, update assignments, track confirmations, and make backups.
-          The manual matches the v53 interface. The app saves changes in this browser automatically; cloud
+          The manual matches the v54 interface. The app saves changes in this browser automatically; cloud
           sync is optional.
         </p>
         <div class="hero-links">
@@ -551,8 +551,11 @@
         <h3>Share all schedules</h3>
         <p>
           Choose <strong>Schedule actions → Share All Schedules</strong>. Select a timeframe (including the next 12 months starting this month) and text or email
-          format. For group text, choose either a single group message or the one-by-one queue, which steps
-          through each conductor. Verify the recipients and message before sharing.
+          format. For group text, choose either one group message or the one-by-one queue. After sending a
+          queued message, return to the app and tap <strong>Next</strong>. Non-Apple browsers use the system
+          share sheet or copy fallback for group texts; add the recipients shown in the To field yourself.
+          The app no longer marks a message sent just because another app opened. After confirming delivery,
+          use <strong>Mark Sent</strong> if you want to update the schedule status.
         </p>
 
         <details class="guide-detail">
@@ -561,7 +564,7 @@
             <ul>
               <li>Edit the preview directly before sharing. <strong>Save as Default</strong> keeps the edited wording for future messages of that type; <strong>Reset Default</strong> restores the built-in wording.</li>
               <li>Templates support tags such as <code>{firstName}</code>, <code>{fullName}</code>, <code>{dates}</code>, <code>{defaultTime}</code>, and <code>{defaultLocation}</code>. Group messages also support <code>{schedules}</code> and <code>{timeframe}</code>.</li>
-              <li>Messaging or sharing actions can update the assignment’s reminder tag. Check the pill after the external app opens and adjust the status if needed; opening another app does not guarantee that the message was sent.</li>
+              <li>Opening Messages, Email, or the share sheet does not confirm delivery. After confirming that you sent the message, use <strong>Mark Sent</strong> to update the assignment’s reminder tag.</li>
               <li>A <strong>Requested Sub</strong> tag records a request; it does not automatically select a replacement. Use Quick Replace or the date selector to change the assignment.</li>
             </ul>
           </div>
@@ -678,7 +681,7 @@
         </p>
       </section>
 
-      <p class="footer-note">Conductor Schedule User Manual · v53</p>
+      <p class="footer-note">Conductor Schedule User Manual · v54</p>
     </main>
   </div>
   <script>
