@@ -88,6 +88,19 @@
             typeof frameWindow.retryCloudSync === "function"
         );
 
+        frameWindow.openPrintModal();
+        const printActions = frameWindow.document.querySelectorAll("#printModal .modal-actions > *");
+        record(
+          "Print/PDF dialog has one print action",
+          printActions.length === 2 &&
+            printActions[1].textContent.includes("Print / Save PDF")
+        );
+        frameWindow.closePrintModal();
+
+        const printSheet = frameWindow.buildPrintSheetHTML("3", 2026, 10);
+        const printMonthCount = (printSheet.match(/class="print-month-block"/g) || []).length;
+        record("Print sheet renders the selected month range", printMonthCount === 3);
+
         const configKey = "conductor_gist_config";
         const originalConfig = frameWindow.localStorage.getItem(configKey);
         const testToken = "smoke-test-token-not-a-real-credential";

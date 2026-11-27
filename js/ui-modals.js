@@ -219,7 +219,7 @@
 
   /* --- BOARD-READY PRINT / SAVE PDF CONTROLLERS --- */
   function openPrintModal() {
-    prepareSafariPrintLink();
+    prepareStandalonePrintLink();
     openAccessibleModal("printModal", "printScopeSelect");
     syncModalBodyLock();
   }
@@ -229,16 +229,30 @@
     syncModalBodyLock();
   }
 
-  function prepareSafariPrintLink() {
+  function prepareStandalonePrintLink() {
     const scopeEl = document.getElementById("printScopeSelect");
     const scope = (scopeEl && scopeEl.value) || "3";
     const printDate = scope === "12" ? new Date() : currentDate;
     const y = printDate.getFullYear();
     const m = printDate.getMonth();
-    const anchor = document.getElementById("safariPrintAnchor");
+    const anchor = document.getElementById("printViewAnchor");
     if (anchor) {
       anchor.href = `./index.html?print=${encodeURIComponent(scope)}&y=${y}&m=${m}`;
     }
+  }
+
+  function printOrSaveBoardSchedule(event) {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    if (isIOS) {
+      prepareStandalonePrintLink();
+      closePrintModal();
+      return true;
+    }
+
+    if (event) event.preventDefault();
+    executeBoardPrint();
+    return false;
   }
 
   function getPrintMonthsData(scope, baseYear, baseMonth) {
@@ -396,224 +410,6 @@
     window.print();
   }
 
-  /* --- ZERO-DEPENDENCY VECTOR PDF GENERATOR --- */
-  function toPdfAscii(str) {
-    return String(str || "")
-      .replace(/[–—]/g, "-")
-      .replace(/•/g, "|")
-      .replace(/[’‘]/g, "'")
-      .replace(/[“”]/g, '"')
-      .replace(/[^\x20-\x7E]/g, "")
-      .replace(/\\/g, "\\\\")
-      .replace(/\(/g, "\\(")
-      .replace(/\)/g, "\\)");
-  }
-
-  function wrapPdfText(str, maxChars) {
-    const words = String(str || "").split(/\s+/).filter(Boolean);
-    if (words.length === 0) return [""];
-    const lines = [];
-    let current = words[0];
-    for (let i = 1; i < words.length; i++) {
-      if ((current + " " + words[i]).length <= maxChars) {
-        current += " " + words[i];
-      } else {
-        lines.push(current);
-        current = words[i];
-      }
-    }
-    lines.push(current);
-    return lines;
-  }
-
-  function generateBoardPDFBlob(scope) {
-    const printDate = scope === "12" ? new Date() : currentDate;
-    const data = getPrintMonthsData(scope, printDate.getFullYear(), printDate.getMonth());
-    const pageW = 612;
-    const pageH = 792;
-    const marginL = 54;
-    const marginR = 54;
-    const contentW = pageW - marginL - marginR;
-    const colWidths = [152, 114, 132, 106];
-    const colMaxChars = [27, 20, 23, 18];
-
-    let pages = [];
-    let ops = [];
-    let y = pageH - 52;
-
-    const pushPageHeader = (continued) => {
-      ops.push("0.118 0.227 0.541 rg");
-      ops.push("BT /F2 15 Tf " + marginL + " " + y + " Td (" + toPdfAscii("Field Service Conductor Schedule" + (continued ? " (Cont.)" : "")) + ") Tj ET");
-      ops.push("0.278 0.333 0.412 rg");
-      ops.push("BT /F1 8.5 Tf " + (pageW - marginR - 110) + " " + y + " Td (" + toPdfAscii("Printed " + data.printedOn) + ") Tj ET");
-      y -= 15;
-      ops.push("0.200 0.255 0.333 rg");
-      ops.push("BT /F2 9 Tf " + marginL + " " + y + " Td (" + toPdfAscii(data.scopeSubtitle + " | " + data.defTime + " | " + data.defLoc) + ") Tj ET");
-      y -= 8;
-      ops.push("0.118 0.227 0.541 RG 1.5 w " + marginL + " " + y + " m " + (pageW - marginR) + " " + y + " l S");
-      y -= 18;
-    };
-
-    const startNewPage = (continued) => {
-      if (ops.length > 0) pages.push(ops.join("\n"));
-      ops = [];
-      y = pageH - 52;
-      pushPageHeader(continued);
-    };
-
-    startNewPage(false);
-
-    data.blocks.forEach(block => {
-      const estBlockH = 38 + block.rows.length * 24;
-      if (y - estBlockH < 64) {
-        startNewPage(true);
-      }
-
-      ops.push("0.945 0.961 0.976 rg 0.796 0.835 0.882 RG 0.7 w");
-      ops.push(marginL + " " + (y - 18) + " " + contentW + " 18 re B");
-      ops.push("0.059 0.090 0.165 rg");
-      ops.push("BT /F2 10 Tf " + (marginL + 6) + " " + (y - 13) + " Td (" + toPdfAscii(block.heading) + ") Tj ET");
-      y -= 18;
-
-      const headers = ["Date", "Conductor", "Time & Location", "Assignment Status"];
-      ops.push("0.973 0.980 0.988 rg 0.796 0.835 0.882 RG 0.7 w");
-      ops.push(marginL + " " + (y - 17) + " " + contentW + " 17 re B");
-      let cx = marginL;
-      ops.push("0.118 0.161 0.231 rg");
-      headers.forEach((h, idx) => {
-        ops.push("BT /F2 8.2 Tf " + (cx + 5) + " " + (y - 12) + " Td (" + toPdfAscii(h) + ") Tj ET");
-        if (idx > 0) {
-          ops.push("0.796 0.835 0.882 RG 0.7 w " + cx + " " + y + " m " + cx + " " + (y - 17) + " l S");
-        }
-        cx += colWidths[idx];
-      });
-      y -= 17;
-
-      block.rows.forEach(r => {
-        const cells = [r.dateText, r.conductorText, r.timeLocText, r.statusText];
-        const wrapped = cells.map((txt, idx) => wrapPdfText(txt, colMaxChars[idx]));
-        const maxLines = Math.max(...wrapped.map(w => w.length), 1);
-        const rowH = Math.max(18, maxLines * 10.5 + 7);
-
-        if (y - rowH < 56) {
-          startNewPage(true);
-        }
-
-        if (r.cancelled) {
-          ops.push("0.996 0.949 0.949 rg 0.796 0.835 0.882 RG 0.7 w");
-        } else {
-          ops.push("1 1 1 rg 0.796 0.835 0.882 RG 0.7 w");
-        }
-        ops.push(marginL + " " + (y - rowH) + " " + contentW + " " + rowH + " re B");
-
-        let rx = marginL;
-        wrapped.forEach((linesArr, idx) => {
-          if (idx > 0) {
-            ops.push("0.796 0.835 0.882 RG 0.7 w " + rx + " " + y + " m " + rx + " " + (y - rowH) + " l S");
-          }
-          if (r.cancelled) {
-            ops.push("0.600 0.106 0.106 rg");
-          } else {
-            ops.push("0 0 0 rg");
-          }
-          const fontTag = (idx === 0 || idx === 1) ? "/F2" : "/F1";
-          linesArr.forEach((lineStr, lineIdx) => {
-            const ty = y - 11.5 - (lineIdx * 10.5);
-            ops.push("BT " + fontTag + " 8.2 Tf " + (rx + 5) + " " + ty + " Td (" + toPdfAscii(lineStr) + ") Tj ET");
-          });
-          rx += colWidths[idx];
-        });
-
-        y -= rowH;
-      });
-
-      y -= 12;
-    });
-
-    if (y < 64) startNewPage(true);
-    ops.push("0.796 0.835 0.882 RG 0.7 w " + marginL + " " + y + " m " + (pageW - marginR) + " " + y + " l S");
-    y -= 12;
-    ops.push("0.278 0.333 0.412 rg");
-    ops.push("BT /F1 7.5 Tf " + marginL + " " + y + " Td (" + toPdfAscii("Preparation References: (1) mwb21 November p. 7 'Tips for Making Meetings for Field Service Practical' | (2) km 3/15 pp. 3-6.") + ") Tj ET");
-    y -= 10;
-    ops.push("BT /F1 7.5 Tf " + marginL + " " + y + " Td (" + toPdfAscii("If a scheduling conflict arises, please notify the schedule coordinator early to arrange a replacement or trade.") + ") Tj ET");
-
-    pages.push(ops.join("\n"));
-
-    const objects = [];
-    const addObj = (body) => {
-      objects.push(body);
-      return objects.length;
-    };
-
-    const catalogId = addObj("<< /Type /Catalog /Pages 2 0 R >>");
-    const pagesId = addObj("");
-    const fontRegId = addObj("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
-    const fontBoldId = addObj("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>");
-
-    const pageIds = [];
-    pages.forEach(streamContent => {
-      const contentId = addObj("<< /Length " + streamContent.length + " >>\nstream\n" + streamContent + "\nendstream");
-      const pageId = addObj(
-        "<< /Type /Page /Parent " + pagesId + " 0 R /MediaBox [0 0 612 792] " +
-        "/Resources << /Font << /F1 " + fontRegId + " 0 R /F2 " + fontBoldId + " 0 R >> >> " +
-        "/Contents " + contentId + " 0 R >>"
-      );
-      pageIds.push(pageId);
-    });
-
-    objects[pagesId - 1] = "<< /Type /Pages /Kids [" + pageIds.map(id => id + " 0 R").join(" ") + "] /Count " + pageIds.length + " >>";
-
-    let pdf = "%PDF-1.4\n";
-    const offsets = [0];
-    objects.forEach((objBody, idx) => {
-      offsets.push(pdf.length);
-      pdf += (idx + 1) + " 0 obj\n" + objBody + "\nendobj\n";
-    });
-
-    const xrefPos = pdf.length;
-    pdf += "xref\n0 " + (objects.length + 1) + "\n";
-    pdf += "0000000000 65535 f \n";
-    for (let i = 1; i <= objects.length; i++) {
-      pdf += String(offsets[i]).padStart(10, "0") + " 00000 n \n";
-    }
-    pdf += "trailer\n<< /Size " + (objects.length + 1) + " /Root " + catalogId + " 0 R >>\nstartxref\n" + xrefPos + "\n%%EOF";
-
-    return new Blob([pdf], { type: "application/pdf" });
-  }
-
-  async function shareOrDownloadBoardPDF() {
-    const scopeEl = document.getElementById("printScopeSelect");
-    const scope = (scopeEl && scopeEl.value) || "3";
-    const pdfBlob = generateBoardPDFBlob(scope);
-    const fileName = `FS_Conductor_Schedule_${scope}Mo.pdf`;
-    closePrintModal();
-
-    try {
-      const pdfFile = new File([pdfBlob], fileName, { type: "application/pdf" });
-      if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-        await navigator.share({
-          title: "Field Service Conductor Schedule",
-          files: [pdfFile]
-        });
-        showStatus("📄 Shared PDF — tap Print or Save to Files in the iOS sheet!");
-        return;
-      }
-    } catch (err) {
-      if (err && err.name === "AbortError") return;
-    }
-
-    const url = URL.createObjectURL(pdfBlob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
-    showStatus("📄 Downloaded " + fileName + "!");
-  }
-
   function enterStandalonePrintMode(scopeParam, yearParam, monthParam) {
     const baseYear = !isNaN(yearParam) ? yearParam : currentDate.getFullYear();
     const baseMonth = !isNaN(monthParam) ? monthParam : currentDate.getMonth();
@@ -621,10 +417,10 @@
     document.body.classList.add("standalone-print-mode");
     container.innerHTML = `
       <div class="standalone-print-bar">
-        <span>Tap Print below or Safari Share (↑) → Print</span>
+        <span>Use Print or Share → Print to print or save as PDF.</span>
         <div class="controls-group">
           <a href="./index.html" style="text-decoration: none; padding: 6px 10px; border-radius: 7px; border: 1px solid #cbd5e1; background: #fff; color: #1e293b; font-size: 0.8rem; font-weight: 600;">← App</a>
-          <button type="button" class="primary" style="min-height: 34px; padding: 6px 12px;" onclick="window.print()">🖨️ Print</button>
+          <button type="button" class="primary" style="min-height: 34px; padding: 6px 12px;" onclick="window.print()">🖨️ Print / Save PDF</button>
         </div>
       </div>
       ${buildPrintSheetHTML(scopeParam || "3", baseYear, baseMonth)}
