@@ -158,7 +158,7 @@
 
     const hintEl = document.getElementById("sharePlaceholdersHint");
     hintEl.innerText = deliveryMode === "queue"
-      ? "Dynamic tags: {firstName}, {fullName}, {dates}, {defaultTime}, {defaultLocation}"
+      ? "Dynamic tags: {firstName}, {fullName}, {name}, {dates}, {defaultTime}, {defaultLocation}"
       : "Dynamic tags: {schedules}, {timeframe}, {defaultTime}, {defaultLocation}";
     document.getElementById("queueActionHint").style.display = deliveryMode === "queue" ? "block" : "none";
 
@@ -254,7 +254,7 @@
 
     if (mode === "single") {
       titleEl.innerText = `Share Schedule: ${conductorName}`;
-      hintEl.innerText = "Dynamic tags: {firstName}, {fullName}, {dates}, {defaultTime}, {defaultLocation}";
+      hintEl.innerText = "Dynamic tags: {firstName}, {fullName}, {name}, {dates}, {defaultTime}, {defaultLocation}";
     } else {
       titleEl.innerText = "Share Schedule: All Conductors";
       hintEl.innerText = "Dynamic tags: {schedules}, {timeframe}, {defaultTime}, {defaultLocation}";
@@ -291,7 +291,7 @@
     if (activeShareContext.mode === "all") {
       const hintEl = document.getElementById("sharePlaceholdersHint");
       if (isQueueActive()) {
-        hintEl.innerText = "Dynamic tags: {firstName}, {fullName}, {dates}, {defaultTime}, {defaultLocation}";
+        hintEl.innerText = "Dynamic tags: {firstName}, {fullName}, {name}, {dates}, {defaultTime}, {defaultLocation}";
       } else {
         hintEl.innerText = "Dynamic tags: {schedules}, {timeframe}, {defaultTime}, {defaultLocation}";
       }
@@ -355,6 +355,7 @@
       textarea.value = template
         .replace(/\{firstName\}/g, firstName)
         .replace(/\{fullName\}/g, name)
+        .replace(/\{name\}/g, name)
         .replace(/\{dates\}/g, dateList)
         .replace(/\{defaultTime\}/g, defTime)
         .replace(/\{defaultLocation\}/g, defLoc);
@@ -391,6 +392,7 @@
         textarea.value = template
           .replace(/\{firstName\}/g, firstName)
           .replace(/\{fullName\}/g, item.name)
+          .replace(/\{name\}/g, item.name)
           .replace(/\{dates\}/g, dateList)
           .replace(/\{defaultTime\}/g, defTime)
           .replace(/\{defaultLocation\}/g, defLoc);
