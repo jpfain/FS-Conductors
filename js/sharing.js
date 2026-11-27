@@ -353,6 +353,7 @@
 
       const template = (state.templates && state.templates[templateKey]) || DEFAULT_TEMPLATES[templateKey];
       textarea.value = template
+        .replace(/\{firstname\}/g, firstName)
         .replace(/\{firstName\}/g, firstName)
         .replace(/\{fullName\}/g, name)
         .replace(/\{name\}/g, name)
@@ -390,6 +391,7 @@
 
         const template = (state.templates && state.templates[templateKey]) || DEFAULT_TEMPLATES[templateKey];
         textarea.value = template
+          .replace(/\{firstname\}/g, firstName)
           .replace(/\{firstName\}/g, firstName)
           .replace(/\{fullName\}/g, item.name)
           .replace(/\{name\}/g, item.name)

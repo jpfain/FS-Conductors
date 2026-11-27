@@ -31,7 +31,7 @@
       "2. km 3/15 pp. 3-6 \"Meetings for Field Service That Accomplish Their Purpose.\"\n\n" +
       "Please let me know early if you need a replacement or trade. Thank you!",
     individualEmail:
-      "Hi {firstName},\n\n" +
+      "Hi {firstName}\n\n" +
       "Here is your upcoming FS Conductor schedule:\n\n" +
       "{dates}\n\n" +
       "Time: {defaultTime}\n" +
