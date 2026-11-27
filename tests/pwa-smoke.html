@@ -106,6 +106,28 @@
           frameWindow.buildSmsLink(["+19045550123"], "Meet & greet") ===
             "sms:+19045550123?body=Meet%20%26%20greet"
         );
+        const originalLoadAppState = frameWindow.loadAppState;
+        try {
+          frameWindow.openShareModal("all", null, "text");
+          frameWindow.loadAppState = () => ({
+            roster: ["Scheduled Conductor", "No Schedule This Timeframe"],
+            contacts: {
+              "Scheduled Conductor": { phone: "+1 202 555 0101" },
+              "No Schedule This Timeframe": { phone: "+1 202 555 0102" }
+            }
+          });
+          frameWindow.populateShareRecipients();
+          record(
+            "Group text includes saved phone numbers for the full roster",
+            frameWindow.document.getElementById("shareRecipientInput").value ===
+              "+1 202 555 0101, +1 202 555 0102"
+          );
+        } catch (error) {
+          record("Group text includes saved phone numbers for the full roster", false, error.message);
+        } finally {
+          frameWindow.loadAppState = originalLoadAppState;
+          frameWindow.closeShareModal();
+        }
         record(
           "Email recipients accept comma and semicolon separators",
           frameWindow.parseEmailRecipients("one@example.com; two@example.com").length === 2

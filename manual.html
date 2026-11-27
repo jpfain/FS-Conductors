@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#f1f5f9">
   <meta name="description" content="How to manage the Conductor Schedule PWA: assignments, roster, reminders, exports, backups, and sync.">
-  <title>Conductor Schedule — User Manual (v55)</title>
+  <title>Conductor Schedule — User Manual (v56)</title>
   <style>
     :root {
       color-scheme: light;
@@ -375,7 +375,7 @@
 <body>
   <header class="top-bar">
     <div class="top-title">
-      <h1>Conductor Schedule <span class="version-badge">MANUAL • v55</span></h1>
+      <h1>Conductor Schedule <span class="version-badge">MANUAL • v56</span></h1>
       <p class="top-subtitle">A practical guide to planning, sharing, and protecting your schedule.</p>
     </div>
     <a href="./index.html" class="back-btn" onclick="if (window.opener) { window.close(); return false; }">← Back to Schedule</a>
@@ -405,7 +405,7 @@
         <h2 id="manual-intro">Keep the schedule clear, balanced, and easy to share.</h2>
         <p>
           Use this guide to set up your rotation, update assignments, track confirmations, and make backups.
-          The manual matches the v55 interface. The app saves changes in this browser automatically; cloud
+          The manual matches the v56 interface. The app saves changes in this browser automatically; cloud
           sync is optional.
         </p>
         <div class="hero-links">
@@ -537,7 +537,7 @@
         </p>
         <p>
           <strong>Send Reminder</strong> on Up Next opens a ready-to-review message for that conductor and date.
-          The message is not sent automatically; review it and use the phone’s or computer’s Messages, Email, or
+          The message is not sent automatically; review it and use the phone’s or computer’s Messages, Gmail, or
           share interface to send it.
         </p>
 
@@ -551,9 +551,10 @@
         <h3>Share all schedules</h3>
         <p>
           Choose <strong>Schedule actions → Send Conductor Schedules</strong>. Select a timeframe (including the next 12 months starting this month) and text or email
-          format. For group text, choose either one group message or the one-by-one queue. After sending a
+          format. Saved phone numbers for all conductors are included in the group text recipients, even if a conductor has no date in the selected timeframe. For group text, choose either one group message or the one-by-one queue. After sending a
           queued message, return to the app and tap <strong>Next</strong>. Non-Apple browsers use the system
-          share sheet or copy fallback for group texts; add the recipients shown in the To field yourself.
+          share sheet or copy fallback for group texts; these options include the message but cannot prefill recipients, so add the numbers shown in the app’s To field yourself. On Apple devices, <strong>Open in Messages</strong> attempts to open Messages with the saved recipients and message filled in.
+          <strong>Share Sheet</strong> opens the system’s app chooser with just the message, letting you select a compatible app; the recipient field may need to be filled manually.
           The app no longer marks a message sent just because another app opened. After confirming delivery,
           use <strong>Mark Sent</strong> if you want to update the schedule status.
         </p>
@@ -681,7 +682,7 @@
         </p>
       </section>
 
-      <p class="footer-note">Conductor Schedule User Manual · v55</p>
+      <p class="footer-note">Conductor Schedule User Manual · v56</p>
     </main>
   </div>
   <script>

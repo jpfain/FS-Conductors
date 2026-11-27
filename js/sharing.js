@@ -204,9 +204,8 @@
       }
     } else {
       editBtn.style.display = "none";
-      const rangeOption = document.getElementById("shareTimeframeSelect").value;
-      const list = getAllConductorsGroupedSchedules(rangeOption, state)
-        .map(({ name }) => {
+      const list = state.roster
+        .map(name => {
           const contact = (state.contacts && state.contacts[name]) || {};
           return isText ? (contact.phone || "") : (contact.email || "");
         })
