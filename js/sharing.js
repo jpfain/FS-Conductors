@@ -136,7 +136,6 @@
   /* --- SHARE, TEMPLATE & 1-BY-1 QUEUE CONTROLLERS --- */
   function isQueueActive() {
     return activeShareContext.mode === "all" &&
-           activeShareContext.format === "text" &&
            activeShareContext.allTextMode === "queue";
   }
 
@@ -196,8 +195,10 @@
       const current = items[activeShareContext.queueIndex];
       if (current) {
         const contact = (state.contacts && state.contacts[current.name]) || {};
-        inputEl.value = contact.phone || "";
-        inputEl.placeholder = `No mobile # saved for ${current.name}`;
+        inputEl.value = isText ? (contact.phone || "") : (contact.email || "");
+        inputEl.placeholder = isText
+          ? `No mobile # saved for ${current.name}`
+          : `No email saved for ${current.name}`;
       } else {
         inputEl.value = "";
         inputEl.placeholder = "No conductors scheduled in this timeframe";
@@ -275,14 +276,26 @@
 
     document.getElementById("btnFormatText").className = isText ? "active" : "outline";
     document.getElementById("btnFormatEmail").className = !isText ? "active" : "outline";
+    document.getElementById("btnQueueModeGroup").innerText = isText
+      ? "👥 Single Group Text"
+      : "👥 Single Group Email";
 
-    const showQueuePanel = activeShareContext.mode === "all" && isText;
+    const showQueuePanel = activeShareContext.mode === "all";
     document.getElementById("allTextQueuePanel").style.display = showQueuePanel ? "block" : "none";
 
     document.getElementById("emailSubjectField").style.display = isText ? "none" : "block";
     document.getElementById("btnActionSms").style.display = isText ? "inline-flex" : "none";
     document.getElementById("btnActionEmail").style.display = !isText ? "inline-flex" : "none";
     document.getElementById("shareMessageLabel").innerText = isText ? "Short Text Message" : "Longer Email Message";
+
+    if (activeShareContext.mode === "all") {
+      const hintEl = document.getElementById("sharePlaceholdersHint");
+      if (isQueueActive()) {
+        hintEl.innerText = "Dynamic tags: {firstName}, {fullName}, {dates}, {defaultTime}, {defaultLocation}";
+      } else {
+        hintEl.innerText = "Dynamic tags: {schedules}, {timeframe}, {defaultTime}, {defaultLocation}";
+      }
+    }
 
     refreshShareModalPreview();
   }
@@ -353,7 +366,9 @@
       if (activeShareContext.queueIndex >= grouped.length) activeShareContext.queueIndex = 0;
 
       const progressEl = document.getElementById("queueProgressLabel");
-      scopeLabel.innerText = "Individual Text Template:";
+      scopeLabel.innerText = activeShareContext.format === "text"
+        ? "Individual Text Template:"
+        : "Individual Email Template:";
 
       if (grouped.length === 0) {
         progressEl.innerText = "No conductors scheduled in this timeframe";
@@ -367,9 +382,12 @@
 
         activeShareContext.lastRenderedDates = dateList;
         progressEl.innerText = `Brother ${idx + 1} of ${grouped.length}: ${item.name}`;
-        smsBtn.innerText = `💬 Text ${firstName} (${idx + 1}/${grouped.length})`;
+        smsBtn.innerText = activeShareContext.format === "text"
+          ? `💬 Text ${firstName} (${idx + 1}/${grouped.length})`
+          : `✉️ Email ${firstName} (${idx + 1}/${grouped.length})`;
+        subjectInput.value = `FS Conductor Schedule - ${item.name}`;
 
-        const template = (state.templates && state.templates.individualText) || DEFAULT_TEMPLATES.individualText;
+        const template = (state.templates && state.templates[templateKey]) || DEFAULT_TEMPLATES[templateKey];
         textarea.value = template
           .replace(/\{firstName\}/g, firstName)
           .replace(/\{fullName\}/g, item.name)
