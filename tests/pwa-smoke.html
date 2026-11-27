@@ -111,6 +111,42 @@
           frameWindow.parseEmailRecipients("one@example.com; two@example.com").length === 2
         );
 
+        const originalOpen = frameWindow.open;
+        const originalEmailFields = {
+          recipients: frameWindow.document.getElementById("shareRecipientInput").value,
+          subject: frameWindow.document.getElementById("shareEmailSubject").value,
+          message: frameWindow.document.getElementById("shareMessageTextarea").value
+        };
+        let openedEmailUrl = "";
+        let emailWindowTarget = "";
+        try {
+          frameWindow.open = (url, target) => {
+            openedEmailUrl = url;
+            emailWindowTarget = target;
+          };
+          frameWindow.document.getElementById("shareRecipientInput").value = "one@example.com; two@example.com";
+          frameWindow.document.getElementById("shareEmailSubject").value = "Schedule & updates";
+          frameWindow.document.getElementById("shareMessageTextarea").value = "Meet & greet";
+          await frameWindow.emailModalMessage();
+          const gmailUrl = new URL(openedEmailUrl);
+          record(
+            "Email action opens Gmail compose with recipients and message",
+            gmailUrl.origin === "https://mail.google.com" &&
+              gmailUrl.searchParams.get("view") === "cm" &&
+              gmailUrl.searchParams.get("to") === "one@example.com,two@example.com" &&
+              gmailUrl.searchParams.get("su") === "Schedule & updates" &&
+              gmailUrl.searchParams.get("body") === "Meet & greet" &&
+              emailWindowTarget === "_blank"
+          );
+        } catch (error) {
+          record("Email action opens Gmail compose with recipients and message", false, error.message);
+        } finally {
+          frameWindow.open = originalOpen;
+          frameWindow.document.getElementById("shareRecipientInput").value = originalEmailFields.recipients;
+          frameWindow.document.getElementById("shareEmailSubject").value = originalEmailFields.subject;
+          frameWindow.document.getElementById("shareMessageTextarea").value = originalEmailFields.message;
+        }
+
         const shareNavigator = frameWindow.navigator;
         const originalShareDescriptor = Object.getOwnPropertyDescriptor(shareNavigator, "share");
         const shareTestDate = "2999-12-31";

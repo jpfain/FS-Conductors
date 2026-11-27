@@ -567,20 +567,15 @@
       return;
     }
 
-    const toParam = emails.map(e => encodeURIComponent(e).replace(/%40/gi, "@")).join(",");
-    const mailtoLink = `mailto:${toParam}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
-    if (mailtoLink.length > MAX_EXTERNAL_MESSAGE_URI_LENGTH) {
-      await shareTextWithFallback(
-        text,
-        subject,
-        "Share sheet closed. Recipients were not prefilled; check the To field before sending.",
-        "Email link too long. The message was copied; open Email, add recipients from the To field, and paste it."
-      );
-      return;
-    }
+    const gmailUrl = new URL("https://mail.google.com/mail/");
+    gmailUrl.searchParams.set("view", "cm");
+    gmailUrl.searchParams.set("fs", "1");
+    gmailUrl.searchParams.set("to", emails.join(","));
+    gmailUrl.searchParams.set("su", subject);
+    gmailUrl.searchParams.set("body", text);
 
-    window.location.href = mailtoLink;
-    showStatus("Opening Email. Sending is not confirmed; return here to mark it sent if appropriate.");
+    window.open(gmailUrl.toString(), "_blank", "noopener,noreferrer");
+    showStatus("Opening Gmail compose. Sending is not confirmed; return here to mark it sent if appropriate.");
   }
 
   async function copyModalMessage(statusMessage = "Copied to clipboard!") {
