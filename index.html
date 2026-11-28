@@ -74,15 +74,14 @@
       <div class="toolbar-left">
         <button type="button" class="accent" onclick="openShareModal('all', null, 'text')">📢 Send Conductor Schedules</button>
         <button type="button" class="outline" onclick="openTradeModal()">⇄ Trade Dates</button>
-        <button type="button" class="manual-pill-btn" onclick="openUserManual()">📖 User Manual</button>
       </div>
 
       <div class="toolbar-right">
-        <button type="button" id="btnUndo" class="outline" onclick="undoLastChange()" disabled title="Undo last schedule change">↩ Undo</button>
+        <button type="button" class="manual-pill-btn" onclick="openUserManual()">📖 User Manual</button>
 
         <!-- SYNC & TOOLS DROPDOWN -->
         <div class="dropdown">
-          <button type="button" class="outline" onclick="toggleDropdown('toolsMenu', event)">⚙️ Sync &amp; Tools ▾</button>
+          <button type="button" class="light-blue-pill-btn" onclick="toggleDropdown('toolsMenu', event)">⚙️ Sync &amp; Tools ▾</button>
           <div id="toolsMenu" class="dropdown-menu">
             <div class="dropdown-header">
               <span>Sync &amp; Tools</span>
@@ -105,6 +104,7 @@
             <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); forceAppUpdate()">🔄 Check for App Update</button>
           </div>
         </div>
+        <button type="button" id="btnUndo" class="outline" onclick="undoLastChange()" disabled title="Undo last schedule change">↩ Undo</button>
         <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="importJSONBackup(event)">
       </div>
     </div>

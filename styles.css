@@ -182,12 +182,25 @@
       min-height: 32px;
       padding: 4px 12px;
       border-radius: 999px;
-      background: #f8fafc;
-      color: #475569;
-      border: 1px solid #cbd5e1;
+      background: #dbeafe;
+      color: #1e40af;
+      border: 1px solid #93c5fd;
+      font-weight: 700;
     }
 
-    .manual-pill-btn:hover { background: #eef2ff; color: #3730a3; }
+    .manual-pill-btn:hover { background: #bfdbfe; color: #1e3a8a; }
+
+    .light-blue-pill-btn {
+      min-height: 32px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: #dbeafe;
+      color: #1e40af;
+      border: 1px solid #93c5fd;
+      font-weight: 700;
+    }
+
+    .light-blue-pill-btn:hover { background: #bfdbfe; color: #1e3a8a; opacity: 1; }
 
     .view-toggle {
       display: flex;
