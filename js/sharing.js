@@ -629,6 +629,36 @@
     }, 3600);
   }
 
+  function escapeICSValue(value) {
+    return String(value == null ? "" : value)
+      .replace(/\\/g, "\\\\")
+      .replace(/\r?\n/g, "\\n")
+      .replace(/,/g, "\\,")
+      .replace(/;/g, "\\;");
+  }
+
+  function addDaysToDateKey(dateKey) {
+    const [year, month, day] = dateKey.split("-").map(Number);
+    const date = new Date(year, month - 1, day);
+    date.setDate(date.getDate() + 1);
+    return {
+      year: date.getFullYear(),
+      monthStr: String(date.getMonth() + 1).padStart(2, "0"),
+      dayStr: String(date.getDate()).padStart(2, "0")
+    };
+  }
+
+  function downloadCalendarFile(lines, filename) {
+    const blob = new Blob([lines.join("\r\n")], { type: "text/calendar;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  }
+
   function downloadConductorICS(conductorName) {
     const state = loadAppState();
     const choice = prompt(
@@ -657,45 +687,121 @@
       "PRODID:-//Conductor Schedule Generator//EN",
       "CALSCALE:GREGORIAN",
       "METHOD:PUBLISH",
-      `X-WR-CALNAME:${conductorName} - FS Conductor Schedule`
+      `X-WR-CALNAME:${escapeICSValue(conductorName)} - FS Conductor Schedule`
     ];
 
     dates.forEach(d => {
       const dateStr = `${d.year}${d.monthStr}${d.dayStr}`;
+      const endDate = addDaysToDateKey(d.dateKey);
+      const endDateStr = `${endDate.year}${endDate.monthStr}${endDate.dayStr}`;
       const slotTL = getSlotTimeLocation(state, d.dateKey);
+      const conductorSlug = conductorName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "");
       icsLines.push(
         "BEGIN:VEVENT",
-        `UID:conductor-${d.dateKey}@conductorschedule.local`,
+        `UID:conductor-${conductorSlug}-${d.dateKey}@conductorschedule.local`,
         `DTSTAMP:${nowString}`,
         `DTSTART;VALUE=DATE:${dateStr}`,
-        `DTEND;VALUE=DATE:${dateStr}`,
-        `SUMMARY:FS Conductor: ${conductorName} (${slotTL.time})`,
-        `LOCATION:${slotTL.location}`,
-        `DESCRIPTION:Please read ahead: 1. mwb21 November p. 7 "Tips for Making Meetings for Field Service Practical" and 2. km 3/15 pp. 3-6 "Meetings for Field Service That Accomplish Their Purpose."`,
+        `DTEND;VALUE=DATE:${endDateStr}`,
+        `SUMMARY:${escapeICSValue(`FS Conductor: ${conductorName} (${slotTL.time})`)}`,
+        `LOCATION:${escapeICSValue(slotTL.location)}`,
+        `DESCRIPTION:${escapeICSValue(`Please read ahead: 1. mwb21 November p. 7 "Tips for Making Meetings for Field Service Practical" and 2. km 3/15 pp. 3-6 "Meetings for Field Service That Accomplish Their Purpose."`)}`,
         "STATUS:CONFIRMED",
         "BEGIN:VALARM",
         "TRIGGER:-PT24H",
         "ACTION:DISPLAY",
-        `DESCRIPTION:Reminder: FS Conductor Duty Tomorrow - ${conductorName}`,
+        `DESCRIPTION:${escapeICSValue(`Reminder: FS Conductor Duty Tomorrow - ${conductorName}`)}`,
         "END:VALARM",
         "BEGIN:VALARM",
         "TRIGGER:-PT12H",
         "ACTION:DISPLAY",
-        `DESCRIPTION:Reminder: FS Conductor Duty in 12 Hours - ${conductorName}`,
+        `DESCRIPTION:${escapeICSValue(`Reminder: FS Conductor Duty in 12 Hours - ${conductorName}`)}`,
         "END:VALARM",
         "END:VEVENT"
       );
     });
 
     icsLines.push("END:VCALENDAR");
-    const blob = new Blob([icsLines.join("\r\n")], { type: "text/calendar;charset=utf-8" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `FS_Conductor_${conductorName.replace(/\s+/g, '_')}.ics`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadCalendarFile(
+      icsLines,
+      `FS_Conductor_${conductorName.replace(/[^a-z0-9]+/gi, "_").replace(/^_|_$/g, "")}.ics`
+    );
     showStatus(`Downloaded .ics for ${conductorName}!`);
+  }
+
+  function exportAllConductorICS() {
+    const state = loadAppState();
+    if (!state.roster || state.roster.length === 0) {
+      alert("No approved conductors found.");
+      return;
+    }
+
+    let exportedCount = 0;
+    state.roster.forEach((conductorName, index) => {
+      const dates = getNextTwelveMonthScheduleSlots(
+        getAllScheduleSlots(state).filter(slot => slot.conductor === conductorName)
+      );
+      if (dates.length === 0) return;
+
+      setTimeout(() => {
+        const nowString = new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+        const icsLines = [
+          "BEGIN:VCALENDAR",
+          "VERSION:2.0",
+          "PRODID:-//Conductor Schedule Generator//EN",
+          "CALSCALE:GREGORIAN",
+          "METHOD:PUBLISH",
+          `X-WR-CALNAME:${escapeICSValue(conductorName)} - FS Conductor Schedule`
+        ];
+
+        dates.forEach(d => {
+          const dateStr = `${d.year}${d.monthStr}${d.dayStr}`;
+          const endDate = addDaysToDateKey(d.dateKey);
+          const endDateStr = `${endDate.year}${endDate.monthStr}${endDate.dayStr}`;
+          const slotTL = getSlotTimeLocation(state, d.dateKey);
+          const conductorSlug = conductorName
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-|-$/g, "");
+
+          icsLines.push(
+            "BEGIN:VEVENT",
+            `UID:conductor-${conductorSlug}-${d.dateKey}@conductorschedule.local`,
+            `DTSTAMP:${nowString}`,
+            `DTSTART;VALUE=DATE:${dateStr}`,
+            `DTEND;VALUE=DATE:${endDateStr}`,
+            `SUMMARY:${escapeICSValue(`FS Conductor: ${conductorName} (${slotTL.time})`)}`,
+            `LOCATION:${escapeICSValue(slotTL.location)}`,
+            `DESCRIPTION:${escapeICSValue(`Please read ahead: 1. mwb21 November p. 7 "Tips for Making Meetings for Field Service Practical" and 2. km 3/15 pp. 3-6 "Meetings for Field Service That Accomplish Their Purpose."`)}`,
+            "STATUS:CONFIRMED",
+            "BEGIN:VALARM",
+            "TRIGGER:-PT24H",
+            "ACTION:DISPLAY",
+            `DESCRIPTION:${escapeICSValue(`Reminder: FS Conductor Duty Tomorrow - ${conductorName}`)}`,
+            "END:VALARM",
+            "BEGIN:VALARM",
+            "TRIGGER:-PT12H",
+            "ACTION:DISPLAY",
+            `DESCRIPTION:${escapeICSValue(`Reminder: FS Conductor Duty in 12 Hours - ${conductorName}`)}`,
+            "END:VALARM",
+            "END:VEVENT"
+          );
+        });
+
+        icsLines.push("END:VCALENDAR");
+        const filename = `FS_Conductor_${conductorName.replace(/[^a-z0-9]+/gi, "_").replace(/^_|_$/g, "")}.ics`;
+        downloadCalendarFile(icsLines, filename);
+        exportedCount++;
+      }, index * 250);
+    });
+
+    setTimeout(() => {
+      showStatus(exportedCount > 0
+        ? `Exported ${exportedCount} individual conductor .ics file${exportedCount === 1 ? "" : "s"}!`
+        : "No scheduled conductor dates found.");
+    }, (state.roster.length + 1) * 250);
   }
 
   function exportMasterICS() {
