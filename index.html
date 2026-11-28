@@ -91,8 +91,10 @@
             <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); openTimeLocModal()">🕒 Time &amp; Location</button>
             <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); openPrintModal()">🖨️ Print / Save PDF</button>
             <div class="dropdown-divider"></div>
-            <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); exportMonthICS()">📅 Export Current Month (.ics)</button>
-            <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); exportMasterICS()">📅 Export Full Selected Year (.ics)</button>
+            <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); exportICSRange(1)">📅 Export Current Month (.ics)</button>
+            <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); exportICSRange(3)">📅 Export 3 Months (.ics)</button>
+            <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); exportICSRange(6)">📅 Export 6 Months (.ics)</button>
+            <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); exportICSRange(12)">📅 Export 12 Months (.ics)</button>
             <div class="dropdown-divider"></div>
             <button type="button" class="dropdown-item" onclick="closeAllDropdowns(); openCloudSyncModal()">☁️ Cloud Sync (GitHub Gist)</button>
             <div class="dropdown-divider"></div>

@@ -762,58 +762,74 @@
     showStatus(`Exported ${selectedYear} Master .ics!`);
   }
 
-  function exportMonthICS() {
+  function exportICSRange(monthCount) {
     const state = loadAppState();
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const sats = getMeetingSaturdays(year, month);
+    const now = new Date();
+    const startYear = now.getFullYear();
+    const startMonth = now.getMonth();
     const nowString = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 
     let icsLines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Conductor Schedule//EN"];
 
-    [sats.second, sats.fourth, sats.fifth].forEach(day => {
-      if (!day) return;
-      const monthStr = String(month + 1).padStart(2, '0');
-      const dayStr = String(day).padStart(2, '0');
-      const dateKey = `${year}-${monthStr}-${dayStr}`;
+    for (let offset = 0; offset < monthCount; offset++) {
+      const monthDate = new Date(startYear, startMonth + offset, 1);
+      const year = monthDate.getFullYear();
+      const month = monthDate.getMonth();
+      const sats = getMeetingSaturdays(year, month);
 
-      if (state.blackouts && state.blackouts[dateKey]) return;
+      [sats.second, sats.fourth, sats.fifth].forEach(day => {
+        if (!day) return;
+        const monthStr = String(month + 1).padStart(2, '0');
+        const dayStr = String(day).padStart(2, '0');
+        const dateKey = `${year}-${monthStr}-${dayStr}`;
 
-      const conductor = (state.overrides && state.overrides[dateKey]) || getRotationalConductor(year, month, day, state);
-      const slotTL = getSlotTimeLocation(state, dateKey);
-      const dateStr = `${year}${monthStr}${dayStr}`;
+        if (state.blackouts && state.blackouts[dateKey]) return;
 
-      icsLines.push(
-        "BEGIN:VEVENT",
-        `UID:conductor-${dateKey}@conductorschedule.local`,
-        `DTSTAMP:${nowString}`,
-        `DTSTART;VALUE=DATE:${dateStr}`,
-        `DTEND;VALUE=DATE:${dateStr}`,
-        `SUMMARY:FS Conductor: ${conductor} (${slotTL.time})`,
-        `LOCATION:${slotTL.location}`,
-        `DESCRIPTION:Please read ahead: 1. mwb21 November p. 7 "Tips for Making Meetings for Field Service Practical" and 2. km 3/15 pp. 3-6 "Meetings for Field Service That Accomplish Their Purpose."`,
-        "STATUS:CONFIRMED",
-        "BEGIN:VALARM",
-        "TRIGGER:-PT24H",
-        "ACTION:DISPLAY",
-        `DESCRIPTION:Reminder: FS Conductor Duty Tomorrow - ${conductor}`,
-        "END:VALARM",
-        "BEGIN:VALARM",
-        "TRIGGER:-PT12H",
-        "ACTION:DISPLAY",
-        `DESCRIPTION:Reminder: FS Conductor Duty in 12 Hours - ${conductor}`,
-        "END:VALARM",
-        "END:VEVENT"
-      );
-    });
+        const conductor = (state.overrides && state.overrides[dateKey]) || getRotationalConductor(year, month, day, state);
+        const slotTL = getSlotTimeLocation(state, dateKey);
+        const dateStr = `${year}${monthStr}${dayStr}`;
+
+        icsLines.push(
+          "BEGIN:VEVENT",
+          `UID:conductor-${dateKey}@conductorschedule.local`,
+          `DTSTAMP:${nowString}`,
+          `DTSTART;VALUE=DATE:${dateStr}`,
+          `DTEND;VALUE=DATE:${dateStr}`,
+          `SUMMARY:FS Conductor: ${conductor} (${slotTL.time})`,
+          `LOCATION:${slotTL.location}`,
+          `DESCRIPTION:Please read ahead: 1. mwb21 November p. 7 "Tips for Making Meetings for Field Service Practical" and 2. km 3/15 pp. 3-6 "Meetings for Field Service That Accomplish Their Purpose."`,
+          "STATUS:CONFIRMED",
+          "BEGIN:VALARM",
+          "TRIGGER:-PT24H",
+          "ACTION:DISPLAY",
+          `DESCRIPTION:Reminder: FS Conductor Duty Tomorrow - ${conductor}`,
+          "END:VALARM",
+          "BEGIN:VALARM",
+          "TRIGGER:-PT12H",
+          "ACTION:DISPLAY",
+          `DESCRIPTION:Reminder: FS Conductor Duty in 12 Hours - ${conductor}`,
+          "END:VALARM",
+          "END:VEVENT"
+        );
+      });
+    }
 
     icsLines.push("END:VCALENDAR");
     const blob = new Blob([icsLines.join("\r\n")], { type: "text/calendar;charset=utf-8" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `Conductor_Schedule_${monthNames[month]}_${year}.ics`;
+    const monthLabel = monthCount === 1
+      ? `${monthNames[startMonth]}_${startYear}`
+      : `${monthCount}_Months_From_${monthNames[startMonth]}_${startYear}`;
+    link.download = `Conductor_Schedule_${monthLabel}.ics`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showStatus(`Exported ${monthNames[month]} .ics!`);
+    showStatus(monthCount === 1
+      ? `Exported ${monthNames[startMonth]} .ics!`
+      : `Exported ${monthCount} Months .ics!`);
+  }
+
+  function exportMonthICS() {
+    exportICSRange(1);
   }
